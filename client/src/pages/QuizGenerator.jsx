@@ -36,8 +36,16 @@ const QuizGenerator = () => {
 
   // Action: Remove question card
   const handleRemoveQuestion = (index) => {
+    const removedQuestion = questions[index];
     const updated = questions.filter((_, i) => i !== index);
     setQuestions(updated);
+
+    if (removedQuestion?.id) {
+      const updatedTagInputs = { ...tagInputs };
+      delete updatedTagInputs[removedQuestion.id];
+      setTagInputs(updatedTagInputs);
+    }
+
     setErrorMessages([]);
   };
 
@@ -122,15 +130,15 @@ const QuizGenerator = () => {
   // Tags/Concepts action: Parse and add tags
   const [tagInputs, setTagInputs] = useState({});
 
-  const handleTagInputChange = (qIndex, value) => {
+  const handleTagInputChange = (questionId, value) => {
     setTagInputs({
       ...tagInputs,
-      [qIndex]: value
+      [questionId]: value
     });
   };
 
-  const handleAddTag = (qIndex) => {
-    const rawInput = tagInputs[qIndex] || '';
+  const handleAddTag = (qIndex, questionId) => {
+    const rawInput = tagInputs[questionId] || '';
     if (!rawInput.trim()) return;
 
     // Split on comma or just take the raw string
@@ -155,14 +163,14 @@ const QuizGenerator = () => {
     // Clear tag input for this question
     setTagInputs({
       ...tagInputs,
-      [qIndex]: ''
+      [questionId]: ''
     });
   };
 
-  const handleTagInputKeyDown = (qIndex, e) => {
+  const handleTagInputKeyDown = (qIndex, questionId, e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      handleAddTag(qIndex);
+      handleAddTag(qIndex, questionId);
     }
   };
 
@@ -612,9 +620,9 @@ const QuizGenerator = () => {
                         <input
                           id={`tags-${q.id}`}
                           type="text"
-                          value={tagInputs[index] || ''}
-                          onChange={(e) => handleTagInputChange(index, e.target.value)}
-                          onKeyDown={(e) => handleTagInputKeyDown(index, e)}
+                          value={tagInputs[q.id] || ''}
+                          onChange={(e) => handleTagInputChange(q.id, e.target.value)}
+                          onKeyDown={(e) => handleTagInputKeyDown(index, q.id, e)}
                           placeholder="Type tags (e.g. hooks, state) and press comma or Enter"
                           className="flex-1 px-4 py-2.5 rounded-lg border text-sm text-white outline-none"
                           style={{
@@ -624,7 +632,7 @@ const QuizGenerator = () => {
                         />
                         <button
                           type="button"
-                          onClick={() => handleAddTag(index)}
+                          onClick={() => handleAddTag(index, q.id)}
                           className="px-4 py-2.5 rounded-lg text-xs font-bold bg-indigo-900/30 text-indigo-300 border border-indigo-500/20 hover:bg-indigo-900/50"
                         >
                           Add Tag
