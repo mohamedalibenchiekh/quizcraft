@@ -4,7 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 
-import connectDB from "./config/db.js";
+import { connectDB } from "./config/db.js";
 import errorHandler from "./middleware/errorHandler.js";
 
 // ─── Route modules ──────────────────────────────────────
