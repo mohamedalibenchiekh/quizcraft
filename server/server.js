@@ -18,7 +18,11 @@ const PORT = process.env.PORT || 5000;
 
 // ─── Global middleware ───────────────────────────────────
 app.use(express.json()); // parse JSON bodies
-app.use(helmet()); // secure HTTP headers
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Disabled since this is a pure JSON API and doesn't serve HTML
+  })
+); // secure HTTP headers
 app.use(morgan("dev")); // request logging
 app.use(
   cors({
@@ -31,6 +35,20 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/sessions", sessionRoutes);
+
+// ─── Root endpoint ───────────────────────────────────────
+app.get("/", (_req, res) => {
+  res.json({
+    success: true,
+    message: "Welcome to the QuizCraft API Platform",
+    endpoints: {
+      health: "/api/health",
+      auth: "/api/auth",
+      quizzes: "/api/quizzes",
+      sessions: "/api/sessions",
+    },
+  });
+});
 
 // ─── Health-check endpoint ───────────────────────────────
 app.get("/api/health", (_req, res) => {
