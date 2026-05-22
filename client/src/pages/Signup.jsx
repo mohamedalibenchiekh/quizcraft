@@ -21,11 +21,17 @@ const inputStyle = {
   border: '1px solid rgba(139, 92, 246, 0.15)',
 };
 
-const Login = () => {
+const Signup = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'student',
+  });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -36,17 +42,29 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const { data } = await api.post('/auth/login', {
+      const { data } = await api.post('/auth/register', {
+        name: form.name.trim(),
         email: form.email.trim(),
         password: form.password,
+        role: form.role,
       });
 
       login(data.token, data.user);
       navigate(data.user.role === 'professor' ? '/dashboard' : '/session', { replace: true });
     } catch (err) {
-      setError(err?.response?.data?.message || 'Unable to sign in. Please try again.');
+      setError(err?.response?.data?.message || 'Unable to create account. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -75,14 +93,32 @@ const Login = () => {
             className="text-3xl font-extrabold tracking-tight"
             style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
           >
-            Welcome back to <span style={{ color: '#8b5cf6' }}>QuizCraft</span>
+            Create your <span style={{ color: '#8b5cf6' }}>QuizCraft</span> account
           </h2>
           <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            Sign in to continue.
+            Get started in seconds — no credit card required.
           </p>
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+              Full name
+            </label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              required
+              value={form.name}
+              onChange={handleChange}
+              autoComplete="name"
+              className="block w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300"
+              style={inputStyle}
+              placeholder="Jane Doe"
+            />
+          </div>
+
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
               Email address
@@ -97,31 +133,63 @@ const Login = () => {
               autoComplete="email"
               className="block w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300"
               style={inputStyle}
-              placeholder="professor@university.edu"
+              placeholder="jane@university.edu"
             />
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label htmlFor="password" className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                Password
-              </label>
-              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                Forgot password?
-              </span>
-            </div>
+            <label htmlFor="password" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+              Password
+            </label>
             <input
               id="password"
               name="password"
               type="password"
               required
+              minLength={6}
               value={form.password}
               onChange={handleChange}
-              autoComplete="current-password"
+              autoComplete="new-password"
               className="block w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300"
               style={inputStyle}
-              placeholder="••••••••"
+              placeholder="At least 6 characters"
             />
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+              Confirm password
+            </label>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              minLength={6}
+              value={form.confirmPassword}
+              onChange={handleChange}
+              autoComplete="new-password"
+              className="block w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300"
+              style={inputStyle}
+              placeholder="Repeat your password"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="role" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+              I am a
+            </label>
+            <select
+              id="role"
+              name="role"
+              value={form.role}
+              onChange={handleChange}
+              className="block w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 cursor-pointer"
+              style={inputStyle}
+            >
+              <option value="student">Student</option>
+              <option value="professor">Professor</option>
+            </select>
           </div>
 
           {error && (
@@ -148,19 +216,19 @@ const Login = () => {
               boxShadow: '0 4px 16px rgba(124, 58, 237, 0.3)',
             }}
           >
-            {submitting ? 'Signing in…' : 'Sign In'}
+            {submitting ? 'Creating account…' : 'Create Account'}
             {!submitting && <ArrowRightIcon />}
           </button>
         </form>
 
         <p className="text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Don&apos;t have an account?{' '}
+          Already have an account?{' '}
           <Link
-            to="/signup"
+            to="/login"
             className="font-semibold transition-colors duration-200"
             style={{ color: 'var(--color-brand-300)' }}
           >
-            Create one
+            Sign in
           </Link>
         </p>
       </div>
@@ -168,4 +236,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Signup;

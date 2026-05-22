@@ -1,9 +1,10 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 import ProfessorDashboard from './pages/ProfessorDashboard';
 import QuizGenerator from './pages/QuizGenerator';
 import StudentSession from './pages/StudentSession';
@@ -25,6 +26,24 @@ const ProtectedRoute = ({ children, allowedRole }) => {
 };
 
 /**
+ * Guard for /session route.
+ * Allows access if the user is authenticated OR has a valid room code
+ * in React Router location state (guest quick-join from Home page).
+ * Otherwise redirects to the landing page.
+ */
+const SessionGuard = ({ children }) => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const hasRoomCode = Boolean(location.state?.roomCode);
+
+  if (!user && !hasRoomCode) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+/**
  * Layout wrapper that conditionally renders Navbar.
  * The Home page has its own integrated nav, so we skip the global Navbar on '/'.
  */
@@ -39,6 +58,15 @@ const AppRoutes = () => {
           <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
             <Navbar />
             <Login />
+          </div>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+            <Navbar />
+            <Signup />
           </div>
         }
       />
@@ -66,13 +94,17 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } 
       />
+
+      {/* Session – requires either auth OR a room code from the Home page */}
       <Route 
         path="/session" 
         element={
-          <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
-            <Navbar />
-            <StudentSession />
-          </div>
+          <SessionGuard>
+            <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+              <Navbar />
+              <StudentSession />
+            </div>
+          </SessionGuard>
         } 
       />
     </Routes>

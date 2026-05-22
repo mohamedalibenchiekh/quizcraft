@@ -117,14 +117,16 @@ const ParticleField = () => {
     createParticles();
     draw();
 
-    window.addEventListener('resize', () => {
+    const handleResize = () => {
       resize();
       createParticles();
-    });
+    };
+
+    window.addEventListener('resize', handleResize);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', resize);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -210,6 +212,10 @@ const Home = () => {
     navigate('/login');
   };
 
+  const handleSignup = () => {
+    navigate('/signup');
+  };
+
   const handleJoinSession = () => {
     if (roomCode.length === 6) {
       navigate('/session', { state: { roomCode } });
@@ -292,24 +298,33 @@ const Home = () => {
             </div>
 
             {/* Desktop Nav Links */}
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-6">
               <a
                 href="#features"
-                className="text-sm font-medium transition-colors duration-200 hover:text-brand-400"
+                className="text-sm font-medium transition-colors duration-200"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
                 Features
               </a>
               <button
-                id="nav-professor-portal"
+                id="nav-login"
                 onClick={handleProfessorPortal}
-                className="px-5 py-2.5 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-brand-500/25 hover:translate-y-[-1px]"
+                className="text-sm font-medium transition-colors duration-200 cursor-pointer bg-transparent border-none"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Login
+              </button>
+              <button
+                id="nav-signup"
+                onClick={handleSignup}
+                className="px-5 py-2.5 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer hover:translate-y-[-1px] hover:shadow-lg"
                 style={{
                   background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
                   color: '#fff',
+                  boxShadow: '0 4px 14px rgba(124, 58, 237, 0.3)',
                 }}
               >
-                Professor Portal
+                Sign Up
               </button>
             </div>
           </div>
@@ -570,7 +585,7 @@ const Home = () => {
             </p>
             <button
               id="cta-get-started"
-              onClick={handleProfessorPortal}
+              onClick={handleSignup}
               className="group px-8 py-4 rounded-xl text-base font-semibold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:shadow-2xl inline-flex items-center gap-2"
               style={{
                 background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
@@ -598,15 +613,22 @@ const Home = () => {
               © {new Date().getFullYear()} QuizCraft. Crafted for modern education.
             </span>
             <div className="flex gap-6">
-              <a href="#features" className="text-sm transition-colors duration-200 hover:text-brand-400" style={{ color: 'var(--color-text-muted)' }}>
+              <a href="#features" className="text-sm transition-colors duration-200" style={{ color: 'var(--color-text-muted)' }}>
                 Features
               </a>
               <button
                 onClick={handleProfessorPortal}
-                className="text-sm transition-colors duration-200 hover:text-brand-400 cursor-pointer bg-transparent border-none"
+                className="text-sm transition-colors duration-200 cursor-pointer bg-transparent border-none"
                 style={{ color: 'var(--color-text-muted)' }}
               >
                 Sign In
+              </button>
+              <button
+                onClick={handleSignup}
+                className="text-sm transition-colors duration-200 cursor-pointer bg-transparent border-none"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                Sign Up
               </button>
             </div>
           </div>
