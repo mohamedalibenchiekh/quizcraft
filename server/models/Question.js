@@ -33,7 +33,7 @@ const questionSchema = new mongoose.Schema(
           }
 
           // If type is not set, allow validation to pass (let schema required check fire if needed)
-          if (!type) return true;
+          if (!type) return false;
 
           if (type === "True-False") {
             return value === "True" || value === "False";
