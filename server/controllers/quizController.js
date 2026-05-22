@@ -213,14 +213,21 @@ export const deleteQuiz = async (req, res, next) => {
  * @route   POST /api/quizzes/:id/questions
  */
 export const addQuestionToQuiz = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const quiz = await Quiz.findById(req.params.id);
+    const quiz = await Quiz.findById(req.params.id).session(session);
     if (!quiz) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ success: false, message: "Quiz not found" });
     }
 
     // Ownership check
     if (quiz.professorId.toString() !== req.user.id) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(403).json({ success: false, message: "Forbidden — You do not own this quiz" });
     }
 
@@ -228,38 +235,54 @@ export const addQuestionToQuiz = async (req, res, next) => {
 
     // Field validation
     if (!text || !text.trim()) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ success: false, message: "Question text is required" });
     }
     if (!type || !['MCQ', 'True-False', 'Short-Answer'].includes(type)) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ success: false, message: "Invalid question type" });
     }
     if (!correctAnswer || !correctAnswer.trim()) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ success: false, message: "Correct answer is required" });
     }
     if (!difficulty || !['easy', 'medium', 'hard'].includes(difficulty)) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ success: false, message: "Difficulty must be easy, medium, or hard" });
     }
 
     let formattedOptions = [];
     if (type === 'MCQ') {
       if (!Array.isArray(options) || options.length < 2) {
+        await session.abortTransaction();
+        session.endSession();
         return res.status(400).json({ success: false, message: "MCQ questions must have at least 2 options" });
       }
       formattedOptions = options.map(o => typeof o === 'string' ? o.trim() : o).filter(Boolean);
       if (formattedOptions.length < 2) {
+        await session.abortTransaction();
+        session.endSession();
         return res.status(400).json({ success: false, message: "MCQ questions must have at least 2 options" });
       }
       if (!formattedOptions.includes(correctAnswer.trim())) {
+        await session.abortTransaction();
+        session.endSession();
         return res.status(400).json({ success: false, message: "Correct answer must match one of the MCQ options" });
       }
     } else if (type === 'True-False') {
       formattedOptions = ['True', 'False'];
       if (correctAnswer !== 'True' && correctAnswer !== 'False') {
+        await session.abortTransaction();
+        session.endSession();
         return res.status(400).json({ success: false, message: "True-False correctAnswer must be 'True' or 'False'" });
       }
     }
 
-    // Create the question document
+    // Create the question document within the transaction
     const newQuestion = new Question({
       text: text.trim(),
       type,
@@ -269,11 +292,14 @@ export const addQuestionToQuiz = async (req, res, next) => {
       tags: Array.isArray(tags) ? tags.map(t => typeof t === 'string' ? t.trim() : t).filter(Boolean) : []
     });
 
-    const savedQuestion = await newQuestion.save();
+    const savedQuestion = await newQuestion.save({ session });
 
-    // Push into the quiz array
+    // Push into the quiz array and save within the same transaction
     quiz.questions.push(savedQuestion._id);
-    await quiz.save();
+    await quiz.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     res.status(201).json({
       success: true,
@@ -281,6 +307,8 @@ export const addQuestionToQuiz = async (req, res, next) => {
       data: savedQuestion
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     next(error);
   }
 };
