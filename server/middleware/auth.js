@@ -22,7 +22,13 @@ export const authenticateToken = (req, res, next) => {
     });
   }
 
-  const token = authHeader.split(" ")[1];
+  const token = authHeader.slice(7).trim();
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized — no bearer token provided.",
+    });
+  }
 
   // ── 2. Verification ───────────────────────────────────────────────────────
   try {
