@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
@@ -25,33 +25,109 @@ const Login = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-gray-50">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-lg border border-gray-100">
+    <div className="flex items-center justify-center min-h-[calc(100vh-64px)] px-4">
+      <div
+        className="w-full max-w-md p-8 space-y-8 rounded-2xl"
+        style={{
+          background: 'var(--color-surface-card)',
+          border: '1px solid rgba(139, 92, 246, 0.15)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+        }}
+      >
         <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Welcome to QuizCraft</h2>
-          <p className="mt-2 text-sm text-gray-500">Sign in to your account</p>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-sm font-medium mb-6 transition-colors duration-200"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Back to Home
+          </Link>
+          <h2
+            className="text-3xl font-extrabold tracking-tight"
+            style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
+          >
+            Welcome to <span style={{ color: '#8b5cf6' }}>QuizCraft</span>
+          </h2>
+          <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+            Sign in to your account
+          </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <div className="rounded-md shadow-sm -space-y-px">
+          <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="sr-only">Email address</label>
-              <input id="email" name="email" type="email" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email address" defaultValue="demo@quizcraft.com" />
+              <label htmlFor="email" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="block w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300"
+                style={{
+                  background: 'var(--color-surface-input)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid rgba(139, 92, 246, 0.15)',
+                }}
+                placeholder="professor@university.edu"
+                defaultValue="demo@quizcraft.com"
+              />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">Password</label>
-              <input id="password" name="password" type="password" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Password" defaultValue="password" />
+              <label htmlFor="password" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="block w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300"
+                style={{
+                  background: 'var(--color-surface-input)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid rgba(139, 92, 246, 0.15)',
+                }}
+                placeholder="••••••••"
+                defaultValue="password"
+              />
             </div>
             <div>
-              <label htmlFor="role" className="sr-only">Role</label>
-              <select id="role" name="role" className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm">
+              <label htmlFor="role" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                Role
+              </label>
+              <select
+                id="role"
+                name="role"
+                className="block w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 cursor-pointer"
+                style={{
+                  background: 'var(--color-surface-input)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid rgba(139, 92, 246, 0.15)',
+                }}
+              >
                 <option value="professor">Professor</option>
                 <option value="student">Student</option>
               </select>
             </div>
           </div>
           <div>
-            <button type="submit" className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+            <button
+              type="submit"
+              className="group relative w-full flex justify-center items-center gap-2 py-3.5 px-4 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer hover:translate-y-[-1px] hover:shadow-lg"
+              style={{
+                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                color: '#fff',
+                boxShadow: '0 4px 16px rgba(124, 58, 237, 0.3)',
+              }}
+            >
               Sign In
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
         </form>

@@ -1,1 +1,9 @@
-/* App Styles */
+/* =============================================
+   App-Level Layout Styles
+   ============================================= */
+
+/* Override any Vite default background */
+#root {
+  min-height: 100vh;
+  background-color: var(--color-surface-base);
+}

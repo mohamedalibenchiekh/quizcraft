@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
+import Home from './pages/Home';
 import Login from './pages/Login';
 import ProfessorDashboard from './pages/ProfessorDashboard';
 import QuizGenerator from './pages/QuizGenerator';
@@ -13,7 +14,7 @@ const ProtectedRoute = ({ children, allowedRole }) => {
   const { user } = useAuth();
   
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
   
   if (allowedRole && user.role !== allowedRole) {
@@ -23,38 +24,58 @@ const ProtectedRoute = ({ children, allowedRole }) => {
   return children;
 };
 
+/**
+ * Layout wrapper that conditionally renders Navbar.
+ * The Home page has its own integrated nav, so we skip the global Navbar on '/'.
+ */
 const AppRoutes = () => {
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute allowedRole="professor">
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={<Home />} />
+      <Route
+        path="/login"
+        element={
+          <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+            <Navbar />
+            <Login />
+          </div>
+        }
+      />
+
+      {/* Protected Routes */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute allowedRole="professor">
+            <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+              <Navbar />
               <ProfessorDashboard />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/generator" 
-          element={
-            <ProtectedRoute allowedRole="professor">
+            </div>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/generator" 
+        element={
+          <ProtectedRoute allowedRole="professor">
+            <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+              <Navbar />
               <QuizGenerator />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/session" 
-          element={
-            <ProtectedRoute allowedRole="student">
-              <StudentSession />
-            </ProtectedRoute>
-          } 
-        />
-      </Routes>
-    </div>
+            </div>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/session" 
+        element={
+          <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+            <Navbar />
+            <StudentSession />
+          </div>
+        } 
+      />
+    </Routes>
   );
 };
 
