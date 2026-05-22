@@ -112,7 +112,11 @@ export const createQuiz = async (req, res, next) => {
  */
 export const getMyQuizzes = async (req, res, next) => {
   try {
-    const quizzes = await Quiz.find({ professorId: req.user.id }).populate('questions');
+    const query = { professorId: req.user.id };
+    if (req.query.approved !== undefined) {
+      query.isApproved = req.query.approved === "true";
+    }
+    const quizzes = await Quiz.find(query).populate('questions');
     res.status(200).json({
       success: true,
       data: quizzes
@@ -461,6 +465,43 @@ export const deleteQuestion = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Question deleted successfully and removed from quiz"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Toggle quiz approval status (professor only)
+ * @route   PATCH /api/quizzes/:id/approve
+ */
+export const toggleQuizApproval = async (req, res, next) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id);
+    if (!quiz) {
+      return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
+
+    // Ownership check
+    if (quiz.professorId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: "Forbidden — You do not own this quiz" });
+    }
+
+    // Update isApproved to opposite, or to an explicitly passed value if provided
+    const { isApproved } = req.body;
+    if (isApproved !== undefined) {
+      quiz.isApproved = Boolean(isApproved);
+    } else {
+      quiz.isApproved = !quiz.isApproved;
+    }
+
+    const updatedQuiz = await quiz.save();
+    const populated = await Quiz.findById(updatedQuiz._id).populate('questions');
+
+    res.status(200).json({
+      success: true,
+      message: `Quiz ${populated.isApproved ? "published" : "moved to draft"} successfully`,
+      data: populated
     });
   } catch (error) {
     next(error);
