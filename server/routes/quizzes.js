@@ -8,6 +8,7 @@ import {
   addQuestionToQuiz,
   updateQuestion,
   deleteQuestion,
+  toggleQuizApproval,
 } from "../controllers/quizController.js";
 import { authenticateToken, requireRole } from "../middleware/auth.js";
 
@@ -24,6 +25,9 @@ router.get("/:id", authenticateToken, getQuizById);
 
 // PUT /api/quizzes/:id -> Modify high-level quiz metadata (title, description, isApproved status).
 router.put("/:id", authenticateToken, requireRole("professor"), updateQuizMetadata);
+
+// PATCH /api/quizzes/:id/approve -> Toggle or set a quiz's approval (published/draft) status.
+router.patch("/:id/approve", authenticateToken, requireRole("professor"), toggleQuizApproval);
 
 // DELETE /api/quizzes/:id -> Permanently drop a quiz and trigger a cascading delete across its connected questions.
 router.delete("/:id", authenticateToken, requireRole("professor"), deleteQuiz);

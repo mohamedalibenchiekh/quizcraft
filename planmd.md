@@ -62,7 +62,7 @@ The domain model is `User → Quiz → Question → Session → Attempt` (where 
   * [x] Design Professor-facing UI to manually build static questions and associate them with a clean parent Quiz schema wrapper.
   * [x] Build full API CRUD endpoints under `/api/quizzes` to query, modify, or drop explicit questions.
   * [x] **QC-BR-01**: A question cannot exist without a default difficulty label (`easy`, `medium`, `hard`) assigned during manual initialization or editing screens.
-  * [ ] Implement an explicit `isApproved` flag on the schema layer so professors can filter out unverified drafts from visible quiz lists.
+  * [x] Implement an explicit `isApproved` flag on the schema layer so professors can filter out unverified drafts from visible quiz lists.
 
 * **Exit criteria**:
   * A Professor can create a blank quiz layout, manually patch questions inside the card UI, change option targets, and successfully persist structural modifications into MongoDB.
