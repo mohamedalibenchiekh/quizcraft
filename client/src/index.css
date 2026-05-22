@@ -4,7 +4,7 @@
    QuizCraft Design System – Global Tokens
    ============================================= */
 
-@theme {
+:root {
   /* Brand Colors */
   --color-brand-50: #f0edff;
   --color-brand-100: #ddd6fe;
