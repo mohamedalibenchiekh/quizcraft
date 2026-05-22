@@ -213,10 +213,12 @@ export const deleteQuiz = async (req, res, next) => {
  * @route   POST /api/quizzes/:id/questions
  */
 export const addQuestionToQuiz = async (req, res, next) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  let session;
 
   try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+
     const quiz = await Quiz.findById(req.params.id).session(session);
     if (!quiz) {
       await session.abortTransaction();
@@ -307,8 +309,10 @@ export const addQuestionToQuiz = async (req, res, next) => {
       data: savedQuestion
     });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    if (session) {
+      await session.abortTransaction();
+      session.endSession();
+    }
     next(error);
   }
 };
