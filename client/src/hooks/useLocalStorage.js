@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export const useLocalStorage = (key, initialValue) => {
   const [storedValue, setStoredValue] = useState(() => {
@@ -11,12 +11,30 @@ export const useLocalStorage = (key, initialValue) => {
     }
   });
 
+  const lastKeyRef = useRef(key);
+
+  useEffect(() => {
+    if (lastKeyRef.current !== key) {
+      try {
+        const item = window.localStorage.getItem(key);
+        setStoredValue(item ? JSON.parse(item) : initialValue);
+        lastKeyRef.current = key;
+      } catch (error) {
+        console.error(error);
+      }
+    } else {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(storedValue));
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }, [key, storedValue, initialValue]);
+
   const setValue = (value) => {
     try {
       setStoredValue((prevValue) => {
-        const valueToStore = value instanceof Function ? value(prevValue) : value;
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
-        return valueToStore;
+        return value instanceof Function ? value(prevValue) : value;
       });
     } catch (error) {
       console.error(error);
