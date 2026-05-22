@@ -18,19 +18,21 @@ const QuestionSchema = new mongoose.Schema(
       // For 'True-False' it defaults to ['True', 'False'].
       // For 'Short-Answer' it remains an empty array.
       validate: {
-        validator: function(v) {
-          if (this.type === 'MCQ') {
-            return v && v.length > 0;
-          } else if (this.type === 'True-False') {
-            return v && v.length === 2; // Usually ['True', 'False']
-          } else if (this.type === 'Short-Answer') {
+        validator: function (v) {
+          const type = this instanceof mongoose.Query ? this.get('type') : this.type;
+
+          if (type === 'MCQ') {
+            return Array.isArray(v) && v.length > 0;
+          } else if (type === 'True-False') {
+            return Array.isArray(v) && v.length === 2; // Usually ['True', 'False']
+          } else if (type === 'Short-Answer') {
             return true; // Empty array or any is fine for short answer based on spec
           }
           return true;
         },
         message: 'Invalid options array based on question type.',
       },
-      default: function() {
+      default: function () {
         if (this.type === 'True-False') {
           return ['True', 'False'];
         }
@@ -42,7 +44,7 @@ const QuestionSchema = new mongoose.Schema(
       required: true,
       trim: true,
       validate: {
-        validator: function(v) {
+        validator: function (v) {
           const type = this instanceof mongoose.Query ? this.get('type') : this.type;
           const options = this instanceof mongoose.Query ? this.get('options') : this.options;
 
