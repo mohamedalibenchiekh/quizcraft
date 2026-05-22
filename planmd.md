@@ -45,8 +45,8 @@ The domain model is `User → Quiz → Question → Session → Attempt` (where 
   * [x] Scaffold client application utilizing Vite with React template.
   * [x] Initialize backend Express platform with modular router allocation (`/api/auth`, `/api/quizzes`, `/api/sessions`).
   * [x] Add MongoDB Atlas connectivity layer via Mongoose; verify connection states inside server startup lifecycles.
-  * [ ] Implement JWT signature generation and custom protection middleware (`requireRole('professor')` and `requireRole('student')`).
-  * [ ] Establish an upstream `.env.example` file pinning all required environment targets (`MONGO_URI`, `JWT_SECRET`, `OPENAI_API_KEY`, `VITE_API_URL`).
+  * [x] Implement JWT signature generation and custom protection middleware (`requireRole('professor')` and `requireRole('student')`).
+  * [x] Establish an upstream `.env.example` file pinning all required environment targets (`MONGO_URI`, `JWT_SECRET`, `OPENAI_API_KEY`, `VITE_API_URL`).
 
 * **Exit criteria**:
   * Client and server run concurrently with zero initialization collisions.
