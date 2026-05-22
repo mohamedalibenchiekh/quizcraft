@@ -1,26 +1,36 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-const quizSchema = new mongoose.Schema(
+const QuizSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: [true, "Quiz title is required"],
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
       trim: true,
     },
     professorId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: [true, "Professor ID is required"],
+      required: true,
+      ref: 'User',
     },
     questions: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Question",
+        ref: 'Question',
       },
     ],
+    isApproved: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-const Quiz = mongoose.model("Quiz", quizSchema);
-export default Quiz;
+export default mongoose.model('Quiz', QuizSchema);

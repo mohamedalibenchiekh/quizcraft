@@ -1,66 +1,60 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-const questionSchema = new mongoose.Schema(
+const QuestionSchema = new mongoose.Schema(
   {
-    type: {
-      type: String,
-      enum: ["MCQ", "True-False", "Short-Answer"],
-      required: [true, "Question type is required"],
-    },
     text: {
       type: String,
-      required: [true, "Question text is required"],
+      required: true,
       trim: true,
+    },
+    type: {
+      type: String,
+      required: true,
+      enum: ['MCQ', 'True-False', 'Short-Answer'],
     },
     options: {
       type: [String],
-      default: [],
-    },
-    correctAnswer: {
-      type: String,
-      required: [true, "Correct answer is required"],
+      // For 'MCQ' it must contain choices.
+      // For 'True-False' it defaults to ['True', 'False'].
+      // For 'Short-Answer' it remains an empty array.
       validate: {
-        validator: function (value) {
-          // Determine the question type and options based on context (doc save vs query update)
-          let type = this.type;
-          let options = this.options;
-
-          if (!(this instanceof mongoose.Document) && this && typeof this.getUpdate === "function") {
-            const update = this.getUpdate();
-            const setObj = update.$set || {};
-            type = update.type !== undefined ? update.type : setObj.type;
-            options = update.options !== undefined ? update.options : setObj.options;
-          }
-
-          // If type is not set, allow validation to pass (let schema required check fire if needed)
-          if (!type) return false;
-
-          if (type === "True-False") {
-            return value === "True" || value === "False";
-          }
-          if (type === "MCQ") {
-            return Array.isArray(options) && options.includes(value);
-          }
-          if (type === "Short-Answer") {
-            return typeof value === "string" && value.trim().length > 0;
+        validator: function(v) {
+          if (this.type === 'MCQ') {
+            return v && v.length > 0;
+          } else if (this.type === 'True-False') {
+            return v && v.length === 2; // Usually ['True', 'False']
+          } else if (this.type === 'Short-Answer') {
+            return true; // Empty array or any is fine for short answer based on spec
           }
           return true;
         },
-        message: "Correct answer must match the question type rules (True/False, or be one of the MCQ options).",
+        message: 'Invalid options array based on question type.',
       },
+      default: function() {
+        if (this.type === 'True-False') {
+          return ['True', 'False'];
+        }
+        return [];
+      }
+    },
+    correctAnswer: {
+      type: String,
+      required: true,
+      trim: true,
     },
     difficulty: {
       type: String,
-      enum: ["easy", "medium", "hard"],
-      default: "medium",
+      required: true,
+      enum: ['easy', 'medium', 'hard'],
     },
     tags: {
       type: [String],
       default: [],
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-const Question = mongoose.model("Question", questionSchema);
-export default Question;
+export default mongoose.model('Question', QuestionSchema);
