@@ -62,11 +62,10 @@ const Navbar = () => {
                 </Link>
                 <Link
                   to="/signup"
-                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer hover:translate-y-[-1px] hover:shadow-lg"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer hover:translate-y-[-1px] shadow-[0_4px_14px_rgba(124,58,237,0.3)] hover:shadow-lg"
                   style={{
                     background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
                     color: '#fff',
-                    boxShadow: '0 4px 14px rgba(124, 58, 237, 0.3)',
                   }}
                 >
                   Sign Up
