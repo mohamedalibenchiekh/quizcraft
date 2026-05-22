@@ -20,7 +20,7 @@ export const register = async (req, res, next) => {
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(email.trim())) {
       return res.status(400).json({ success: false, message: "Please provide a valid email address" });
     }
 
