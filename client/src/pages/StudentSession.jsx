@@ -10,11 +10,14 @@ const StudentSession = () => {
       connectSocket(token);
     }
     
-    socket.on('connect', () => {
+    const handleConnect = () => {
       console.log('Connected to live session');
-    });
+    };
+
+    socket.on('connect', handleConnect);
 
     return () => {
+      socket.off('connect', handleConnect);
       disconnectSocket();
     };
   }, [token]);

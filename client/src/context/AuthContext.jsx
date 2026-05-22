@@ -11,13 +11,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // In a real app, you would fetch user details using the token here
     if (token) {
-      localStorage.setItem('token', token);
-      // Mocking user decoding for now
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         setUser({ name: payload.name, email: payload.email, role: payload.role });
+        localStorage.setItem('token', token);
       } catch (e) {
-        // Handle invalid token
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
       }
     } else {
       localStorage.removeItem('token');
