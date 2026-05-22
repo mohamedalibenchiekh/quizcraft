@@ -50,21 +50,20 @@ export const register = async (req, res, next) => {
       role: role || "student",
     });
 
-    // Generate token
+    // Generate token — payload carries the three claims needed by middleware
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
     res.status(201).json({
       success: true,
-      data: {
-        _id: user._id,
+      token,
+      user: {
         name: user.name,
         email: user.email,
         role: user.role,
-        token,
       },
     });
   } catch (error) {
@@ -100,19 +99,18 @@ export const login = async (req, res, next) => {
     }
 
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
     res.status(200).json({
       success: true,
-      data: {
-        _id: user._id,
+      token,
+      user: {
         name: user.name,
         email: user.email,
         role: user.role,
-        token,
       },
     });
   } catch (error) {
