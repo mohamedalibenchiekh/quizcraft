@@ -60,8 +60,8 @@ The domain model is `User → Quiz → Question → Session → Attempt` (where 
 * **Deliverables**:
   * [x] Execute database models for `quizzes` and `questions` containing explicit attributes: `type` (MCQ / True-False / Short-Answer), `options`, `correctAnswer`, and `tags`.
   * [x] Design Professor-facing UI to manually build static questions and associate them with a clean parent Quiz schema wrapper.
-  * [ ] Build full API CRUD endpoints under `/api/quizzes` to query, modify, or drop explicit questions.
-  * [ ] **QC-BR-01**: A question cannot exist without a default difficulty label (`easy`, `medium`, `hard`) assigned during manual initialization or editing screens.
+  * [x] Build full API CRUD endpoints under `/api/quizzes` to query, modify, or drop explicit questions.
+  * [x] **QC-BR-01**: A question cannot exist without a default difficulty label (`easy`, `medium`, `hard`) assigned during manual initialization or editing screens.
   * [ ] Implement an explicit `isApproved` flag on the schema layer so professors can filter out unverified drafts from visible quiz lists.
 
 * **Exit criteria**:
