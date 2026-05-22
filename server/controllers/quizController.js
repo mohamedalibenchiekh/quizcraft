@@ -41,6 +41,9 @@ export const createQuiz = async (req, res, next) => {
         }
         // Filter out empty options or trim them
         formattedOptions = q.options.map(o => typeof o === 'string' ? o.trim() : o).filter(Boolean);
+        if (formattedOptions.length < 2) {
+          return res.status(400).json({ success: false, message: "MCQ questions must have at least 2 options" });
+        }
         if (!formattedOptions.includes(q.correctAnswer.trim())) {
           return res.status(400).json({ success: false, message: "Correct answer must match one of the MCQ options" });
         }
