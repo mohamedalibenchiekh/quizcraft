@@ -21,6 +21,8 @@ export const useLocalStorage = (key, initialValue) => {
         lastKeyRef.current = key;
       } catch (error) {
         console.error(error);
+        setStoredValue(initialValue);
+        lastKeyRef.current = key;
       }
     } else {
       try {
