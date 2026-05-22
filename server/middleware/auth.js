@@ -1,44 +1,76 @@
 import jwt from "jsonwebtoken";
 
+// ─── authenticateToken ────────────────────────────────────────────────────────
 /**
- * Middleware: verifies the JWT from the Authorization header.
- * Attaches the decoded payload to `req.user`.
+ * Primary token-parsing middleware.
+ *
+ * Extracts the JWT from the `Authorization: Bearer <token>` header, verifies
+ * it against JWT_SECRET, and attaches the decoded payload to `req.user`.
+ *
+ * Status semantics:
+ *   401 Unauthorized — token is absent or header is malformed.
+ *   403 Forbidden    — token is present but invalid or expired.
  */
-export const protect = (req, res, next) => {
+export const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  // ── 1. Presence check ─────────────────────────────────────────────────────
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized — no bearer token provided.",
+    });
+  }
+
+  const token = authHeader.slice(7).trim();
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized — no bearer token provided.",
+    });
+  }
+
+  // ── 2. Verification ───────────────────────────────────────────────────────
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ success: false, message: "Not authorized — no token provided" });
-    }
-
-    const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Attach user claims to the request object
-    req.user = decoded; // { id, role, iat, exp }
+    req.user = decoded; // { id, email, role, iat, exp }
     next();
   } catch (error) {
-    return res.status(401).json({ success: false, message: "Not authorized — token invalid or expired" });
+    // Token present but tampered, expired, or signed with wrong secret
+    return res.status(403).json({
+      success: false,
+      message: "Forbidden — token is invalid or has expired.",
+    });
   }
 };
 
+// ─── requireRole ──────────────────────────────────────────────────────────────
 /**
- * Middleware factory: blocks requests unless `req.user.role`
- * matches the required role.
+ * Higher-order role verification guard.
  *
- * Usage:  router.post("/", protect, requireRole("professor"), handler);
+ * Returns an Express middleware that asserts `req.user.role === role`.
+ * Must be chained *after* `authenticateToken` so that `req.user` is populated.
+ *
+ * Usage:
+ *   router.post("/", authenticateToken, requireRole("professor"), handler);
+ *
+ * @param {string} role - The role string to enforce (e.g. 'professor', 'student').
+ * @returns {import('express').RequestHandler}
  */
 export const requireRole = (role) => {
   return (req, res, next) => {
+    // Guard: authenticateToken must always run first
     if (!req.user) {
-      return res.status(401).json({ success: false, message: "Not authorized" });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized — authentication required.",
+      });
     }
 
     if (req.user.role !== role) {
       return res.status(403).json({
         success: false,
-        message: `Forbidden — requires '${role}' role`,
+        message: `Forbidden — this endpoint requires the '${role}' role. Your current role is '${req.user.role}'.`,
       });
     }
 
