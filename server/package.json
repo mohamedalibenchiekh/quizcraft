@@ -1,5 +1,6 @@
 {
   "name": "quizcraft-server",
+  "private": true,
   "version": "1.0.0",
   "description": "QuizCraft platform — Node.js + Express backend API",
   "type": "module",

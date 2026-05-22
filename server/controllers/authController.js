@@ -10,7 +10,29 @@ export const register = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
 
-    // Check for existing user
+    // Validate presence and types of input
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ success: false, message: "Please provide a valid name" });
+    }
+
+    if (!email || typeof email !== "string" || !email.trim()) {
+      return res.status(400).json({ success: false, message: "Please provide a valid email" });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ success: false, message: "Please provide a valid email address" });
+    }
+
+    if (!password || typeof password !== "string" || password.length < 6) {
+      return res.status(400).json({ success: false, message: "Password must be at least 6 characters long" });
+    }
+
+    if (role && !["professor", "student"].includes(role)) {
+      return res.status(400).json({ success: false, message: "Role must be either 'professor' or 'student'" });
+    }
+
+    // Check for existing user (prevents redundant hashing for known duplicate cases)
     const exists = await User.findOne({ email });
     if (exists) {
       return res.status(409).json({ success: false, message: "Email already registered" });
@@ -22,8 +44,8 @@ export const register = async (req, res, next) => {
 
     // Create user
     const user = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim(),
       password: hashedPassword,
       role: role || "student",
     });
@@ -46,6 +68,10 @@ export const register = async (req, res, next) => {
       },
     });
   } catch (error) {
+    // Handle concurrent/race-condition duplicate email registration safely
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: "Email already registered" });
+    }
     next(error);
   }
 };
