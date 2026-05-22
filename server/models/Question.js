@@ -41,6 +41,18 @@ const QuestionSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      validate: {
+        validator: function(v) {
+          const type = this instanceof mongoose.Query ? this.get('type') : this.type;
+          const options = this instanceof mongoose.Query ? this.get('options') : this.options;
+
+          if (type === 'True-False') return v === 'True' || v === 'False';
+          if (type === 'MCQ') return Array.isArray(options) && options.includes(v);
+          if (type === 'Short-Answer') return typeof v === 'string' && v.trim().length > 0;
+          return true;
+        },
+        message: 'Invalid correctAnswer for question type.',
+      },
     },
     difficulty: {
       type: String,
