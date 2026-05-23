@@ -73,7 +73,7 @@ The domain model is `User → Quiz → Question → Session → Attempt` (where 
 *Satisfies: TAG: AI — Auto-Question Generation*
 
 * **Deliverables**:
-  * [ ] Configure `Multer` middleware to handle multi-part file payloads specifically restricted to `.pdf` and `.docx` extensions.
+  * [x] Configure `Multer` middleware to handle multi-part file payloads specifically restricted to `.pdf` and `.docx` extensions.
   * [ ] Wire up `pdf-parse` and `mammoth` string extractors to cleanly pipe raw text inputs out of uploaded course arrays.
   * [ ] Engineer a strict system prompt instruction layer to pass text extracts directly into the LLM SDK endpoint (`/api/ai/generate`).
   * [ ] **QC-BR-02**: The AI system prompt must explicitly restrict output format structures to a native JSON string matching this signature blueprint: 
