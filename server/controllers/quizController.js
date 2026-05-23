@@ -64,8 +64,13 @@ export const createQuiz = async (req, res, next) => {
       });
     }
 
+    // Pre-create collections to avoid DDL execution within transactions (fixes WriteConflict/Namespace issues in memory replica sets)
+    await Question.createCollection();
+    await Quiz.createCollection();
+
     const session = await mongoose.startSession();
     session.startTransaction();
+    let transactionCommitted = false;
 
     try {
       const questionIds = [];
@@ -87,6 +92,7 @@ export const createQuiz = async (req, res, next) => {
 
       const savedQuiz = await newQuiz.save({ session });
       await session.commitTransaction();
+      transactionCommitted = true;
       session.endSession();
 
       const populatedQuiz = await Quiz.findById(savedQuiz._id).populate('questions');
@@ -97,7 +103,9 @@ export const createQuiz = async (req, res, next) => {
         data: populatedQuiz
       });
     } catch (transactionError) {
-      await session.abortTransaction();
+      if (!transactionCommitted) {
+        await session.abortTransaction();
+      }
       session.endSession();
       throw transactionError;
     }

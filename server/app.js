@@ -11,6 +11,7 @@ import authRoutes from "./routes/auth.js";
 import quizRoutes from "./routes/quizzes.js";
 import sessionRoutes from "./routes/sessions.js";
 import uploadRoutes from "./routes/upload.js";
+import aiRoutes from "./routes/ai.js";
 
 // ─── Initialise app ─────────────────────────────────────
 const app = express();
@@ -35,6 +36,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/ai", aiRoutes);
 
 // ─── Root endpoint ───────────────────────────────────────
 app.get("/", (_req, res) => {
@@ -44,6 +46,7 @@ app.get("/", (_req, res) => {
     endpoints: {
       health: "/api/health",
       upload: "/api/upload",
+      ai: "/api/ai",
       auth: "/api/auth",
       quizzes: "/api/quizzes",
       sessions: "/api/sessions",
