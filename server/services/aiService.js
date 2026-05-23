@@ -93,8 +93,11 @@ export const transformAndValidateAiQuestions = (questions, requestedDifficulty) 
       const correctAnswer = String(q.answer || q.correctAnswer || "").trim();
       if (!correctAnswer) continue; // Drop block if no answer exists
 
+      // Validate correctAnswer against options based on question type
       if (type === "MCQ" && !options.includes(correctAnswer)) {
-        continue; // Drop if correctAnswer is not one of the choices
+        continue; // Drop if correctAnswer is not one of the MCQ choices
+      } else if (type === "True-False" && !options.includes(correctAnswer)) {
+        continue; // Drop if correctAnswer is not "True" or "False"
       }
 
       // 5. Verify difficulty
@@ -122,12 +125,18 @@ export const transformAndValidateAiQuestions = (questions, requestedDifficulty) 
   // Atomic fallback schema parser: if all generated questions were corrupted/empty,
   // drop into a clean, safe, valid baseline question to guarantee system reliability.
   if (validated.length === 0) {
+    // Normalize and validate fallback difficulty to ensure it's a valid enum value
+    const normalizedFallbackDifficulty = String(requestedDifficulty || "medium").toLowerCase();
+    const validDifficulty = ["easy", "medium", "hard"].includes(normalizedFallbackDifficulty)
+      ? normalizedFallbackDifficulty
+      : "medium";
+
     validated.push({
       text: "Placeholder question generated due to automatic parser fallback.",
       type: "True-False",
       options: ["True", "False"],
       correctAnswer: "True",
-      difficulty: requestedDifficulty || "medium",
+      difficulty: validDifficulty,
       tags: ["AI Fallback"],
     });
   }
