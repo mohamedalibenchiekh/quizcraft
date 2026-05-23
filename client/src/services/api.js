@@ -13,7 +13,29 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   return config;
 });
+
+api.generateQuizFromFiles = async (formData) => {
+  const uploadResponse = await api.post('/upload', formData);
+
+  const text = uploadResponse.data?.consolidatedText;
+  const numQuestions = Number(formData.get('numQuestions') || 10);
+  const difficulty = formData.get('difficulty') || 'medium';
+
+  const generationResponse = await api.post('/ai/generate', {
+    text,
+    numQuestions,
+    difficulty,
+  });
+
+  return {
+    ...generationResponse.data,
+    upload: uploadResponse.data,
+  };
+};
 
 export default api;
