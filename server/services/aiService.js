@@ -1,9 +1,21 @@
 import OpenAI from "openai";
 
-// ─── Client initialisation ──────────────────────────────
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// ─── Client initialisation (Lazy) ──────────────────────
+let openai = null;
+
+/**
+ * Get or initialize the OpenAI client lazily.
+ * This prevents initialization errors when OPENAI_API_KEY is not set during test imports.
+ * @returns {OpenAI} The OpenAI client instance
+ */
+const getOpenAIClient = () => {
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+};
 
 // ─── System prompt template ─────────────────────────────
 /**
@@ -138,7 +150,8 @@ export const generateQuestions = async ({ text, numQuestions, difficulty }) => {
 
   let response;
   try {
-    response = await openai.chat.completions.create({
+    const client = getOpenAIClient();
+    response = await client.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.4,
       response_format: { type: "json_object" },
@@ -171,4 +184,4 @@ export const generateQuestions = async ({ text, numQuestions, difficulty }) => {
 };
 
 // Export for testing access
-export { openai, SYSTEM_PROMPT };
+export { getOpenAIClient, SYSTEM_PROMPT };
