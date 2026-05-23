@@ -34,7 +34,7 @@ export const extractTextFromFile = async (file) => {
     if (
       ext === ".docx" ||
       file.mimetype ===
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     ) {
       const result = await mammoth.extractRawText({ buffer: file.buffer });
       return result.value;
