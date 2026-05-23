@@ -10,6 +10,7 @@ import errorHandler from "./middleware/errorHandler.js";
 import authRoutes from "./routes/auth.js";
 import quizRoutes from "./routes/quizzes.js";
 import sessionRoutes from "./routes/sessions.js";
+import uploadRoutes from "./routes/upload.js";
 
 // ─── Initialise app ─────────────────────────────────────
 const app = express();
@@ -33,6 +34,7 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/sessions", sessionRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // ─── Root endpoint ───────────────────────────────────────
 app.get("/", (_req, res) => {
@@ -41,6 +43,7 @@ app.get("/", (_req, res) => {
     message: "Welcome to the QuizCraft API Platform",
     endpoints: {
       health: "/api/health",
+      upload: "/api/upload",
       auth: "/api/auth",
       quizzes: "/api/quizzes",
       sessions: "/api/sessions",
