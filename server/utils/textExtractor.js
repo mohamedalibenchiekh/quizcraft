@@ -1,4 +1,8 @@
-import pdfParse from "pdf-parse";
+import * as pdfParsePkg from "pdf-parse";
+// pdf-parse may export either a default function or named exports depending on
+// the installed package version. Normalize to `pdfParse` for compatibility.
+const pdfParse = pdfParsePkg?.default ?? pdfParsePkg;
+
 import mammoth from "mammoth";
 import path from "path";
 
