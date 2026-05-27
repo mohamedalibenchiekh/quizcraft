@@ -7,7 +7,7 @@ import app from "../app.js";
 
 process.env.JWT_SECRET = "supersecretfortesting";
 
-describe("Session Controller (Stubbed - Phase 3)", () => {
+describe("Session Controller — POST /api/sessions/answer (stubbed)", () => {
   let mongoServer;
   let professorToken;
 
@@ -27,29 +27,14 @@ describe("Session Controller (Stubbed - Phase 3)", () => {
     await mongoServer.stop();
   });
 
-  describe("POST /api/sessions/start", () => {
-    it("should return 501 Not Implemented", async () => {
-      const res = await request(app)
-        .post("/api/sessions/start")
-        .set("Authorization", `Bearer ${professorToken}`)
-        .send({ quizId: "64f1a2b3c4d5e6f7a8b9c0e1" });
+  it("should return 501 Not Implemented", async () => {
+    const res = await request(app)
+      .post("/api/sessions/answer")
+      .set("Authorization", `Bearer ${professorToken}`)
+      .send({ sessionId: "session_1", questionIndex: 0, answer: "A" });
 
-      expect(res.status).toBe(501);
-      expect(res.body.success).toBe(false);
-      expect(res.body.message).toMatch(/not yet implemented/i);
-    });
-  });
-
-  describe("POST /api/sessions/answer", () => {
-    it("should return 501 Not Implemented", async () => {
-      const res = await request(app)
-        .post("/api/sessions/answer")
-        .set("Authorization", `Bearer ${professorToken}`)
-        .send({ sessionId: "session_1", questionIndex: 0, answer: "A" });
-
-      expect(res.status).toBe(501);
-      expect(res.body.success).toBe(false);
-      expect(res.body.message).toMatch(/not yet implemented/i);
-    });
+    expect(res.status).toBe(501);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/not yet implemented/i);
   });
 });
