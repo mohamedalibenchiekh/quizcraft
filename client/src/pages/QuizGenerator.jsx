@@ -159,7 +159,8 @@ const QuizGenerator = () => {
       } else if (correctAnswerIndex > optionIndex) {
         correctAnswerIndex -= 1;
       }
-      return { ...question, options, correctAnswerIndex };
+      const correctAnswer = correctAnswerIndex >= 0 ? (options[correctAnswerIndex] || '') : '';
+      return { ...question, options, correctAnswerIndex, correctAnswer };
     }));
   };
 
