@@ -6,12 +6,14 @@ import Quiz from "../models/Quiz.js";
 import Question from "../models/Question.js";
 
 const ROOM_PIN_REGEX = /^[A-Z0-9]{6}$/;
+const NETWORK_BUFFER_MS = 500;
+const DEFAULT_QUESTION_DURATION_MS = 30000;
 
 const rooms = new Map();
 
 const getRoom = (pin) => {
   if (!rooms.has(pin)) {
-    rooms.set(pin, { hostId: null, participants: new Map(), playerScores: new Map() });
+    rooms.set(pin, { hostId: null, participants: new Map(), playerScores: new Map(), questionExpiresAt: 0 });
   }
   return rooms.get(pin);
 };
@@ -137,7 +139,7 @@ export const initSocket = (httpServer) => {
       }
     });
 
-    socket.on("nextQuestion", async ({ pin, questionIndex } = {}) => {
+    socket.on("nextQuestion", async ({ pin, questionIndex, durationMs } = {}) => {
       if (!pin || !ROOM_PIN_REGEX.test(String(pin))) {
         socket.emit("control-error", { message: "Invalid session PIN." });
         return;
@@ -168,6 +170,9 @@ export const initSocket = (httpServer) => {
         const filteredQuestion = questionDoc.toObject();
         delete filteredQuestion.correctAnswer;
 
+        const questionDuration = durationMs || DEFAULT_QUESTION_DURATION_MS;
+        room.questionExpiresAt = Date.now() + questionDuration + NETWORK_BUFFER_MS;
+
         io.to(pinStr).emit("reveal-question", filteredQuestion);
       } catch (error) {
         console.error(`[Socket] Error in nextQuestion: ${error.message}`);
@@ -183,6 +188,18 @@ export const initSocket = (httpServer) => {
 
       const pinStr = String(pin);
       const room = getRoom(pinStr);
+      const receivedAt = Date.now();
+
+      if (room.questionExpiresAt > 0 && receivedAt > room.questionExpiresAt) {
+        const participant = room.participants.get(socket.id);
+        const pid = participant ? participant.playerId : null;
+        if (pid) {
+          const currentScore = room.playerScores.get(pid) || 0;
+          room.playerScores.set(pid, currentScore);
+        }
+        socket.emit("answer-rejected", { reason: "timeout", pointsAwarded: 0 });
+        return;
+      }
 
       try {
         const session = await Session.findOne({ pin: pinStr });
