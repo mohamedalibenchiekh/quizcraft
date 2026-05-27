@@ -16,9 +16,14 @@ const start = async () => {
     console.log(`\n⚠️   Received ${signal}. Shutting down gracefully...`);
     server.close(async () => {
       console.log("🛑  HTTP server closed.");
-      await mongoose.connection.close();
-      console.log("🔌  MongoDB connection closed.");
-      process.exit(0);
+      try {
+        await mongoose.connection.close();
+        console.log("🔌  MongoDB connection closed.");
+        process.exit(0);
+      } catch (dbErr) {
+        console.error("⚠️  Error closing DB connection:", dbErr.message);
+        process.exit(1);
+      }
     });
 
     // Force exit after 10s if graceful shutdown hangs

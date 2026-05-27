@@ -1,5 +1,4 @@
-const QUESTION_TYPES = ['MCQ', 'True-False', 'Short-Answer'];
-const DIFFICULTIES = ['easy', 'medium', 'hard'];
+import { QUESTION_TYPES, DIFFICULTIES } from '../utils/quizConstants';
 
 const QuestionPreviewCard = ({
   question,
@@ -86,9 +85,9 @@ const QuestionPreviewCard = ({
                 type="radio"
                 aria-label={`Mark option ${optionIndex + 1} as correct`}
                 name={`correct-${question.id}`}
-                checked={question.correctAnswer === option && option !== ''}
+                checked={question.correctAnswerIndex === optionIndex && option !== ''}
                 disabled={disabled || option.trim() === ''}
-                onChange={() => onUpdate(questionIndex, { correctAnswer: option })}
+                onChange={() => onUpdate(questionIndex, { correctAnswerIndex: optionIndex, correctAnswer: option })}
                 className="h-4 w-4 accent-emerald-400"
               />
               <input
@@ -118,7 +117,14 @@ const QuestionPreviewCard = ({
             id={`answer-${question.id}`}
             value={question.correctAnswer}
             disabled={disabled}
-            onChange={(event) => onUpdate(questionIndex, { correctAnswer: event.target.value })}
+            onChange={(event) => {
+              const newVal = event.target.value;
+              const idx = question.options.indexOf(newVal);
+              onUpdate(questionIndex, {
+                correctAnswer: newVal,
+                correctAnswerIndex: idx >= 0 ? idx : question.correctAnswerIndex,
+              });
+            }}
             className="w-full rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
           />
         </div>

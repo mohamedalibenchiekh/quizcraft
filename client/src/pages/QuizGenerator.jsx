@@ -4,44 +4,13 @@ import api from '../services/api';
 import FileDropzone from '../components/FileDropzone';
 import AIParameterForm from '../components/AIParameterForm';
 import QuestionPreviewCard from '../components/QuestionPreviewCard';
-
-const DIFFICULTIES = ['easy', 'medium', 'hard'];
-const QUESTION_TYPES = ['MCQ', 'True-False', 'Short-Answer'];
-const MAX_FILES = 5;
-
-const makeQuestionId = () => `ai-question-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-const createBlankQuestion = (difficulty = 'medium') => ({
-  id: makeQuestionId(),
-  text: '',
-  type: 'MCQ',
-  options: ['', '', '', ''],
-  correctAnswer: '',
-  difficulty,
-  tags: [],
-});
-
-const clampQuestionCount = (value) => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return 1;
-  return Math.min(20, Math.max(1, Math.round(parsed)));
-};
-
-const normalizeQuestion = (question, index, fallbackDifficulty) => {
-  const type = question.type || 'MCQ';
-  const normalizedType = QUESTION_TYPES.includes(type) ? type : 'MCQ';
-  const options = Array.isArray(question.options) ? question.options.map((option) => String(option)) : [];
-
-  return {
-    id: question.id || question._id || `${makeQuestionId()}-${index}`,
-    text: question.text || question.question || '',
-    type: normalizedType,
-    options: normalizedType === 'Short-Answer' ? [] : options,
-    correctAnswer: question.correctAnswer || question.answer || '',
-    difficulty: DIFFICULTIES.includes(question.difficulty) ? question.difficulty : fallbackDifficulty,
-    tags: Array.isArray(question.tags) ? question.tags : [],
-  };
-};
+import {
+  DIFFICULTIES,
+  MAX_FILES,
+  clampQuestionCount,
+  createBlankQuestion,
+  normalizeQuestion,
+} from '../utils/quizConstants';
 
 const QuizGenerator = () => {
   const navigate = useNavigate();
@@ -141,13 +110,8 @@ const QuizGenerator = () => {
     setGeneratedQuestions((currentQuestions) => currentQuestions.map((question, index) => {
       if (index !== questionIndex) return question;
       const options = [...question.options];
-      const previousValue = options[optionIndex];
       options[optionIndex] = value;
-      return {
-        ...question,
-        options,
-        correctAnswer: question.correctAnswer === previousValue ? value : question.correctAnswer,
-      };
+      return { ...question, options };
     }));
   };
 
@@ -168,14 +132,14 @@ const QuizGenerator = () => {
 
       if (type === 'MCQ') {
         const options = question.options.length >= 2 ? question.options : ['', '', '', ''];
-        return { ...question, type, options, correctAnswer: '' };
+        return { ...question, type, options, correctAnswer: '', correctAnswerIndex: -1 };
       }
 
       if (type === 'True-False') {
-        return { ...question, type, options: ['True', 'False'], correctAnswer: 'True' };
+        return { ...question, type, options: ['True', 'False'], correctAnswer: 'True', correctAnswerIndex: 0 };
       }
 
-      return { ...question, type, options: [], correctAnswer: '' };
+      return { ...question, type, options: [], correctAnswer: '', correctAnswerIndex: -1 };
     }));
   };
 
@@ -188,13 +152,14 @@ const QuizGenerator = () => {
   const handleRemoveChoice = (questionIndex, optionIndex) => {
     setGeneratedQuestions((currentQuestions) => currentQuestions.map((question, index) => {
       if (index !== questionIndex || question.options.length <= 2) return question;
-      const removedOption = question.options[optionIndex];
       const options = question.options.filter((_, optionPosition) => optionPosition !== optionIndex);
-      return {
-        ...question,
-        options,
-        correctAnswer: question.correctAnswer === removedOption ? '' : question.correctAnswer,
-      };
+      let correctAnswerIndex = question.correctAnswerIndex;
+      if (correctAnswerIndex === optionIndex) {
+        correctAnswerIndex = -1;
+      } else if (correctAnswerIndex > optionIndex) {
+        correctAnswerIndex -= 1;
+      }
+      return { ...question, options, correctAnswerIndex };
     }));
   };
 
@@ -205,14 +170,17 @@ const QuizGenerator = () => {
     for (const [index, question] of generatedQuestions.entries()) {
       const label = `Question ${index + 1}`;
       if (!question.text.trim()) return `${label} needs question text.`;
-      if (!question.correctAnswer.trim()) return `${label} needs a correct answer.`;
       if (question.type === 'MCQ') {
         const options = question.options.map((option) => option.trim()).filter(Boolean);
         if (options.length < 2) return `${label} needs at least two answer choices.`;
-        if (!options.includes(question.correctAnswer.trim())) return `${label} correct answer must match one of its choices.`;
-      }
-      if (question.type === 'True-False' && !['True', 'False'].includes(question.correctAnswer)) {
-        return `${label} correct answer must be True or False.`;
+        if (question.correctAnswerIndex < 0 || !options.includes(question.options[question.correctAnswerIndex]?.trim())) {
+          return `${label} correct answer must match one of its choices.`;
+        }
+      } else {
+        if (!question.correctAnswer.trim()) return `${label} needs a correct answer.`;
+        if (question.type === 'True-False' && !['True', 'False'].includes(question.correctAnswer)) {
+          return `${label} correct answer must be True or False.`;
+        }
       }
     }
 
@@ -232,16 +200,21 @@ const QuizGenerator = () => {
     const payload = {
       title: quizTitle.trim(),
       description: description.trim(),
-      questions: generatedQuestions.map((question) => ({
-        text: question.text.trim(),
-        type: question.type,
-        options: question.type === 'Short-Answer'
-          ? []
-          : question.options.map((option) => option.trim()).filter(Boolean),
-        correctAnswer: question.correctAnswer.trim(),
-        difficulty: question.difficulty,
-        tags: question.tags || [],
-      })),
+      questions: generatedQuestions.map((question) => {
+        const correctAnswer = question.type === 'MCQ' && question.correctAnswerIndex >= 0
+          ? (question.options[question.correctAnswerIndex] || '').trim()
+          : question.correctAnswer.trim();
+        return {
+          text: question.text.trim(),
+          type: question.type,
+          options: question.type === 'Short-Answer'
+            ? []
+            : question.options.map((option) => option.trim()).filter(Boolean),
+          correctAnswer,
+          difficulty: question.difficulty,
+          tags: question.tags || [],
+        };
+      }),
     };
 
     try {

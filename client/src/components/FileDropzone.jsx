@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-const ACCEPTED_EXTENSIONS = ['.pdf', '.docx'];
+import { ACCEPTED_EXTENSIONS } from '../utils/quizConstants';
 
 const getExtension = (fileName = '') => {
   const dotIndex = fileName.lastIndexOf('.');

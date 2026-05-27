@@ -205,42 +205,45 @@ export const updateQuizMetadata = async (req, res, next) => {
  * @route   DELETE /api/quizzes/:id
  */
 export const deleteQuiz = async (req, res, next) => {
+  let session;
   try {
-    const quiz = await Quiz.findById(req.params.id);
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    const quiz = await Quiz.findById(req.params.id).session(session);
     if (!quiz) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ success: false, message: "Quiz not found" });
     }
 
     // Ownership check
     if (quiz.professorId.toString() !== req.user.id) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(403).json({ success: false, message: "Forbidden — You do not own this quiz" });
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    // Cascading delete within transaction
+    if (quiz.questions && quiz.questions.length > 0) {
+      await Question.deleteMany({ _id: { $in: quiz.questions } }, { session });
+    }
 
-    try {
-      // Cascading delete within transaction
-      if (quiz.questions && quiz.questions.length > 0) {
-        await Question.deleteMany({ _id: { $in: quiz.questions } }, { session });
-      }
+    // Remove Quiz document
+    await Quiz.deleteOne({ _id: quiz._id }, { session });
 
-      // Remove Quiz document
-      await Quiz.deleteOne({ _id: quiz._id }, { session });
+    await session.commitTransaction();
+    session.endSession();
 
-      await session.commitTransaction();
-      session.endSession();
-
-      res.status(200).json({
-        success: true,
-        message: "Quiz and all connected questions successfully deleted"
-      });
-    } catch (transactionError) {
+    res.status(200).json({
+      success: true,
+      message: "Quiz and all connected questions successfully deleted"
+    });
+  } catch (error) {
+    if (session) {
       await session.abortTransaction();
       session.endSession();
-      throw transactionError;
     }
-  } catch (error) {
     next(error);
   }
 };

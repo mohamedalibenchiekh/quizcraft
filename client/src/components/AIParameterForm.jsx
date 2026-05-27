@@ -1,10 +1,4 @@
-const DIFFICULTIES = ['easy', 'medium', 'hard'];
-
-const clampQuestionCount = (value) => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return 1;
-  return Math.min(20, Math.max(1, Math.round(parsed)));
-};
+import { DIFFICULTIES, clampQuestionCount } from '../utils/quizConstants';
 
 const AIParameterForm = ({ numQuestions, difficulty, onNumQuestionsChange, onDifficultyChange, isGenerating, isSaving, onSubmit }) => {
   const interactionLocked = isGenerating || isSaving;
