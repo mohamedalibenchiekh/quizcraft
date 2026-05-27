@@ -207,20 +207,14 @@ describe("Socket.io Live Quiz Orchestration", () => {
     });
     expect(ack.score).toBeGreaterThan(0);
 
-    const wrongAckPromise = waitForEvent(studentSocket, "answer-acknowledged");
+    const dupErr = waitForEvent(studentSocket, "submit-error");
     studentSocket.emit("submitAnswer", {
       pin: PIN,
       questionId: questionId.toString(),
       chosenOption: "3",
     });
-    const wrongAck = await wrongAckPromise;
-
-    expect(wrongAck).toMatchObject({
-      questionId: questionId.toString(),
-      correct: false,
-      score: ack.score,
-      pointsAwarded: 0,
-    });
+    const dupPayload = await dupErr;
+    expect(dupPayload).toMatchObject({ message: expect.stringContaining("already answered") });
 
     hostSocket.close();
     studentSocket.close();

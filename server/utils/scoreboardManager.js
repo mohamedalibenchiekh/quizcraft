@@ -77,6 +77,23 @@ export const compileLeaderboard = (pin) => {
   });
 };
 
+export const finalizeUnansweredPlayers = (pin) => {
+  const sb = getScoreboard(pin);
+  if (!sb.answeredThisRound) return;
+
+  for (const playerId of Object.keys(sb.players)) {
+    if (!sb.answeredThisRound.has(playerId)) {
+      sb.players[playerId].currentStreak = 0;
+    }
+  }
+};
+
+export const hasAnsweredThisRound = (pin, playerId) => {
+  const sb = getScoreboard(pin);
+  if (!sb.answeredThisRound) return false;
+  return sb.answeredThisRound.has(playerId);
+};
+
 export const allAnsweredThisRound = (pin, totalNonHostPlayers) => {
   const sb = getScoreboard(pin);
   if (!sb.answeredThisRound) return false;

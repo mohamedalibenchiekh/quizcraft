@@ -8,6 +8,8 @@ import {
   startQuestion,
   recordAnswer,
   compileLeaderboard,
+  finalizeUnansweredPlayers,
+  hasAnsweredThisRound,
   allAnsweredThisRound,
   deleteScoreboard,
 } from "../utils/scoreboardManager.js";
@@ -174,6 +176,7 @@ export const initSocket = (httpServer) => {
         delete filteredQuestion.correctAnswer;
 
         if (room.questionStartTime) {
+          finalizeUnansweredPlayers(pinStr);
           const prevLb = compileLeaderboard(pinStr);
           if (prevLb.length > 0) {
             io.to(pinStr).emit("leaderboard-updated", { leaderboard: prevLb });
@@ -207,9 +210,25 @@ export const initSocket = (httpServer) => {
       const room = getRoom(pinStr);
       const receivedAt = Date.now();
 
+      if (!room.questionStartTime) {
+        socket.emit("submit-error", { message: "No question is currently active." });
+        return;
+      }
+
+      const participant = room.participants.get(socket.id);
+      const pid = participant ? participant.playerId : null;
+
+      if (participant && participant.role === "host") {
+        socket.emit("submit-error", { message: "Host cannot submit answers." });
+        return;
+      }
+
+      if (pid && hasAnsweredThisRound(pinStr, pid)) {
+        socket.emit("submit-error", { message: "You have already answered this question." });
+        return;
+      }
+
       if (room.questionExpiresAt > 0 && receivedAt > room.questionExpiresAt) {
-        const participant = room.participants.get(socket.id);
-        const pid = participant ? participant.playerId : null;
         if (pid) {
           recordAnswer(pinStr, {
             playerId: pid,
@@ -238,14 +257,12 @@ export const initSocket = (httpServer) => {
 
         const isCorrect = question.correctAnswer === chosenOption;
 
-        const participant = room.participants.get(socket.id);
-        const pid = participant ? participant.playerId : null;
         if (!pid) {
           socket.emit("submit-error", { message: "Participant not found." });
           return;
         }
 
-        const responseTimeMs = room.questionStartTime ? receivedAt - room.questionStartTime : 0;
+        const responseTimeMs = receivedAt - room.questionStartTime;
         const result = recordAnswer(pinStr, {
           playerId: pid,
           username: participant.username,
