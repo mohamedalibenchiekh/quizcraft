@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import mongoose from "mongoose";
 
 import errorHandler from "./middleware/errorHandler.js";
 
@@ -17,6 +18,11 @@ import aiRoutes from "./routes/ai.js";
 const app = express();
 
 // ─── Global middleware ───────────────────────────────────
+// Number of trusted reverse-proxy hops so express-rate-limit identifies real client IPs.
+// Set TRUST_PROXY=0 for direct-facing deployments, or higher values for multi-hop
+// topologies (e.g. Cloudflare → Nginx → app requires 2).
+const trustProxy = process.env.TRUST_PROXY;
+app.set("trust proxy", trustProxy !== undefined ? Number(trustProxy) : 1);
 app.use(express.json()); // parse JSON bodies
 app.use(
   helmet({
@@ -56,7 +62,16 @@ app.get("/", (_req, res) => {
 
 // ─── Health-check endpoint ───────────────────────────────
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", uptime: process.uptime() });
+  const dbState = mongoose.connection.readyState;
+  const dbStatus = { 0: "disconnected", 1: "connected", 2: "connecting", 3: "disconnecting" };
+  if (dbState !== 1) {
+    return res.status(503).json({
+      status: "unavailable",
+      uptime: process.uptime(),
+      database: dbStatus[dbState] || "unknown",
+    });
+  }
+  res.json({ status: "ok", uptime: process.uptime(), database: "connected" });
 });
 
 // ─── Global error handler (must be LAST middleware) ──────

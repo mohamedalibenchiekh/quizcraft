@@ -1,7 +1,24 @@
 import * as pdfParsePkg from "pdf-parse";
-// pdf-parse may export either a default function or named exports depending on
-// the installed package version. Normalize to `pdfParse` for compatibility.
-const pdfParse = pdfParsePkg?.default ?? pdfParsePkg;
+// pdf-parse version >= 2.x exports a `PDFParse` class rather than a function.
+// For backwards compatibility and unit testing, we handle both styles.
+const pdfParse = async (buffer) => {
+  const PDFParseClass = pdfParsePkg?.PDFParse || pdfParsePkg?.default?.PDFParse;
+  if (PDFParseClass) {
+    const parser = new PDFParseClass({ data: buffer });
+    try {
+      return await parser.getText();
+    } finally {
+      await parser.destroy();
+    }
+  }
+
+  const fallback = pdfParsePkg?.default ?? pdfParsePkg;
+  if (typeof fallback === "function") {
+    return fallback(buffer);
+  }
+
+  throw new Error("pdfParse is not a function and PDFParse class is not available");
+};
 
 import mammoth from "mammoth";
 import path from "path";

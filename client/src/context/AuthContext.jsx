@@ -1,5 +1,11 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 
+/**
+ * SECURITY NOTE: Role claims decoded here are for UI cosmetic purposes only
+ * (show/hide buttons, display conditional content). The backend middleware
+ * (authenticateToken + requireRole) is the SINGLE AUTHORITATIVE gate for all
+ * protected operations. Never make authZ decisions client-side.
+ */
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
@@ -9,7 +15,6 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
 
   useEffect(() => {
-    // In a real app, you would fetch user details using the token here
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));

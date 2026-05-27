@@ -1,8 +1,20 @@
 import { describe, it, expect, vi } from "vitest";
 
 // ─── Mock pdf-parse and mammoth BEFORE importing the module under test ───
+const mockPdfParse = vi.fn();
+class MockPDFParse {
+  constructor(options) {
+    this.options = options;
+  }
+  async getText() {
+    return mockPdfParse(this.options.data);
+  }
+  async destroy() {}
+}
+
 vi.mock("pdf-parse", () => ({
-  default: vi.fn(),
+  default: mockPdfParse,
+  PDFParse: MockPDFParse,
 }));
 
 vi.mock("mammoth", () => ({
