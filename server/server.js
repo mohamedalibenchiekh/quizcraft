@@ -1,13 +1,17 @@
+import http from "http";
 import app from "./app.js";
 import mongoose from "mongoose";
 import { connectDB } from "./config/db.js";
+import { initSocket } from "./config/socket.js";
 
 const PORT = process.env.PORT || 5000;
 
 // ─── Start server ────────────────────────────────────────
 const start = async () => {
   await connectDB();
-  const server = app.listen(PORT, () => {
+  const server = http.createServer(app);
+  initSocket(server);
+  server.listen(PORT, () => {
     console.log(`🚀  QuizCraft API running on http://localhost:${PORT}`);
   });
 
