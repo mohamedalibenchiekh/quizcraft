@@ -1,6 +1,6 @@
 import { Server } from "socket.io";
 
-const ROOM_PIN_REGEX = /^\d{6}$/;
+const ROOM_PIN_REGEX = /^[A-Z0-9]{6}$/;
 
 export const initSocket = (httpServer) => {
   const io = new Server(httpServer, {
@@ -16,7 +16,7 @@ export const initSocket = (httpServer) => {
 
     socket.on("join-session", ({ pin, username } = {}) => {
       if (!pin || !ROOM_PIN_REGEX.test(String(pin))) {
-        socket.emit("join-error", { message: "Invalid session PIN. Must be a 6-digit code." });
+        socket.emit("join-error", { message: "Invalid session PIN. Must be a 6-character alphanumeric code." });
         return;
       }
 

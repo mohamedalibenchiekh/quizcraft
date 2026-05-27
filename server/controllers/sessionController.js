@@ -4,6 +4,7 @@ import Session from "../models/Session.js";
 
 const PIN_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const PIN_LENGTH = 6;
+const MAX_PIN_RETRIES = 5;
 
 const generatePin = () => {
   let pin = "";
@@ -13,12 +14,16 @@ const generatePin = () => {
   return pin;
 };
 
-const generateUniquePin = async () => {
-  let pin;
-  do {
-    pin = generatePin();
-  } while (await Session.exists({ pin }));
-  return pin;
+const createSessionWithUniquePin = async (data) => {
+  for (let attempt = 0; attempt < MAX_PIN_RETRIES; attempt++) {
+    data.pin = generatePin();
+    try {
+      return await Session.create(data);
+    } catch (error) {
+      if (error.code !== 11000) throw error;
+    }
+  }
+  throw new Error("Failed to generate a unique session PIN after multiple attempts.");
 };
 
 export const startSession = async (req, res, next) => {
@@ -39,12 +44,9 @@ export const startSession = async (req, res, next) => {
       });
     }
 
-    const pin = await generateUniquePin();
-
-    const session = await Session.create({
+    const session = await createSessionWithUniquePin({
       quizId,
       hostId: req.user.id,
-      pin,
     });
 
     res.status(201).json({
