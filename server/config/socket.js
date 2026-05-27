@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import Session from "../models/Session.js";
 import Quiz from "../models/Quiz.js";
@@ -19,13 +20,16 @@ const broadcastRoster = (io, pin) => {
   const room = getRoom(pin);
   const roster = Array.from(room.participants.entries()).map(([socketId, p]) => ({
     socketId,
+    playerId: p.playerId,
     username: p.username,
     role: p.role,
   }));
   io.to(pin).emit("room-roster-updated", roster);
 };
 
-const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode } = {}) => {
+const generatePlayerId = () => crypto.randomUUID();
+
+const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode, playerId } = {}) => {
   const pin = rawPin || roomCode;
   if (!pin || !ROOM_PIN_REGEX.test(String(pin))) {
     socket.emit("join-error", { message: "Invalid session PIN. Must be a 6-character alphanumeric code." });
@@ -34,14 +38,20 @@ const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode } = {}) =>
 
   const pinStr = String(pin);
   const room = getRoom(pinStr);
+  const id = playerId || generatePlayerId();
+
+  if (!room.playerScores.has(id)) {
+    room.playerScores.set(id, 0);
+  }
 
   room.participants.set(socket.id, {
+    playerId: id,
     username: username || "Anonymous",
     role: "player",
   });
 
   socket.join(pinStr);
-  console.log(`[Socket] ${socket.id} joined room ${pinStr}`);
+  console.log(`[Socket] ${socket.id} (player ${id}) joined room ${pinStr}`);
 
   broadcastRoster(io, pinStr);
 };
@@ -85,6 +95,7 @@ export const initSocket = (httpServer) => {
         room.hostId = socket.id;
 
         room.participants.set(socket.id, {
+          playerId: generatePlayerId(),
           username: decoded.id || "Host",
           role: "host",
         });
@@ -190,9 +201,14 @@ export const initSocket = (httpServer) => {
         const delta = isCorrect ? 1 : 0;
 
         const participant = room.participants.get(socket.id);
-        const playerName = participant ? participant.username : "Anonymous";
-        const currentScore = room.playerScores.get(playerName) || 0;
-        room.playerScores.set(playerName, currentScore + delta);
+        const pid = participant ? participant.playerId : null;
+        if (!pid) {
+          socket.emit("submit-error", { message: "Participant not found." });
+          return;
+        }
+
+        const currentScore = room.playerScores.get(pid) || 0;
+        room.playerScores.set(pid, currentScore + delta);
 
         socket.emit("answer-acknowledged", {
           questionId,
