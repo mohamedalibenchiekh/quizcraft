@@ -36,7 +36,13 @@ export const initSocket = (httpServer) => {
         return;
       }
 
-      socket.to(String(pin)).emit("quiz-started");
+      const pinStr = String(pin);
+      if (!socket.rooms.has(pinStr)) {
+        socket.emit("control-error", { message: "You are not a member of this session room." });
+        return;
+      }
+
+      socket.to(pinStr).emit("quiz-started");
       console.log(`[Socket] Quiz started by ${socket.id} in room ${pin}`);
     });
 
@@ -46,7 +52,13 @@ export const initSocket = (httpServer) => {
         return;
       }
 
-      socket.to(String(pin)).emit("next-question", { questionIndex });
+      const pinStr = String(pin);
+      if (!socket.rooms.has(pinStr)) {
+        socket.emit("control-error", { message: "You are not a member of this session room." });
+        return;
+      }
+
+      socket.to(pinStr).emit("next-question", { questionIndex });
       console.log(`[Socket] Next question ${questionIndex} by ${socket.id} in room ${pin}`);
     });
 
