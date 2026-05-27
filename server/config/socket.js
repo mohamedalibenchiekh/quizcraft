@@ -170,7 +170,10 @@ export const initSocket = (httpServer) => {
         const filteredQuestion = questionDoc.toObject();
         delete filteredQuestion.correctAnswer;
 
-        const questionDuration = durationMs || DEFAULT_QUESTION_DURATION_MS;
+        const questionDuration =
+          typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs > 0
+            ? durationMs
+            : DEFAULT_QUESTION_DURATION_MS;
         room.questionExpiresAt = Date.now() + questionDuration + NETWORK_BUFFER_MS;
 
         io.to(pinStr).emit("reveal-question", filteredQuestion);
