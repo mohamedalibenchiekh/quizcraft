@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import jwt from "jsonwebtoken";
 import Session from "../models/Session.js";
 import Quiz from "../models/Quiz.js";
 import Question from "../models/Question.js";
@@ -24,6 +25,27 @@ const broadcastRoster = (io, pin) => {
   io.to(pin).emit("room-roster-updated", roster);
 };
 
+const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode } = {}) => {
+  const pin = rawPin || roomCode;
+  if (!pin || !ROOM_PIN_REGEX.test(String(pin))) {
+    socket.emit("join-error", { message: "Invalid session PIN. Must be a 6-character alphanumeric code." });
+    return;
+  }
+
+  const pinStr = String(pin);
+  const room = getRoom(pinStr);
+
+  room.participants.set(socket.id, {
+    username: username || "Anonymous",
+    role: "player",
+  });
+
+  socket.join(pinStr);
+  console.log(`[Socket] ${socket.id} joined room ${pinStr}`);
+
+  broadcastRoster(io, pinStr);
+};
+
 export const initSocket = (httpServer) => {
   const io = new Server(httpServer, {
     cors: {
@@ -36,28 +58,68 @@ export const initSocket = (httpServer) => {
   io.on("connection", (socket) => {
     console.log(`[Socket] Connected: ${socket.id}`);
 
-    socket.on("joinRoom", ({ pin, username, role } = {}) => {
+    socket.on("joinRoom", (payload) => handleJoinRoom(io, socket, payload));
+    socket.on("join-room", (payload) => handleJoinRoom(io, socket, payload));
+
+    socket.on("hostClaim", async ({ pin, token } = {}) => {
+      if (!pin || !ROOM_PIN_REGEX.test(String(pin)) || !token) {
+        socket.emit("control-error", { message: "Invalid payload or missing token." });
+        return;
+      }
+
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const session = await Session.findOne({ pin: String(pin) });
+        if (!session) {
+          socket.emit("control-error", { message: "Session not found." });
+          return;
+        }
+
+        if (decoded.id !== session.hostId.toString()) {
+          socket.emit("control-error", { message: "You are not authorized as host for this session." });
+          return;
+        }
+
+        const pinStr = String(pin);
+        const room = getRoom(pinStr);
+        room.hostId = socket.id;
+
+        room.participants.set(socket.id, {
+          username: decoded.id || "Host",
+          role: "host",
+        });
+
+        socket.join(pinStr);
+        broadcastRoster(io, pinStr);
+        socket.emit("host-claimed", { message: "You are now the host." });
+        console.log(`[Socket] ${socket.id} claimed host for room ${pinStr}`);
+      } catch (error) {
+        socket.emit("control-error", { message: "Invalid or expired token." });
+      }
+    });
+
+    socket.on("startQuiz", async ({ pin } = {}) => {
       if (!pin || !ROOM_PIN_REGEX.test(String(pin))) {
-        socket.emit("join-error", { message: "Invalid session PIN. Must be a 6-character alphanumeric code." });
+        socket.emit("control-error", { message: "Invalid session PIN." });
         return;
       }
 
       const pinStr = String(pin);
       const room = getRoom(pinStr);
 
-      if (role === "host") {
-        room.hostId = socket.id;
+      if (room.hostId !== socket.id) {
+        socket.emit("control-error", { message: "Only the host can start the quiz." });
+        return;
       }
 
-      room.participants.set(socket.id, {
-        username: username || "Anonymous",
-        role: role || "player",
-      });
-
-      socket.join(pinStr);
-      console.log(`[Socket] ${socket.id} (${role}) joined room ${pinStr}`);
-
-      broadcastRoster(io, pinStr);
+      try {
+        await Session.findOneAndUpdate({ pin: pinStr }, { status: "active" });
+        io.to(pinStr).emit("quiz-started");
+        console.log(`[Socket] Quiz started by host ${socket.id} in room ${pinStr}`);
+      } catch (error) {
+        console.error(`[Socket] Error starting quiz: ${error.message}`);
+        socket.emit("control-error", { message: "Internal error starting quiz." });
+      }
     });
 
     socket.on("nextQuestion", async ({ pin, questionIndex } = {}) => {
@@ -98,7 +160,7 @@ export const initSocket = (httpServer) => {
       }
     });
 
-    socket.on("submitAnswer", async ({ pin, questionId, chosenOption, username } = {}) => {
+    socket.on("submitAnswer", async ({ pin, questionId, chosenOption } = {}) => {
       if (!pin || !ROOM_PIN_REGEX.test(String(pin))) {
         socket.emit("submit-error", { message: "Invalid session PIN." });
         return;
@@ -122,11 +184,9 @@ export const initSocket = (httpServer) => {
 
         const isCorrect = question.correctAnswer === chosenOption;
         const delta = isCorrect ? 1 : 0;
-        const participant = room.participants.get(socket.id);
-        const uname = username || (participant ? participant.username : "Anonymous");
 
-        const currentScore = room.scores.get(uname) || 0;
-        room.scores.set(uname, currentScore + delta);
+        const currentScore = room.scores.get(socket.id) || 0;
+        room.scores.set(socket.id, currentScore + delta);
 
         socket.emit("answer-acknowledged", {
           questionId,
@@ -172,6 +232,7 @@ export const initSocket = (httpServer) => {
       for (const [pin, room] of rooms.entries()) {
         if (room.participants.has(socket.id)) {
           room.participants.delete(socket.id);
+          room.scores.delete(socket.id);
           if (room.hostId === socket.id) {
             room.hostId = null;
           }

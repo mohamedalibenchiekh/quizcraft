@@ -51,11 +51,11 @@ describe("Socket.io Real-Time Engine", () => {
     ]);
 
     const roster1 = waitForEvent(client1, "room-roster-updated");
-    client1.emit("joinRoom", { pin: PIN, username: "Professor", role: "host" });
+    client1.emit("joinRoom", { pin: PIN, username: "Professor" });
     const firstRoster = await roster1;
 
     expect(firstRoster).toHaveLength(1);
-    expect(firstRoster[0]).toMatchObject({ username: "Professor", role: "host" });
+    expect(firstRoster[0]).toMatchObject({ username: "Professor", role: "player" });
 
     const roster2 = waitForEvent(client2, "room-roster-updated");
     const roster1Again = waitForEvent(client1, "room-roster-updated");
