@@ -9,6 +9,7 @@ class MockPDFParse {
   async getText() {
     return mockPdfParse(this.options.data);
   }
+  async destroy() {}
 }
 
 vi.mock("pdf-parse", () => ({
