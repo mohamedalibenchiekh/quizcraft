@@ -5,7 +5,11 @@ const pdfParse = async (buffer) => {
   const PDFParseClass = pdfParsePkg?.PDFParse || pdfParsePkg?.default?.PDFParse;
   if (PDFParseClass) {
     const parser = new PDFParseClass({ data: buffer });
-    return parser.getText();
+    try {
+      return await parser.getText();
+    } finally {
+      await parser.destroy();
+    }
   }
 
   const fallback = pdfParsePkg?.default ?? pdfParsePkg;
