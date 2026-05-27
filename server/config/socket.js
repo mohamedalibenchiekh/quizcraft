@@ -29,7 +29,7 @@ const broadcastRoster = (io, pin) => {
 
 const generatePlayerId = () => crypto.randomUUID();
 
-const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode, playerId } = {}) => {
+const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode } = {}) => {
   const pin = rawPin || roomCode;
   if (!pin || !ROOM_PIN_REGEX.test(String(pin))) {
     socket.emit("join-error", { message: "Invalid session PIN. Must be a 6-character alphanumeric code." });
@@ -38,7 +38,7 @@ const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode, playerId 
 
   const pinStr = String(pin);
   const room = getRoom(pinStr);
-  const id = playerId || generatePlayerId();
+  const id = generatePlayerId();
 
   if (!room.playerScores.has(id)) {
     room.playerScores.set(id, 0);
