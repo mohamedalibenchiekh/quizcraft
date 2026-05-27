@@ -2,26 +2,29 @@ import mongoose from "mongoose";
 
 const sessionSchema = new mongoose.Schema(
   {
-    roomCode: {
-      type: String,
-      required: [true, "Room code is required"],
-      unique: true,
-      uppercase: true,
-      trim: true,
-    },
     quizId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Quiz",
       required: [true, "Quiz ID is required"],
     },
+    hostId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "Host (professor) ID is required"],
+    },
+    pin: {
+      type: String,
+      required: [true, "Room PIN is required"],
+      unique: true,
+      index: true,
+      uppercase: true,
+      trim: true,
+      match: [/^[A-Z0-9]{6}$/, "PIN must be exactly 6 alphanumeric characters"],
+    },
     status: {
       type: String,
-      enum: ["active", "closed"],
-      default: "active",
-    },
-    currentQuestionIndex: {
-      type: Number,
-      default: 0,
+      enum: ["waiting", "active", "completed"],
+      default: "waiting",
     },
   },
   { timestamps: true }
