@@ -10,7 +10,7 @@ const rooms = new Map();
 
 const getRoom = (pin) => {
   if (!rooms.has(pin)) {
-    rooms.set(pin, { hostId: null, participants: new Map(), scores: new Map() });
+    rooms.set(pin, { hostId: null, participants: new Map(), playerScores: new Map() });
   }
   return rooms.get(pin);
 };
@@ -113,7 +113,11 @@ export const initSocket = (httpServer) => {
       }
 
       try {
-        await Session.findOneAndUpdate({ pin: pinStr }, { status: "active" });
+        const updated = await Session.findOneAndUpdate({ pin: pinStr }, { status: "active" });
+        if (!updated) {
+          socket.emit("control-error", { message: "Session not found." });
+          return;
+        }
         io.to(pinStr).emit("quiz-started");
         console.log(`[Socket] Quiz started by host ${socket.id} in room ${pinStr}`);
       } catch (error) {
@@ -185,8 +189,10 @@ export const initSocket = (httpServer) => {
         const isCorrect = question.correctAnswer === chosenOption;
         const delta = isCorrect ? 1 : 0;
 
-        const currentScore = room.scores.get(socket.id) || 0;
-        room.scores.set(socket.id, currentScore + delta);
+        const participant = room.participants.get(socket.id);
+        const playerName = participant ? participant.username : "Anonymous";
+        const currentScore = room.playerScores.get(playerName) || 0;
+        room.playerScores.set(playerName, currentScore + delta);
 
         socket.emit("answer-acknowledged", {
           questionId,
@@ -232,7 +238,6 @@ export const initSocket = (httpServer) => {
       for (const [pin, room] of rooms.entries()) {
         if (room.participants.has(socket.id)) {
           room.participants.delete(socket.id);
-          room.scores.delete(socket.id);
           if (room.hostId === socket.id) {
             room.hostId = null;
           }
