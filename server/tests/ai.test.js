@@ -210,6 +210,19 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
       expect(res.body.success).toBe(false);
       expect(res.body.message).toMatch(/difficulty/i);
     });
+
+    it("should return 400 when 'text' exceeds maximum length", async () => {
+      const longText = "x".repeat(50001);
+      const res = await request(app)
+        .post("/api/ai/generate")
+        .set("Authorization", `Bearer ${professorToken}`)
+        .send({ text: longText, numQuestions: 3, difficulty: "easy" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toMatch(/maximum length/i);
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
   });
 
   // ─── Auth & Role Guards ────────────────────────────────

@@ -2,6 +2,54 @@ import mongoose from "mongoose";
 import Quiz from "../models/Quiz.js";
 import Question from "../models/Question.js";
 
+const VALID_TYPES = ['MCQ', 'True-False', 'Short-Answer'];
+const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'];
+
+const validateQuestionData = (q) => {
+  if (!q.text || !q.text.trim()) {
+    return { error: "Question text is required" };
+  }
+  if (!q.type || !VALID_TYPES.includes(q.type)) {
+    return { error: "Invalid question type" };
+  }
+  if (!q.correctAnswer || !q.correctAnswer.trim()) {
+    return { error: "Correct answer is required" };
+  }
+  if (!q.difficulty || !VALID_DIFFICULTIES.includes(q.difficulty)) {
+    return { error: "Difficulty must be easy, medium, or hard" };
+  }
+
+  let formattedOptions = [];
+  if (q.type === 'MCQ') {
+    if (!Array.isArray(q.options) || q.options.length < 2) {
+      return { error: "MCQ questions must have at least 2 options" };
+    }
+    formattedOptions = q.options.map(o => typeof o === 'string' ? o.trim() : o).filter(Boolean);
+    if (formattedOptions.length < 2) {
+      return { error: "MCQ questions must have at least 2 options" };
+    }
+    if (!formattedOptions.includes(q.correctAnswer.trim())) {
+      return { error: "Correct answer must match one of the MCQ options" };
+    }
+  } else if (q.type === 'True-False') {
+    formattedOptions = ['True', 'False'];
+    if (q.correctAnswer !== 'True' && q.correctAnswer !== 'False') {
+      return { error: "True-False correctAnswer must be 'True' or 'False'" };
+    }
+  }
+
+  return {
+    sanitized: {
+      text: q.text.trim(),
+      type: q.type,
+      options: formattedOptions,
+      correctAnswer: q.correctAnswer.trim(),
+      difficulty: q.difficulty,
+      tags: Array.isArray(q.tags) ? q.tags.map(t => typeof t === 'string' ? t.trim() : t).filter(Boolean) : []
+    }
+  };
+};
+
 /**
  * @desc    Create a new quiz (professor only)
  * @route   POST /api/quizzes
@@ -22,46 +70,11 @@ export const createQuiz = async (req, res, next) => {
 
     // Validate and normalize all questions before writing any documents.
     for (const q of questions) {
-      if (!q.text || !q.text.trim()) {
-        return res.status(400).json({ success: false, message: "Question text is required" });
+      const result = validateQuestionData(q);
+      if (result.error) {
+        return res.status(400).json({ success: false, message: result.error });
       }
-      if (!q.type || !['MCQ', 'True-False', 'Short-Answer'].includes(q.type)) {
-        return res.status(400).json({ success: false, message: "Invalid question type" });
-      }
-      if (!q.correctAnswer || !q.correctAnswer.trim()) {
-        return res.status(400).json({ success: false, message: "Correct answer is required" });
-      }
-      if (!q.difficulty || !['easy', 'medium', 'hard'].includes(q.difficulty)) {
-        return res.status(400).json({ success: false, message: "Difficulty must be easy, medium, or hard" });
-      }
-
-      let formattedOptions = [];
-      if (q.type === 'MCQ') {
-        if (!Array.isArray(q.options) || q.options.length < 2) {
-          return res.status(400).json({ success: false, message: "MCQ questions must have at least 2 options" });
-        }
-        formattedOptions = q.options.map(o => typeof o === 'string' ? o.trim() : o).filter(Boolean);
-        if (formattedOptions.length < 2) {
-          return res.status(400).json({ success: false, message: "MCQ questions must have at least 2 options" });
-        }
-        if (!formattedOptions.includes(q.correctAnswer.trim())) {
-          return res.status(400).json({ success: false, message: "Correct answer must match one of the MCQ options" });
-        }
-      } else if (q.type === 'True-False') {
-        formattedOptions = ['True', 'False'];
-        if (q.correctAnswer !== 'True' && q.correctAnswer !== 'False') {
-          return res.status(400).json({ success: false, message: "True-False correctAnswer must be 'True' or 'False'" });
-        }
-      }
-
-      sanitizedQuestions.push({
-        text: q.text.trim(),
-        type: q.type,
-        options: formattedOptions,
-        correctAnswer: q.correctAnswer.trim(),
-        difficulty: q.difficulty,
-        tags: Array.isArray(q.tags) ? q.tags.map(t => typeof t === 'string' ? t.trim() : t).filter(Boolean) : []
-      });
+      sanitizedQuestions.push(result.sanitized);
     }
 
     // Pre-create collections to avoid DDL execution within transactions (fixes WriteConflict/Namespace issues in memory replica sets)
@@ -203,18 +216,30 @@ export const deleteQuiz = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Forbidden — You do not own this quiz" });
     }
 
-    // Cascading delete
-    if (quiz.questions && quiz.questions.length > 0) {
-      await Question.deleteMany({ _id: { $in: quiz.questions } });
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Cascading delete within transaction
+      if (quiz.questions && quiz.questions.length > 0) {
+        await Question.deleteMany({ _id: { $in: quiz.questions } }, { session });
+      }
+
+      // Remove Quiz document
+      await Quiz.deleteOne({ _id: quiz._id }, { session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      res.status(200).json({
+        success: true,
+        message: "Quiz and all connected questions successfully deleted"
+      });
+    } catch (transactionError) {
+      await session.abortTransaction();
+      session.endSession();
+      throw transactionError;
     }
-
-    // Remove Quiz document
-    await Quiz.deleteOne({ _id: quiz._id });
-
-    res.status(200).json({
-      success: true,
-      message: "Quiz and all connected questions successfully deleted"
-    });
   } catch (error) {
     next(error);
   }
@@ -247,64 +272,16 @@ export const addQuestionToQuiz = async (req, res, next) => {
 
     const { text, type, options, correctAnswer, difficulty, tags } = req.body;
 
-    // Field validation
-    if (!text || !text.trim()) {
+    // Validate via shared helper
+    const validationResult = validateQuestionData({ text, type, options, correctAnswer, difficulty, tags });
+    if (validationResult.error) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(400).json({ success: false, message: "Question text is required" });
-    }
-    if (!type || !['MCQ', 'True-False', 'Short-Answer'].includes(type)) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ success: false, message: "Invalid question type" });
-    }
-    if (!correctAnswer || !correctAnswer.trim()) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ success: false, message: "Correct answer is required" });
-    }
-    if (!difficulty || !['easy', 'medium', 'hard'].includes(difficulty)) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ success: false, message: "Difficulty must be easy, medium, or hard" });
-    }
-
-    let formattedOptions = [];
-    if (type === 'MCQ') {
-      if (!Array.isArray(options) || options.length < 2) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(400).json({ success: false, message: "MCQ questions must have at least 2 options" });
-      }
-      formattedOptions = options.map(o => typeof o === 'string' ? o.trim() : o).filter(Boolean);
-      if (formattedOptions.length < 2) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(400).json({ success: false, message: "MCQ questions must have at least 2 options" });
-      }
-      if (!formattedOptions.includes(correctAnswer.trim())) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(400).json({ success: false, message: "Correct answer must match one of the MCQ options" });
-      }
-    } else if (type === 'True-False') {
-      formattedOptions = ['True', 'False'];
-      if (correctAnswer !== 'True' && correctAnswer !== 'False') {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(400).json({ success: false, message: "True-False correctAnswer must be 'True' or 'False'" });
-      }
+      return res.status(400).json({ success: false, message: validationResult.error });
     }
 
     // Create the question document within the transaction
-    const newQuestion = new Question({
-      text: text.trim(),
-      type,
-      options: formattedOptions,
-      correctAnswer: correctAnswer.trim(),
-      difficulty,
-      tags: Array.isArray(tags) ? tags.map(t => typeof t === 'string' ? t.trim() : t).filter(Boolean) : []
-    });
+    const newQuestion = new Question(validationResult.sanitized);
 
     const savedQuestion = await newQuestion.save({ session });
 
@@ -448,32 +425,50 @@ export const deleteQuestion = async (req, res, next) => {
   try {
     const { quizId, questionId } = req.params;
 
-    const quiz = await Quiz.findById(quizId);
-    if (!quiz) {
-      return res.status(404).json({ success: false, message: "Quiz not found" });
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const quiz = await Quiz.findById(quizId).session(session);
+      if (!quiz) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({ success: false, message: "Quiz not found" });
+      }
+
+      // Ownership check
+      if (quiz.professorId.toString() !== req.user.id) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(403).json({ success: false, message: "Forbidden — You do not own this quiz" });
+      }
+
+      // Verify ownership/association
+      if (!quiz.questions.includes(questionId)) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({ success: false, message: "Question does not belong to this quiz" });
+      }
+
+      // Pull from Quiz's array of questions
+      quiz.questions.pull(questionId);
+      await quiz.save({ session });
+
+      // Drop from collection
+      await Question.deleteOne({ _id: questionId }, { session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      res.status(200).json({
+        success: true,
+        message: "Question deleted successfully and removed from quiz"
+      });
+    } catch (transactionError) {
+      await session.abortTransaction();
+      session.endSession();
+      throw transactionError;
     }
-
-    // Ownership check
-    if (quiz.professorId.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: "Forbidden — You do not own this quiz" });
-    }
-
-    // Verify ownership/association
-    if (!quiz.questions.includes(questionId)) {
-      return res.status(400).json({ success: false, message: "Question does not belong to this quiz" });
-    }
-
-    // Pull from Quiz's array of questions
-    quiz.questions.pull(questionId);
-    await quiz.save();
-
-    // Drop from collection
-    await Question.deleteOne({ _id: questionId });
-
-    res.status(200).json({
-      success: true,
-      message: "Question deleted successfully and removed from quiz"
-    });
   } catch (error) {
     next(error);
   }
@@ -498,7 +493,7 @@ export const toggleQuizApproval = async (req, res, next) => {
     // Update isApproved to opposite, or to an explicitly passed value if provided
     const { isApproved } = req.body;
     if (isApproved !== undefined) {
-      quiz.isApproved = Boolean(isApproved);
+      quiz.isApproved = isApproved === true || isApproved === 'true';
     } else {
       quiz.isApproved = !quiz.isApproved;
     }

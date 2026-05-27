@@ -1,10 +1,13 @@
-import { useMemo, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import FileDropzone from '../components/FileDropzone';
+import AIParameterForm from '../components/AIParameterForm';
+import QuestionPreviewCard from '../components/QuestionPreviewCard';
 
 const DIFFICULTIES = ['easy', 'medium', 'hard'];
 const QUESTION_TYPES = ['MCQ', 'True-False', 'Short-Answer'];
-const ACCEPTED_EXTENSIONS = ['.pdf', '.docx'];
+const MAX_FILES = 5;
 
 const makeQuestionId = () => `ai-question-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -22,11 +25,6 @@ const clampQuestionCount = (value) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 1;
   return Math.min(20, Math.max(1, Math.round(parsed)));
-};
-
-const getExtension = (fileName = '') => {
-  const dotIndex = fileName.lastIndexOf('.');
-  return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : '';
 };
 
 const normalizeQuestion = (question, index, fallbackDifficulty) => {
@@ -47,11 +45,9 @@ const normalizeQuestion = (question, index, fallbackDifficulty) => {
 
 const QuizGenerator = () => {
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
 
   const [creationMode, setCreationMode] = useState('ai');
   const [files, setFiles] = useState([]);
-  const [isDragging, setIsDragging] = useState(false);
   const [numQuestions, setNumQuestions] = useState(10);
   const [difficulty, setDifficulty] = useState('medium');
   const [generatedQuestions, setGeneratedQuestions] = useState([]);
@@ -65,33 +61,23 @@ const QuizGenerator = () => {
   const interactionLocked = isGenerating || isSaving;
   const hasDraftQuestions = generatedQuestions.length > 0;
 
-  const fileSummary = useMemo(() => {
-    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-    return totalSize > 0 ? `${(totalSize / 1024 / 1024).toFixed(2)} MB selected` : 'No files selected';
-  }, [files]);
-
-  const addFiles = (incomingFiles) => {
+  const handleAddFiles = (incomingFiles, fileError) => {
     if (interactionLocked) return;
-
-    const nextFiles = Array.from(incomingFiles || []);
-    const invalidFiles = nextFiles.filter((file) => !ACCEPTED_EXTENSIONS.includes(getExtension(file.name)));
-    const validFiles = nextFiles.filter((file) => ACCEPTED_EXTENSIONS.includes(getExtension(file.name)));
-
-    if (invalidFiles.length > 0) {
-      setError('Only PDF and DOCX files can be uploaded.');
-    } else {
-      setError('');
+    if (fileError) {
+      setError(fileError);
+      return;
     }
+    setError('');
 
-    if (validFiles.length === 0) return;
+    if (incomingFiles.length === 0) return;
 
     setFiles((currentFiles) => {
       const merged = [...currentFiles];
-      validFiles.forEach((file) => {
-        const duplicate = merged.some((existing) => (
-          existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified
-        ));
-        if (!duplicate && merged.length < 5) {
+      incomingFiles.forEach((file) => {
+        const duplicate = merged.some(
+          (existing) => existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified
+        );
+        if (!duplicate && merged.length < MAX_FILES) {
           merged.push(file);
         }
       });
@@ -102,13 +88,6 @@ const QuizGenerator = () => {
   const removeFile = (fileIndex) => {
     if (interactionLocked) return;
     setFiles((currentFiles) => currentFiles.filter((_, index) => index !== fileIndex));
-  };
-
-  const handleDrop = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setIsDragging(false);
-    addFiles(event.dataTransfer.files);
   };
 
   const handleGenerate = async (event) => {
@@ -209,10 +188,8 @@ const QuizGenerator = () => {
   const handleRemoveChoice = (questionIndex, optionIndex) => {
     setGeneratedQuestions((currentQuestions) => currentQuestions.map((question, index) => {
       if (index !== questionIndex || question.options.length <= 2) return question;
-
       const removedOption = question.options[optionIndex];
       const options = question.options.filter((_, optionPosition) => optionPosition !== optionIndex);
-
       return {
         ...question,
         options,
@@ -273,7 +250,7 @@ const QuizGenerator = () => {
       setTimeout(() => navigate('/dashboard'), 900);
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || 'Unable to save this AI quiz draft.');
+      setError(err.response?.data?.message || 'Unable to save this quiz draft.');
     } finally {
       setIsSaving(false);
     }
@@ -345,175 +322,20 @@ const QuizGenerator = () => {
 
       {creationMode === 'ai' ? (
       <form onSubmit={handleGenerate} className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] gap-6">
-        <section className="glass-card p-6 shadow-xl">
-          <div className="flex items-start justify-between gap-4 mb-5">
-            <div>
-              <h2 className="text-xl font-bold text-white">Source Documents</h2>
-              <p className="mt-1 text-sm text-slate-400">Attach up to five lecture files for text extraction.</p>
-            </div>
-            <span className="rounded-full border border-cyan-400/25 bg-cyan-950/25 px-3 py-1 text-xs font-bold text-cyan-200">
-              PDF / DOCX
-            </span>
-          </div>
-
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => !interactionLocked && fileInputRef.current?.click()}
-            onKeyDown={(event) => {
-              if ((event.key === 'Enter' || event.key === ' ') && !interactionLocked) {
-                event.preventDefault();
-                fileInputRef.current?.click();
-              }
-            }}
-            onDragEnter={(event) => {
-              event.preventDefault();
-              if (!interactionLocked) setIsDragging(true);
-            }}
-            onDragOver={(event) => {
-              event.preventDefault();
-              if (!interactionLocked) setIsDragging(true);
-            }}
-            onDragLeave={(event) => {
-              event.preventDefault();
-              setIsDragging(false);
-            }}
-            onDrop={handleDrop}
-            aria-disabled={interactionLocked}
-            className={`rounded-2xl border-2 border-dashed p-8 text-center transition-all ${
-              isDragging
-                ? 'border-cyan-300 bg-cyan-950/25'
-                : 'border-slate-700 bg-slate-950/20 hover:border-cyan-400/70 hover:bg-slate-950/35'
-            } ${interactionLocked ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
-          >
-            <input
-              ref={fileInputRef}
-              aria-label="Upload documents"
-              type="file"
-              accept=".pdf,.docx"
-              multiple
-              disabled={interactionLocked}
-              onChange={(event) => addFiles(event.target.files)}
-              className="sr-only"
-            />
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-950/30 text-cyan-200">
-              <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 16V4m0 0L7 9m5-5 5 5M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5" />
-              </svg>
-            </div>
-            <p className="text-base font-bold text-white">Drop files here or click to browse</p>
-            <p className="mt-2 text-sm text-slate-400">Only `.pdf` and `.docx` documents are accepted. Each upload is processed in memory.</p>
-          </div>
-
-          <div className="mt-5 flex items-center justify-between text-xs text-slate-500">
-            <span>{fileSummary}</span>
-            <span>{files.length}/5 files attached</span>
-          </div>
-
-          {files.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {files.map((file, index) => (
-                <span
-                  key={`${file.name}-${file.size}-${file.lastModified}`}
-                  className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-700 bg-slate-950/45 px-3 py-1.5 text-xs font-semibold text-slate-200"
-                >
-                  <span className="truncate">{file.name}</span>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      removeFile(index);
-                    }}
-                    disabled={interactionLocked}
-                    aria-label={`Remove ${file.name}`}
-                    className="text-slate-500 hover:text-red-300 disabled:opacity-40"
-                  >
-                    X
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="glass-card gradient-border p-6 shadow-xl">
-          <h2 className="text-xl font-bold text-white">AI Parameters</h2>
-          <p className="mt-1 text-sm text-slate-400">Control the generated assessment size and target complexity.</p>
-
-          <div className="mt-6 space-y-6">
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <label htmlFor="numQuestions" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Number of Questions
-                </label>
-                <span className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1 text-xs font-bold text-white">
-                  {clampQuestionCount(numQuestions)}
-                </span>
-              </div>
-              <input
-                id="numQuestions"
-                type="range"
-                min="1"
-                max="20"
-                value={numQuestions}
-                disabled={interactionLocked}
-                onChange={(event) => setNumQuestions(clampQuestionCount(event.target.value))}
-                className="w-full accent-cyan-400"
-              />
-              <input
-                aria-label="Question count"
-                type="number"
-                min="1"
-                max="20"
-                value={numQuestions}
-                disabled={interactionLocked}
-                onChange={(event) => setNumQuestions(clampQuestionCount(event.target.value))}
-                className="mt-3 w-28 rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400 disabled:opacity-60"
-              />
-            </div>
-
-            <div>
-              <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">
-                Difficulty
-              </span>
-              <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-800 bg-slate-950/35 p-1">
-                {DIFFICULTIES.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    disabled={interactionLocked}
-                    onClick={() => setDifficulty(option)}
-                    className={`rounded-lg px-3 py-2 text-sm font-bold capitalize transition-all disabled:opacity-50 ${
-                      difficulty === option
-                        ? 'bg-cyan-500 text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.25)]'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={interactionLocked}
-              className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-cyan-400 via-emerald-400 to-violet-400 px-5 py-3 text-sm font-black text-slate-950 shadow-[0_12px_30px_rgba(34,211,238,0.18)] transition-all hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-65"
-            >
-              {isGenerating ? 'Generating...' : 'Generate AI Quiz'}
-            </button>
-
-            {isGenerating && (
-              <div role="status" className="rounded-xl border border-cyan-400/25 bg-cyan-950/20 p-4 text-center">
-                <svg data-testid="ai-loading-spinner" className="mx-auto mb-3 h-8 w-8 animate-spin text-cyan-300" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
-                </svg>
-                <p className="text-sm font-bold text-cyan-100">AI is reading documents and drafting your exam questions...</p>
-              </div>
-            )}
-          </div>
-        </section>
+        <FileDropzone
+          files={files}
+          onAddFiles={handleAddFiles}
+          onRemoveFile={removeFile}
+          disabled={interactionLocked}
+        />
+        <AIParameterForm
+          numQuestions={numQuestions}
+          difficulty={difficulty}
+          onNumQuestionsChange={(v) => setNumQuestions(clampQuestionCount(v))}
+          onDifficultyChange={setDifficulty}
+          isGenerating={isGenerating}
+          isSaving={isSaving}
+        />
       </form>
       ) : (
         <section className="glass-card gradient-border p-6 shadow-xl">
@@ -603,155 +425,18 @@ const QuizGenerator = () => {
 
           <div className="space-y-5">
             {generatedQuestions.map((question, questionIndex) => (
-              <article key={question.id} className="glass-card p-5 shadow-lg">
-                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400 text-sm font-black text-slate-950">
-                      {questionIndex + 1}
-                    </span>
-                    <select
-                      aria-label={`Question ${questionIndex + 1} type`}
-                      value={question.type}
-                      disabled={interactionLocked}
-                      onChange={(event) => handleQuestionTypeChange(questionIndex, event.target.value)}
-                      className="rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-xs font-bold text-white outline-none"
-                    >
-                      {QUESTION_TYPES.map((type) => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select
-                      aria-label={`Question ${questionIndex + 1} difficulty`}
-                      value={question.difficulty}
-                      disabled={interactionLocked}
-                      onChange={(event) => updateQuestion(questionIndex, { difficulty: event.target.value })}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm font-semibold text-white outline-none md:w-36"
-                    >
-                      {DIFFICULTIES.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveQuestion(questionIndex)}
-                      disabled={interactionLocked}
-                      aria-label={`Remove question ${questionIndex + 1}`}
-                      className="rounded-lg border border-red-500/25 px-3 py-2 text-sm font-bold text-red-300 hover:bg-red-950/25 disabled:opacity-50"
-                    >
-                      X
-                    </button>
-                  </div>
-                </div>
-
-                <label htmlFor={`question-${question.id}`} className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Question Text
-                </label>
-                <textarea
-                  id={`question-${question.id}`}
-                  value={question.text}
-                  disabled={interactionLocked}
-                  onChange={(event) => updateQuestion(questionIndex, { text: event.target.value })}
-                  rows={2}
-                  className="w-full resize-none rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
-                />
-
-                {question.type === 'MCQ' && (
-                  <div className="mt-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="block text-xs font-bold uppercase tracking-wider text-slate-400">Answer Choices</span>
-                      <button
-                        type="button"
-                        onClick={() => handleAddChoice(questionIndex)}
-                        disabled={interactionLocked}
-                        className="text-xs font-bold text-cyan-300 hover:text-cyan-100 disabled:opacity-50"
-                      >
-                        Add Choice
-                      </button>
-                    </div>
-                    {question.options.map((option, optionIndex) => (
-                      <div key={`${question.id}-option-${optionIndex}`} className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          aria-label={`Mark option ${optionIndex + 1} as correct`}
-                          name={`correct-${question.id}`}
-                          checked={question.correctAnswer === option && option !== ''}
-                          disabled={interactionLocked || option.trim() === ''}
-                          onChange={() => updateQuestion(questionIndex, { correctAnswer: option })}
-                          className="h-4 w-4 accent-emerald-400"
-                        />
-                        <input
-                          aria-label={`Question ${questionIndex + 1} option ${optionIndex + 1}`}
-                          value={option}
-                          disabled={interactionLocked}
-                          onChange={(event) => updateOption(questionIndex, optionIndex, event.target.value)}
-                          className="flex-1 rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
-                        />
-                        {question.options.length > 2 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveChoice(questionIndex, optionIndex)}
-                            disabled={interactionLocked}
-                            aria-label={`Remove option ${optionIndex + 1}`}
-                            className="rounded-lg px-2 py-1 text-sm font-bold text-slate-500 hover:text-red-300 disabled:opacity-50"
-                          >
-                            X
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    <label htmlFor={`answer-${question.id}`} className="mt-3 block text-xs font-bold uppercase tracking-wider text-slate-400">
-                      Correct Answer
-                    </label>
-                    <input
-                      id={`answer-${question.id}`}
-                      value={question.correctAnswer}
-                      disabled={interactionLocked}
-                      onChange={(event) => updateQuestion(questionIndex, { correctAnswer: event.target.value })}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
-                    />
-                  </div>
-                )}
-
-                {question.type === 'True-False' && (
-                  <div className="mt-4">
-                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Correct Answer</span>
-                    <div className="flex gap-2">
-                      {['True', 'False'].map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          disabled={interactionLocked}
-                          onClick={() => updateQuestion(questionIndex, { correctAnswer: option })}
-                          className={`rounded-lg px-4 py-2 text-sm font-bold ${
-                            question.correctAnswer === option
-                              ? 'bg-emerald-400 text-slate-950'
-                              : 'border border-slate-700 text-slate-300 hover:text-white'
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {question.type === 'Short-Answer' && (
-                  <div className="mt-4">
-                    <label htmlFor={`answer-${question.id}`} className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">
-                      Correct Answer
-                    </label>
-                    <input
-                      id={`answer-${question.id}`}
-                      value={question.correctAnswer}
-                      disabled={interactionLocked}
-                      onChange={(event) => updateQuestion(questionIndex, { correctAnswer: event.target.value })}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
-                    />
-                  </div>
-                )}
-              </article>
+              <QuestionPreviewCard
+                key={question.id}
+                question={question}
+                questionIndex={questionIndex}
+                onUpdate={updateQuestion}
+                onUpdateOption={updateOption}
+                onTypeChange={handleQuestionTypeChange}
+                onAddChoice={handleAddChoice}
+                onRemoveChoice={handleRemoveChoice}
+                onRemove={handleRemoveQuestion}
+                disabled={interactionLocked}
+              />
             ))}
           </div>
         </section>

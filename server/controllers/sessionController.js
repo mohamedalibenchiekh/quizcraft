@@ -1,23 +1,13 @@
 /**
  * @desc    Start a new live session for a quiz
  * @route   POST /api/sessions/start
+ * @status  501 — Not implemented (Phase 3: Socket.io)
  */
 export const startSession = async (req, res, next) => {
   try {
-    // Stubbed response
-    const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-    res.status(201).json({
-      success: true,
-      message: "Session started (stub)",
-      data: {
-        _id: "64f1a2b3c4d5e6f7a8b9c0e1",
-        roomCode,
-        quizId: req.body.quizId || "quiz_placeholder",
-        status: "active",
-        currentQuestionIndex: 0,
-        createdAt: new Date().toISOString(),
-      },
+    res.status(501).json({
+      success: false,
+      message: "Session management is not yet implemented. Coming in Phase 3 (Socket.io).",
     });
   } catch (error) {
     next(error);
@@ -27,19 +17,13 @@ export const startSession = async (req, res, next) => {
 /**
  * @desc    Submit an answer to the current question in a session
  * @route   POST /api/sessions/answer
+ * @status  501 — Not implemented (Phase 3: Socket.io)
  */
 export const submitAnswer = async (req, res, next) => {
   try {
-    // Stubbed response
-    res.status(200).json({
-      success: true,
-      message: "Answer submitted (stub)",
-      data: {
-        sessionId: req.body.sessionId || "session_placeholder",
-        questionIndex: req.body.questionIndex ?? 0,
-        selectedAnswer: req.body.answer || "N/A",
-        isCorrect: true, // mock — always correct for now
-      },
+    res.status(501).json({
+      success: false,
+      message: "Answer submission is not yet implemented. Coming in Phase 3 (Socket.io).",
     });
   } catch (error) {
     next(error);

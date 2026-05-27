@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import mongoose from "mongoose";
 
 import errorHandler from "./middleware/errorHandler.js";
 
@@ -56,7 +57,16 @@ app.get("/", (_req, res) => {
 
 // ─── Health-check endpoint ───────────────────────────────
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", uptime: process.uptime() });
+  const dbState = mongoose.connection.readyState;
+  const dbStatus = { 0: "disconnected", 1: "connected", 2: "connecting", 3: "disconnecting" };
+  if (dbState !== 1) {
+    return res.status(503).json({
+      status: "unavailable",
+      uptime: process.uptime(),
+      database: dbStatus[dbState] || "unknown",
+    });
+  }
+  res.json({ status: "ok", uptime: process.uptime(), database: "connected" });
 });
 
 // ─── Global error handler (must be LAST middleware) ──────
