@@ -4,6 +4,13 @@ import jwt from "jsonwebtoken";
 import Session from "../models/Session.js";
 import Quiz from "../models/Quiz.js";
 import Question from "../models/Question.js";
+import {
+  startQuestion,
+  recordAnswer,
+  compileLeaderboard,
+  allAnsweredThisRound,
+  deleteScoreboard,
+} from "../utils/scoreboardManager.js";
 
 const ROOM_PIN_REGEX = /^[A-Z0-9]{6}$/;
 const NETWORK_BUFFER_MS = 500;
@@ -13,7 +20,7 @@ const rooms = new Map();
 
 const getRoom = (pin) => {
   if (!rooms.has(pin)) {
-    rooms.set(pin, { hostId: null, participants: new Map(), playerScores: new Map(), questionExpiresAt: 0 });
+    rooms.set(pin, { hostId: null, participants: new Map(), questionExpiresAt: 0, questionStartTime: null, questionDuration: DEFAULT_QUESTION_DURATION_MS });
   }
   return rooms.get(pin);
 };
@@ -41,10 +48,6 @@ const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode } = {}) =>
   const pinStr = String(pin);
   const room = getRoom(pinStr);
   const id = generatePlayerId();
-
-  if (!room.playerScores.has(id)) {
-    room.playerScores.set(id, 0);
-  }
 
   room.participants.set(socket.id, {
     playerId: id,
@@ -170,11 +173,22 @@ export const initSocket = (httpServer) => {
         const filteredQuestion = questionDoc.toObject();
         delete filteredQuestion.correctAnswer;
 
+        if (room.questionStartTime) {
+          const prevLb = compileLeaderboard(pinStr);
+          if (prevLb.length > 0) {
+            io.to(pinStr).emit("leaderboard-updated", { leaderboard: prevLb });
+          }
+        }
+
         const questionDuration =
           typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs > 0
             ? durationMs
             : DEFAULT_QUESTION_DURATION_MS;
         room.questionExpiresAt = Date.now() + questionDuration + NETWORK_BUFFER_MS;
+        room.questionStartTime = Date.now();
+        room.questionDuration = questionDuration;
+
+        startQuestion(pinStr, room.questionStartTime);
 
         io.to(pinStr).emit("reveal-question", filteredQuestion);
       } catch (error) {
@@ -197,8 +211,13 @@ export const initSocket = (httpServer) => {
         const participant = room.participants.get(socket.id);
         const pid = participant ? participant.playerId : null;
         if (pid) {
-          const currentScore = room.playerScores.get(pid) || 0;
-          room.playerScores.set(pid, currentScore);
+          recordAnswer(pinStr, {
+            playerId: pid,
+            username: participant.username,
+            isCorrect: false,
+            responseTimeMs: 0,
+            questionDurationMs: room.questionDuration,
+          });
         }
         socket.emit("answer-rejected", { reason: "timeout", pointsAwarded: 0 });
         return;
@@ -218,7 +237,6 @@ export const initSocket = (httpServer) => {
         }
 
         const isCorrect = question.correctAnswer === chosenOption;
-        const delta = isCorrect ? 1 : 0;
 
         const participant = room.participants.get(socket.id);
         const pid = participant ? participant.playerId : null;
@@ -227,14 +245,31 @@ export const initSocket = (httpServer) => {
           return;
         }
 
-        const currentScore = room.playerScores.get(pid) || 0;
-        room.playerScores.set(pid, currentScore + delta);
+        const responseTimeMs = room.questionStartTime ? receivedAt - room.questionStartTime : 0;
+        const result = recordAnswer(pinStr, {
+          playerId: pid,
+          username: participant.username,
+          isCorrect,
+          responseTimeMs,
+          questionDurationMs: room.questionDuration,
+        });
 
         socket.emit("answer-acknowledged", {
           questionId,
           correct: isCorrect,
-          score: currentScore + delta,
+          score: result.cumulativeScore,
+          pointsAwarded: result.pointsAwarded,
+          speedPoints: result.speedPoints,
+          streakBonus: result.streakBonus,
         });
+
+        const nonHostCount = Array.from(room.participants.values()).filter((p) => p.role !== "host").length;
+        if (allAnsweredThisRound(pinStr, nonHostCount)) {
+          const lb = compileLeaderboard(pinStr);
+          if (lb.length > 0) {
+            io.to(pinStr).emit("leaderboard-updated", { leaderboard: lb });
+          }
+        }
       } catch (error) {
         console.error(`[Socket] Error in submitAnswer: ${error.message}`);
         socket.emit("submit-error", { message: "Internal error processing answer." });
@@ -261,10 +296,15 @@ export const initSocket = (httpServer) => {
         console.error(`[Socket] Error updating session: ${error.message}`);
       }
 
+      const finalLb = compileLeaderboard(pinStr);
+      if (finalLb.length > 0) {
+        io.to(pinStr).emit("leaderboard-updated", { leaderboard: finalLb });
+      }
       io.to(pinStr).emit("quiz-terminated", { message: "Quiz has been terminated by the host." });
 
       io.in(pinStr).socketsLeave(pinStr);
       rooms.delete(pinStr);
+      deleteScoreboard(pinStr);
       console.log(`[Socket] Room ${pinStr} closed by host ${socket.id}`);
     });
 
@@ -280,6 +320,7 @@ export const initSocket = (httpServer) => {
           broadcastRoster(io, pin);
           if (room.participants.size === 0) {
             rooms.delete(pin);
+            deleteScoreboard(pin);
           }
           break;
         }

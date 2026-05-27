@@ -131,8 +131,10 @@ describe("QC-BR-03 — Socket.io Countdown Enforcement", () => {
     expect(ack).toMatchObject({
       questionId: questionId.toString(),
       correct: true,
-      score: 1,
+      score: expect.any(Number),
+      pointsAwarded: expect.any(Number),
     });
+    expect(ack.score).toBeGreaterThan(0);
 
     hostSocket.close();
     studentSocket.close();
