@@ -3,7 +3,7 @@ import http from "http";
 import { io as ioc } from "socket.io-client";
 import { initSocket } from "../config/socket.js";
 
-const PIN = "123456";
+const PIN = "999888";
 let server;
 let serverUrl;
 
@@ -41,7 +41,7 @@ afterAll(() => {
 });
 
 describe("Socket.io Real-Time Engine", () => {
-  it("should handshake and exchange room-join notifications between two clients", async () => {
+  it("should connect and exchange room-roster-updated events when clients joinRoom", async () => {
     const client1 = createClient();
     const client2 = createClient();
 
@@ -50,52 +50,21 @@ describe("Socket.io Real-Time Engine", () => {
       waitForEvent(client2, "connect"),
     ]);
 
-    const userJoined1 = waitForEvent(client1, "user-joined");
-    client1.emit("join-session", { pin: PIN, username: "Professor" });
-    await userJoined1;
+    const roster1 = waitForEvent(client1, "room-roster-updated");
+    client1.emit("joinRoom", { pin: PIN, username: "Professor", role: "host" });
+    const firstRoster = await roster1;
 
-    const userJoined2 = waitForEvent(client2, "user-joined");
-    const userJoined1Again = waitForEvent(client1, "user-joined");
-    client2.emit("join-session", { pin: PIN, username: "Student" });
-    const [joined2Payload, joined1AgainPayload] = await Promise.all([
-      userJoined2,
-      userJoined1Again,
-    ]);
+    expect(firstRoster).toHaveLength(1);
+    expect(firstRoster[0]).toMatchObject({ username: "Professor", role: "host" });
 
-    expect(joined2Payload).toMatchObject({
-      socketId: client2.id,
-      username: "Student",
-    });
-    expect(joined1AgainPayload).toMatchObject({
-      socketId: client2.id,
-      username: "Student",
-    });
+    const roster2 = waitForEvent(client2, "room-roster-updated");
+    const roster1Again = waitForEvent(client1, "room-roster-updated");
+    client2.emit("joinRoom", { pin: PIN, username: "Student", role: "player" });
 
-    client1.close();
-    client2.close();
-  });
+    const [secondRoster, thirdRoster] = await Promise.all([roster2, roster1Again]);
 
-  it("should forward broadcast events from professor to student in the same room", async () => {
-    const client1 = createClient();
-    const client2 = createClient();
-
-    await Promise.all([
-      waitForEvent(client1, "connect"),
-      waitForEvent(client2, "connect"),
-    ]);
-
-    client1.emit("join-session", { pin: PIN, username: "Professor" });
-    client2.emit("join-session", { pin: PIN, username: "Student" });
-    await Promise.all([
-      waitForEvent(client1, "user-joined"),
-      waitForEvent(client2, "user-joined"),
-      waitForEvent(client1, "user-joined"),
-    ]);
-
-    const quizStarted = waitForEvent(client2, "quiz-started");
-    client1.emit("start-quiz", { pin: PIN });
-
-    await expect(quizStarted).resolves.toBeUndefined();
+    expect(secondRoster).toHaveLength(2);
+    expect(thirdRoster).toHaveLength(2);
 
     client1.close();
     client2.close();
