@@ -28,7 +28,7 @@ export const normalizeQuestion = (question, index, fallbackDifficulty) => {
   const type = question.type || 'MCQ';
   const normalizedType = QUESTION_TYPES.includes(type) ? type : 'MCQ';
   const options = Array.isArray(question.options) ? question.options.map((option) => String(option)) : [];
-  const correctAnswer = question.correctAnswer || question.answer || '';
+  const correctAnswer = question.correctAnswer ?? question.answer ?? '';
   const correctAnswerIndex = normalizedType === 'MCQ' && options.length > 0
     ? options.indexOf(correctAnswer)
     : -1;

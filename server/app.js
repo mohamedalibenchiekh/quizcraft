@@ -18,9 +18,11 @@ import aiRoutes from "./routes/ai.js";
 const app = express();
 
 // ─── Global middleware ───────────────────────────────────
-// Trust first proxy hop so express-rate-limit identifies real client IPs
-// behind reverse proxies (Render, Nginx, etc.)
-app.set("trust proxy", 1);
+// Number of trusted reverse-proxy hops so express-rate-limit identifies real client IPs.
+// Set TRUST_PROXY=0 for direct-facing deployments, or higher values for multi-hop
+// topologies (e.g. Cloudflare → Nginx → app requires 2).
+const trustProxy = process.env.TRUST_PROXY;
+app.set("trust proxy", trustProxy !== undefined ? Number(trustProxy) : 1);
 app.use(express.json()); // parse JSON bodies
 app.use(
   helmet({
