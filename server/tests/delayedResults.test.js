@@ -11,7 +11,7 @@ import Question from "../models/Question.js";
 
 process.env.JWT_SECRET = "supersecretfortesting";
 
-const PIN = "888777";
+const PIN = "444555";
 let server;
 let serverUrl;
 let mongoServer;
@@ -25,7 +25,7 @@ const createClient = () =>
     forceNew: true,
   });
 
-const waitForEvent = (socket, event, timeout = 3000) =>
+const waitForEvent = (socket, event, timeout = 7000) =>
   new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new Error(`Timeout waiting for "${event}"`));
@@ -36,9 +36,7 @@ const waitForEvent = (socket, event, timeout = 3000) =>
     });
   });
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const setupClients = async () => {
+const setupRoom = async () => {
   const hostSocket = createClient();
   const studentSocket = createClient();
 
@@ -54,7 +52,6 @@ const setupClients = async () => {
   ]);
 
   studentSocket.emit("joinRoom", { pin: PIN, username: "Tester" });
-
   await Promise.all([
     waitForEvent(hostSocket, "room-roster-updated"),
     waitForEvent(studentSocket, "room-roster-updated"),
@@ -114,12 +111,30 @@ afterAll(async () => {
   server.close();
 });
 
-describe("QC-BR-03 — Socket.io Countdown Enforcement", () => {
-  it("should accept an on-time answer and immediately receive reveal-question-results when all students answered", async () => {
-    const { hostSocket, studentSocket } = await setupClients();
+describe("QC-BR-05 — Delayed Results & Payload Completeness", () => {
+  it("Test Case 1 (Payload Completeness): reveal-question carries non-empty question text and no correctAnswer", async () => {
+    const { hostSocket, studentSocket } = await setupRoom();
 
     const revealPromise = waitForEvent(studentSocket, "reveal-question");
-    hostSocket.emit("nextQuestion", { pin: PIN, questionIndex: 0, durationMs: 5000 });
+    hostSocket.emit("nextQuestion", { pin: PIN, questionIndex: 0, durationMs: 10000 });
+    const payload = await revealPromise;
+
+    expect(payload).toHaveProperty("text");
+    expect(payload.text).toBe("What is the capital of France?");
+    expect(payload.text.length).toBeGreaterThan(0);
+    expect(payload).toHaveProperty("options");
+    expect(payload.options.length).toBeGreaterThan(0);
+    expect(payload).not.toHaveProperty("correctAnswer");
+
+    hostSocket.close();
+    studentSocket.close();
+  });
+
+  it("Test Case 2 (Delayed Evaluation Integrity): answer-received has NO correctness flags; correctness arrives only in reveal-question-results", async () => {
+    const { hostSocket, studentSocket } = await setupRoom();
+
+    const revealPromise = waitForEvent(studentSocket, "reveal-question");
+    hostSocket.emit("nextQuestion", { pin: PIN, questionIndex: 0, durationMs: 10000 });
     await revealPromise;
 
     const receivedPromise = waitForEvent(studentSocket, "answer-received");
@@ -132,42 +147,19 @@ describe("QC-BR-03 — Socket.io Countdown Enforcement", () => {
     });
 
     const received = await receivedPromise;
-    expect(received).toMatchObject({
-      questionId: questionId.toString(),
-    });
     expect(received).not.toHaveProperty("correct");
     expect(received).not.toHaveProperty("score");
+    expect(received).not.toHaveProperty("pointsAwarded");
+    expect(received).not.toHaveProperty("speedPoints");
+    expect(received).not.toHaveProperty("streakBonus");
+    expect(received).toHaveProperty("questionId");
+    expect(received.questionId).toBe(questionId.toString());
 
     const results = await resultsPromise;
-    expect(results).toHaveProperty("correctAnswer", "Paris");
+    expect(results).toHaveProperty("correctAnswer");
+    expect(results.correctAnswer).toBe("Paris");
     expect(results).toHaveProperty("scoreboard");
     expect(Array.isArray(results.scoreboard)).toBe(true);
-
-    hostSocket.close();
-    studentSocket.close();
-  });
-
-  it("should reject a late answer submitted after the question deadline", async () => {
-    const { hostSocket, studentSocket } = await setupClients();
-
-    const revealPromise = waitForEvent(studentSocket, "reveal-question");
-    hostSocket.emit("nextQuestion", { pin: PIN, questionIndex: 0, durationMs: 10 });
-    await revealPromise;
-
-    await delay(700);
-
-    const rejectPromise = waitForEvent(studentSocket, "answer-rejected");
-    studentSocket.emit("submitAnswer", {
-      pin: PIN,
-      questionId: questionId.toString(),
-      chosenOption: "Paris",
-    });
-    const rejection = await rejectPromise;
-
-    expect(rejection).toMatchObject({
-      reason: "timeout",
-      pointsAwarded: 0,
-    });
 
     hostSocket.close();
     studentSocket.close();

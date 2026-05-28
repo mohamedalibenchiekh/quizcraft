@@ -119,13 +119,13 @@ describe('LiveSession Student Portal Tests', () => {
     expect(screen.getByText(/3 players in the lobby/i)).toBeInTheDocument();
   });
 
-  it('Test Case 1 — Input Freeze Realization: should freeze all options as soon as an option is selected', () => {
+  it('Test Case 1 — Input Freeze Realization: should freeze all options as soon as an option is selected and show waiting overlay', () => {
     joinLobbyHelper();
 
     // Simulate quiz starting and question being revealed
     const mockQuestion = {
       _id: 'q123',
-      question: 'Which course material is the source of truth?',
+      text: 'Which course material is the source of truth?',
       options: ['Syllabus', 'Slides', 'AI Generator', 'Wikipedia'],
     };
 
@@ -158,7 +158,7 @@ describe('LiveSession Student Portal Tests', () => {
     expect(opt2).toBeDisabled();
     expect(opt3).toBeDisabled();
 
-    // Verify subset of styles or "Answer submitted" text appears
-    expect(screen.getByText(/Answer submitted — waiting for results/i)).toBeInTheDocument();
+    // Verify the waiting overlay appears
+    expect(screen.getByText(/Answer locked in! Waiting for other participants/i)).toBeInTheDocument();
   });
 });

@@ -167,7 +167,7 @@ describe("Socket.io Live Quiz Orchestration", () => {
     studentSocket.close();
   });
 
-  it("should acknowledge answer submission with correctness and updated score", async () => {
+  it("should receive answer-received (no correctness) followed by reveal-question-results with correctness", async () => {
     const hostSocket = createClient();
     const studentSocket = createClient();
 
@@ -195,21 +195,27 @@ describe("Socket.io Live Quiz Orchestration", () => {
     hostSocket.emit("nextQuestion", { pin: PIN, questionIndex: 0, durationMs: 10000 });
     await revealPromise;
 
-    const ackPromise = waitForEvent(studentSocket, "answer-acknowledged");
+    const receivedPromise = waitForEvent(studentSocket, "answer-received");
+    const resultsPromise = waitForEvent(studentSocket, "reveal-question-results");
+
     studentSocket.emit("submitAnswer", {
       pin: PIN,
       questionId: questionId.toString(),
       chosenOption: "4",
     });
-    const ack = await ackPromise;
 
-    expect(ack).toMatchObject({
+    const received = await receivedPromise;
+    expect(received).toMatchObject({
       questionId: questionId.toString(),
-      correct: true,
-      score: expect.any(Number),
-      pointsAwarded: expect.any(Number),
     });
-    expect(ack.score).toBeGreaterThan(0);
+    expect(received).not.toHaveProperty("correct");
+    expect(received).not.toHaveProperty("score");
+
+    const results = await resultsPromise;
+    expect(results).toHaveProperty("correctAnswer");
+    expect(results).toHaveProperty("scoreboard");
+    expect(Array.isArray(results.scoreboard)).toBe(true);
+    expect(results.correctAnswer).toBe("4");
 
     const dupErr = waitForEvent(studentSocket, "submit-error");
     studentSocket.emit("submitAnswer", {

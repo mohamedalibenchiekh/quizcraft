@@ -19,12 +19,15 @@ export const startQuestion = (pin, startTime) => {
   const sb = getScoreboard(pin);
   sb.questionStartTime = startTime;
   sb.answeredThisRound = new Set();
+  for (const playerId of Object.keys(sb.players)) {
+    sb.players[playerId].lastResult = null;
+  }
 };
 
 export const recordAnswer = (pin, { playerId, username, isCorrect, responseTimeMs, questionDurationMs }) => {
   const sb = getScoreboard(pin);
   if (!sb.players[playerId]) {
-    sb.players[playerId] = { username, score: 0, currentStreak: 0, lastPlacement: 0 };
+    sb.players[playerId] = { username, score: 0, currentStreak: 0, lastPlacement: 0, lastResult: null };
   }
 
   const player = sb.players[playerId];
@@ -35,7 +38,9 @@ export const recordAnswer = (pin, { playerId, username, isCorrect, responseTimeM
 
   if (!isCorrect) {
     player.currentStreak = 0;
-    return { pointsAwarded: 0, speedPoints: 0, streakBonus: 0, cumulativeScore: player.score };
+    const result = { pointsAwarded: 0, speedPoints: 0, streakBonus: 0, cumulativeScore: player.score, isCorrect: false };
+    player.lastResult = result;
+    return result;
   }
 
   const speedRatio = Math.min(responseTimeMs / questionDurationMs, 1);
@@ -46,7 +51,9 @@ export const recordAnswer = (pin, { playerId, username, isCorrect, responseTimeM
   player.score += pointsAwarded;
   player.currentStreak += 1;
 
-  return { pointsAwarded, speedPoints, streakBonus, cumulativeScore: player.score };
+  const result = { pointsAwarded, speedPoints, streakBonus, cumulativeScore: player.score, isCorrect: true };
+  player.lastResult = result;
+  return result;
 };
 
 export const compileLeaderboard = (pin) => {

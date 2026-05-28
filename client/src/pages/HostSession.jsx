@@ -111,6 +111,12 @@ const HostSession = () => {
       setCurrentQuestion(question);
     };
 
+    const onQuestionResultsRevealed = ({ correctAnswer, scoreboard }) => {
+      if (Array.isArray(scoreboard)) {
+        setLeaderboard(scoreboard);
+      }
+    };
+
     const onControlError = ({ message }) => {
       setError(message || 'Control error received.');
     };
@@ -122,13 +128,13 @@ const HostSession = () => {
     socket.on('room-roster-updated', onRoster);
     socket.on('leaderboard-updated', onLeaderboard);
     socket.on('reveal-question', onQuestionRevealed);
+    socket.on('reveal-question-results', onQuestionResultsRevealed);
     socket.on('control-error', onControlError);
     socket.on('host-claimed', onHostClaimed);
 
     return () => {
-      socket.off('room-roster-updated', onRoster);
-      socket.off('leaderboard-updated', onLeaderboard);
       socket.off('reveal-question', onQuestionRevealed);
+      socket.off('reveal-question-results', onQuestionResultsRevealed);
       socket.off('control-error', onControlError);
       socket.off('host-claimed', onHostClaimed);
     };
@@ -357,7 +363,7 @@ const HostSession = () => {
               {currentQuestion ? (
                 <div>
                   <p className="text-xl font-bold mb-6" style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>
-                    {currentQuestion.question}
+                    {currentQuestion.text}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {(currentQuestion.options || []).map((opt, i) => (
