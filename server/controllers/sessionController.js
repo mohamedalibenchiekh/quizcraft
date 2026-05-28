@@ -75,6 +75,7 @@ export const startSession = async (req, res, next) => {
       throw transactionError;
     }
   } catch (error) {
+    console.error("startSession error:", error);
     next(error);
   }
 };
