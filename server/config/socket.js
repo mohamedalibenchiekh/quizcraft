@@ -306,6 +306,12 @@ export const initSocket = (httpServer) => {
       }
 
       const pinStr = String(pin);
+
+      if (!rooms.has(pinStr)) {
+        socket.emit("control-error", { message: "No active session found for this PIN." });
+        return;
+      }
+
       const room = getRoom(pinStr);
 
       if (room.hostId !== socket.id) {
@@ -334,6 +340,12 @@ export const initSocket = (httpServer) => {
       }
 
       const pinStr = String(pin);
+
+      if (!rooms.has(pinStr)) {
+        socket.emit("control-error", { message: "No active session found for this PIN." });
+        return;
+      }
+
       const room = getRoom(pinStr);
 
       if (room.hostId !== socket.id) {
