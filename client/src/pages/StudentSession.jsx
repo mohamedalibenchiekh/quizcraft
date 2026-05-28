@@ -147,11 +147,20 @@ const StudentSession = () => {
       clearInterval(countdownRef.current);
     };
 
+    const onJoinRejected = ({ reason, message }) => {
+      if (reason === 'name_taken') {
+        setError(message || 'That nickname is already taken! Try another one.');
+        setIsConnecting(false);
+        setPhase('join');
+      }
+    };
+
     const onConnectError = (err) => {
       setError(err?.message || 'Socket connection failed.');
       setIsConnecting(false);
     };
 
+    socket.on('join-rejected', onJoinRejected);
     socket.on('join-error', onJoinError);
     socket.on('session-error', onSessionError);
     socket.on('room-terminated', onRoomTerminated);
@@ -167,6 +176,7 @@ const StudentSession = () => {
     socket.on('connect_error', onConnectError);
 
     return () => {
+      socket.off('join-rejected', onJoinRejected);
       socket.off('reveal-question-results', onRevealQuestionResults);
       socket.off('your-question-result', onYourQuestionResult);
       socket.off('leaderboard-updated', onLeaderboard);
