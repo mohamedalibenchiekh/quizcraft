@@ -43,6 +43,7 @@ const StudentSession = () => {
   const [frozen, setFrozen] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
   const [shortAnswerText, setShortAnswerText] = useState('');
+  const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [answerStatus, setAnswerStatus] = useState('idle'); // idle | submitted | received | rejected
   const countdownRef = useRef(null);
 
@@ -112,6 +113,7 @@ const StudentSession = () => {
       setFrozen(false);
       setSelectedOption(null);
       setShortAnswerText('');
+      setSubmittedAnswer('');
       setAnswerStatus('idle');
       setResultsData(null);
       setYourQuestionResult(null);
@@ -268,13 +270,16 @@ const StudentSession = () => {
   const handleShortAnswerSubmit = useCallback(() => {
     if (frozen || !shortAnswerText.trim()) return;
 
+    const text = shortAnswerText.trim();
+
     // QC-BR-03: Freeze input immediately upon submission
     setFrozen(true);
+    setSubmittedAnswer(text);
     setAnswerStatus('submitted');
     clearInterval(countdownRef.current);
 
     if (currentQuestion && activePin) {
-      emitSubmitAnswer(activePin, currentQuestion._id, shortAnswerText.trim());
+      emitSubmitAnswer(activePin, currentQuestion._id, text);
     }
   }, [frozen, shortAnswerText, currentQuestion, activePin]);
 
@@ -541,7 +546,8 @@ const StudentSession = () => {
   // --- Results (delayed reveal after question window closes) ---
   if (phase === 'results') {
     const isLate = answerStatus === 'rejected';
-    const isCorrect = !isLate && selectedOption === resultsData?.correctAnswer;
+    const studentAnswer = currentQuestion?.type === 'Short-Answer' ? submittedAnswer : selectedOption;
+    const isCorrect = !isLate && studentAnswer === resultsData?.correctAnswer;
 
     const myEntry = Array.isArray(resultsData?.scoreboard)
       ? resultsData.scoreboard.find((e) => e.playerId)
@@ -566,6 +572,11 @@ const StudentSession = () => {
               {isCorrect ? 'Correct!' : isLate ? "Time's Up!" : 'Incorrect'}
             </h3>
 
+            {(currentQuestion?.type === 'Short-Answer' && submittedAnswer) && (
+              <p className="text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                Your answer: <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>{submittedAnswer}</span>
+              </p>
+            )}
             <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
               The correct answer was: <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>{resultsData?.correctAnswer}</span>
             </p>

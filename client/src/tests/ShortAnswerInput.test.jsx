@@ -161,4 +161,38 @@ describe('Short-Answer Input Rendering', () => {
     expect(textarea).toBeDisabled();
     expect(submitBtn).toBeDisabled();
   });
+
+  it('should show "Your answer" in results phase after submitting a short-answer', () => {
+    joinLobbyHelper();
+
+    const mockShortAnswerQuestion = {
+      _id: 'q456',
+      text: 'What is the capital of France?',
+      type: 'Short-Answer',
+    };
+
+    act(() => {
+      if (socket._callbacks['reveal-question']) {
+        socket._callbacks['reveal-question'](mockShortAnswerQuestion);
+      }
+    });
+
+    const textarea = screen.getByTestId('short-answer-input');
+    fireEvent.change(textarea, { target: { value: 'Paris' } });
+    fireEvent.click(screen.getByTestId('short-answer-submit'));
+
+    act(() => {
+      if (socket._callbacks['reveal-question-results']) {
+        socket._callbacks['reveal-question-results']({
+          correctAnswer: 'Paris',
+          scoreboard: [],
+        });
+      }
+    });
+
+    expect(screen.getByText(/your answer:/i)).toBeInTheDocument();
+    expect(screen.getByText(/correct answer was:/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Paris')).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: /correct/i })).toBeInTheDocument();
+  });
 });
