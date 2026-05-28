@@ -209,9 +209,10 @@ export const updateQuizMetadata = async (req, res, next) => {
       let transactionCommitted = false;
 
       try {
-        // Block if an active session is using this quiz
+        // Block if the quiz owner has an active session using this quiz
         const activeSession = await Session.findOne({
           quizId: quiz._id,
+          hostId: req.user.id,
           status: { $in: ['waiting', 'active'] },
         }).session(session);
         if (activeSession) {

@@ -12,7 +12,6 @@ const QuizEdit = () => {
   const {
     questions,
     setQuestions,
-    difficulty,
     updateQuestion,
     updateOption,
     handleAddManualQuestion,
