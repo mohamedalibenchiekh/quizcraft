@@ -30,6 +30,7 @@ const StudentSession = () => {
 
   /* ---- State ---- */
   const [phase, setPhase] = useState('join');           // join | lobby | question | feedback | leaderboard | ended
+  const [isConnecting, setIsConnecting] = useState(false);
   const [pinInput, setPinInput] = useState(location.state?.roomCode || '');
   const [usernameInput, setUsernameInput] = useState('');
   const [activePin, setActivePin] = useState('');
@@ -61,6 +62,7 @@ const StudentSession = () => {
     const onJoinError = ({ message }) => {
       setError(message || 'Failed to join room.');
       setPhase('join');
+      setIsConnecting(false);
     };
 
     const onRoster = (data) => {
@@ -97,16 +99,24 @@ const StudentSession = () => {
     const onLeaderboard = ({ leaderboard: lb }) => {
       if (Array.isArray(lb)) {
         setLeaderboard(lb);
-        // Only show leaderboard view if we're in feedback phase
-        if (phase === 'feedback' || phase === 'question') {
-          setPhase('leaderboard');
-        }
+        // Only show leaderboard view if we're in feedback phase or question phase
+        setPhase((currentPhase) => {
+          if (currentPhase === 'feedback' || currentPhase === 'question') {
+            return 'leaderboard';
+          }
+          return currentPhase;
+        });
       }
     };
 
     const onTerminated = () => {
       setPhase('ended');
       clearInterval(countdownRef.current);
+    };
+
+    const onConnectError = (err) => {
+      setError(err?.message || 'Socket connection failed.');
+      setIsConnecting(false);
     };
 
     socket.on('join-error', onJoinError);
@@ -117,6 +127,7 @@ const StudentSession = () => {
     socket.on('answer-rejected', onRejected);
     socket.on('leaderboard-updated', onLeaderboard);
     socket.on('quiz-terminated', onTerminated);
+    socket.on('connect_error', onConnectError);
 
     return () => {
       socket.off('join-error', onJoinError);
@@ -127,8 +138,9 @@ const StudentSession = () => {
       socket.off('answer-rejected', onRejected);
       socket.off('leaderboard-updated', onLeaderboard);
       socket.off('quiz-terminated', onTerminated);
+      socket.off('connect_error', onConnectError);
     };
-  }, [phase]);
+  }, []); // Bind exactly once on mount
 
   /* ---- Countdown timer ---- */
   useEffect(() => {
@@ -159,6 +171,8 @@ const StudentSession = () => {
 
   /* ---- Actions ---- */
   const handleJoinLobby = useCallback(() => {
+    if (isConnecting) return;
+
     const pin = pinInput.trim().toUpperCase();
     const username = usernameInput.trim();
 
@@ -172,6 +186,7 @@ const StudentSession = () => {
     }
 
     setError('');
+    setIsConnecting(true);
     setActivePin(pin);
     activePinRef.current = pin;
 
@@ -180,6 +195,7 @@ const StudentSession = () => {
     const onConnect = () => {
       joinRoom(pin, username);
       setPhase('lobby');
+      setIsConnecting(false);
     };
 
     if (socket.connected) {
@@ -187,7 +203,7 @@ const StudentSession = () => {
     } else {
       socket.once('connect', onConnect);
     }
-  }, [pinInput, usernameInput, token]);
+  }, [pinInput, usernameInput, token, isConnecting]);
 
   const handleSelectOption = useCallback((option) => {
     if (frozen) return;
@@ -281,14 +297,15 @@ const StudentSession = () => {
               <button
                 id="join-lobby-btn"
                 onClick={handleJoinLobby}
-                className="w-full py-3.5 rounded-xl text-base font-extrabold text-white transition-all duration-300 cursor-pointer hover:translate-y-[-1px]"
+                disabled={isConnecting}
+                className="w-full py-3.5 rounded-xl text-base font-extrabold text-white transition-all duration-300 cursor-pointer hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: 'linear-gradient(135deg, var(--color-brand-500), #6d28d9)',
                   boxShadow: '0 8px 24px rgba(124, 58, 237, 0.25)',
                   fontFamily: 'var(--font-display)',
                 }}
               >
-                Join Lobby
+                {isConnecting ? 'Connecting…' : 'Join Lobby'}
               </button>
             </div>
           </div>

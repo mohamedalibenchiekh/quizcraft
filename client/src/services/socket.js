@@ -28,9 +28,7 @@ export const socket = io(SOCKET_URL, {
  * Optionally attach a JWT bearer token for authenticated flows.
  */
 export const connectSocket = (token) => {
-  if (token) {
-    socket.auth = { token };
-  }
+  socket.auth = token ? { token } : {};
   if (!socket.connected) {
     socket.connect();
   }
@@ -40,9 +38,7 @@ export const connectSocket = (token) => {
  * Cleanly tear down the socket connection.
  */
 export const disconnectSocket = () => {
-  if (socket.connected) {
-    socket.disconnect();
-  }
+  socket.disconnect();
 };
 
 /* ---------------------------------------------

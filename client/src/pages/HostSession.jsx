@@ -260,24 +260,29 @@ const HostSession = () => {
           <div className="text-center">
             <button
               onClick={handleStartQuiz}
-              disabled={roster.length === 0}
+              disabled={roster.length === 0 || totalQuestions === 0}
               className="px-10 py-4 rounded-xl text-lg font-extrabold text-white transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:translate-y-[-2px]"
               style={{
-                background: roster.length > 0
+                background: (roster.length > 0 && totalQuestions > 0)
                   ? 'linear-gradient(135deg, #22c55e, #16a34a)'
                   : 'rgba(100, 100, 100, 0.3)',
-                boxShadow: roster.length > 0 ? '0 8px 32px rgba(34, 197, 94, 0.3)' : 'none',
+                boxShadow: (roster.length > 0 && totalQuestions > 0) ? '0 8px 32px rgba(34, 197, 94, 0.3)' : 'none',
                 fontFamily: 'var(--font-display)',
               }}
             >
               <span className="flex items-center gap-2">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l-3.197-2.132a1 1 0 000-1.664z" /></svg>
                 Start Quiz
               </span>
             </button>
-            {roster.length === 0 && (
+            {roster.length === 0 && totalQuestions > 0 && (
               <p className="text-xs mt-3" style={{ color: 'var(--color-text-muted)' }}>
                 At least one student must join before starting
+              </p>
+            )}
+            {totalQuestions === 0 && (
+              <p className="text-xs mt-3 text-red-400 font-semibold">
+                This quiz has 0 questions. Please add questions before starting.
               </p>
             )}
           </div>
