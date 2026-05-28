@@ -13,6 +13,7 @@ import quizRoutes from "./routes/quizzes.js";
 import sessionRoutes from "./routes/sessions.js";
 import uploadRoutes from "./routes/upload.js";
 import aiRoutes from "./routes/ai.js";
+import attemptRoutes from "./routes/attempts.js";
 
 // ─── Initialise app ─────────────────────────────────────
 const app = express();
@@ -43,6 +44,7 @@ app.use("/api/quizzes", quizRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/attempts", attemptRoutes);
 
 // ─── Root endpoint ───────────────────────────────────────
 app.get("/", (_req, res) => {
