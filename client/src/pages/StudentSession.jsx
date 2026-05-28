@@ -47,6 +47,7 @@ const StudentSession = () => {
 
   // Results state
   const [resultsData, setResultsData] = useState(null); // { correctAnswer, scoreboard }
+  const [yourQuestionResult, setYourQuestionResult] = useState(null); // { pointsAwarded, speedPoints, streakBonus, cumulativeScore, isCorrect }
   const [leaderboard, setLeaderboard] = useState([]);
 
   const activePinRef = useRef('');
@@ -98,6 +99,7 @@ const StudentSession = () => {
       setSelectedOption(null);
       setAnswerStatus('idle');
       setResultsData(null);
+      setYourQuestionResult(null);
       setCountdown(QUESTION_DURATION_S);
       setPhase('question');
     };
@@ -115,6 +117,10 @@ const StudentSession = () => {
       setResultsData({ correctAnswer, scoreboard });
       setLeaderboard(Array.isArray(scoreboard) ? scoreboard : []);
       setPhase('results');
+    };
+
+    const onYourQuestionResult = (result) => {
+      setYourQuestionResult(result);
     };
 
     const onLeaderboard = ({ leaderboard: lb }) => {
@@ -148,15 +154,14 @@ const StudentSession = () => {
     socket.on('answer-received', onAnswerReceived);
     socket.on('answer-rejected', onRejected);
     socket.on('reveal-question-results', onRevealQuestionResults);
+    socket.on('your-question-result', onYourQuestionResult);
     socket.on('leaderboard-updated', onLeaderboard);
     socket.on('quiz-terminated', onTerminated);
     socket.on('connect_error', onConnectError);
 
     return () => {
-      socket.off('reveal-question', onRevealQuestion);
-      socket.off('answer-received', onAnswerReceived);
-      socket.off('answer-rejected', onRejected);
       socket.off('reveal-question-results', onRevealQuestionResults);
+      socket.off('your-question-result', onYourQuestionResult);
       socket.off('leaderboard-updated', onLeaderboard);
       socket.off('quiz-terminated', onTerminated);
       socket.off('connect_error', onConnectError);
@@ -505,9 +510,33 @@ const StudentSession = () => {
               {isCorrect ? 'Correct!' : isLate ? "Time's Up!" : 'Incorrect'}
             </h3>
 
-            <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
+            <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
               The correct answer was: <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>{resultsData?.correctAnswer}</span>
             </p>
+
+            {/* Points breakdown */}
+            {yourQuestionResult && (
+              <div className="mb-6 p-4 rounded-xl" style={{ background: 'var(--color-surface-elevated)', border: '1px solid rgba(139, 92, 246, 0.12)' }}>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <span className="text-lg font-bold" style={{ color: 'var(--color-brand-300)' }}>
+                    +{yourQuestionResult.pointsAwarded || 0} pts
+                  </span>
+                </div>
+                {yourQuestionResult.speedPoints > 0 && (
+                  <p className="text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>
+                    Speed bonus: +{yourQuestionResult.speedPoints}
+                    {yourQuestionResult.streakBonus > 0 && (
+                      <span className="ml-3" style={{ color: '#f59e0b' }}>🔥 Streak bonus: +{yourQuestionResult.streakBonus}</span>
+                    )}
+                  </p>
+                )}
+                {yourQuestionResult.cumulativeScore > 0 && (
+                  <p className="text-xs text-center mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                    Total: {yourQuestionResult.cumulativeScore.toLocaleString()} pts
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Leaderboard */}
             {Array.isArray(resultsData?.scoreboard) && resultsData.scoreboard.length > 0 && (

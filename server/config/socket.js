@@ -12,6 +12,7 @@ import {
   hasAnsweredThisRound,
   allAnsweredThisRound,
   deleteScoreboard,
+  getScoreboard,
 } from "../utils/scoreboardManager.js";
 
 const ROOM_PIN_REGEX = /^[A-Z0-9]{6}$/;
@@ -35,6 +36,29 @@ const getRoom = (pin) => {
     });
   }
   return rooms.get(pin);
+};
+
+const emitRevealQuestionResults = (io, pinStr) => {
+  const room = getRoom(pinStr);
+  const lb = compileLeaderboard(pinStr);
+  const sb = getScoreboard(pinStr);
+
+  io.to(pinStr).emit("reveal-question-results", {
+    correctAnswer: room.currentCorrectAnswer,
+    scoreboard: lb,
+  });
+
+  for (const [socketId, participant] of room.participants.entries()) {
+    if (participant.role === "host") continue;
+    const playerEntry = sb.players[participant.playerId];
+    if (playerEntry && playerEntry.lastResult) {
+      io.to(socketId).emit("your-question-result", playerEntry.lastResult);
+    }
+  }
+
+  if (lb.length > 0) {
+    io.to(pinStr).emit("leaderboard-updated", { leaderboard: lb });
+  }
 };
 
 const broadcastRoster = (io, pin) => {
@@ -198,16 +222,7 @@ export const initSocket = (httpServer) => {
             room.questionTimeoutId = null;
           }
           finalizeUnansweredPlayers(pinStr);
-          const prevLb = compileLeaderboard(pinStr);
-          if (room.currentCorrectAnswer) {
-            io.to(pinStr).emit("reveal-question-results", {
-              correctAnswer: room.currentCorrectAnswer,
-              scoreboard: prevLb,
-            });
-          }
-          if (prevLb.length > 0) {
-            io.to(pinStr).emit("leaderboard-updated", { leaderboard: prevLb });
-          }
+          emitRevealQuestionResults(io, pinStr);
         }
 
         const questionDuration =
@@ -229,14 +244,7 @@ export const initSocket = (httpServer) => {
           if (r.questionStartTime && !r.resultsRevealed) {
             r.resultsRevealed = true;
             finalizeUnansweredPlayers(pinStr);
-            const lb = compileLeaderboard(pinStr);
-            io.to(pinStr).emit("reveal-question-results", {
-              correctAnswer: r.currentCorrectAnswer,
-              scoreboard: lb,
-            });
-            if (lb.length > 0) {
-              io.to(pinStr).emit("leaderboard-updated", { leaderboard: lb });
-            }
+            emitRevealQuestionResults(io, pinStr);
           }
           r.questionTimeoutId = null;
         }, questionDuration + NETWORK_BUFFER_MS);
@@ -332,14 +340,7 @@ export const initSocket = (httpServer) => {
             clearTimeout(room.questionTimeoutId);
             room.questionTimeoutId = null;
           }
-          const lb = compileLeaderboard(pinStr);
-          io.to(pinStr).emit("reveal-question-results", {
-            correctAnswer: room.currentCorrectAnswer,
-            scoreboard: lb,
-          });
-          if (lb.length > 0) {
-            io.to(pinStr).emit("leaderboard-updated", { leaderboard: lb });
-          }
+          emitRevealQuestionResults(io, pinStr);
         }
       } catch (error) {
         console.error(`[Socket] Error in submitAnswer: ${error.message}`);
