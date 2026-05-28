@@ -19,6 +19,9 @@ export const startQuestion = (pin, startTime) => {
   const sb = getScoreboard(pin);
   sb.questionStartTime = startTime;
   sb.answeredThisRound = new Set();
+  for (const playerId of Object.keys(sb.players)) {
+    sb.players[playerId].lastResult = null;
+  }
 };
 
 export const recordAnswer = (pin, { playerId, username, isCorrect, responseTimeMs, questionDurationMs }) => {
