@@ -48,6 +48,12 @@ const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode } = {}) =>
   }
 
   const pinStr = String(pin);
+
+  if (!rooms.has(pinStr) || !rooms.get(pinStr).hostId) {
+    socket.emit("session-error", { message: "This session is no longer active or the host has disconnected." });
+    return;
+  }
+
   const room = getRoom(pinStr);
   const id = generatePlayerId();
 
@@ -293,6 +299,34 @@ export const initSocket = (httpServer) => {
       }
     });
 
+    socket.on("cancelSession", async ({ pin } = {}) => {
+      if (!pin || !ROOM_PIN_REGEX.test(String(pin))) {
+        socket.emit("control-error", { message: "Invalid session PIN." });
+        return;
+      }
+
+      const pinStr = String(pin);
+      const room = getRoom(pinStr);
+
+      if (room.hostId !== socket.id) {
+        socket.emit("control-error", { message: "Only the host can cancel the session." });
+        return;
+      }
+
+      try {
+        await Session.findOneAndUpdate({ pin: pinStr }, { status: "completed" });
+      } catch (error) {
+        console.error(`[Socket] Error updating session on cancel: ${error.message}`);
+      }
+
+      io.to(pinStr).emit("room-terminated", { message: "The host has cancelled this session." });
+
+      io.in(pinStr).socketsLeave(pinStr);
+      rooms.delete(pinStr);
+      deleteScoreboard(pinStr);
+      console.log(`[Socket] Room ${pinStr} cancelled by host ${socket.id}`);
+    });
+
     socket.on("roomClosed", async ({ pin } = {}) => {
       if (!pin || !ROOM_PIN_REGEX.test(String(pin))) {
         socket.emit("control-error", { message: "Invalid session PIN." });
@@ -325,15 +359,24 @@ export const initSocket = (httpServer) => {
       console.log(`[Socket] Room ${pinStr} closed by host ${socket.id}`);
     });
 
-    socket.on("disconnect", (reason) => {
+    socket.on("disconnect", async (reason) => {
       console.log(`[Socket] Disconnected: ${socket.id} (${reason})`);
 
       for (const [pin, room] of rooms.entries()) {
+        if (room.hostId === socket.id) {
+          io.to(pin).emit("room-terminated", { message: "The host has disconnected. This session is no longer available." });
+          io.in(pin).socketsLeave(pin);
+          rooms.delete(pin);
+          deleteScoreboard(pin);
+          try {
+            await Session.findOneAndUpdate({ pin }, { status: "completed" });
+          } catch (error) {
+            console.error(`[Socket] Error updating session on host disconnect: ${error.message}`);
+          }
+          break;
+        }
         if (room.participants.has(socket.id)) {
           room.participants.delete(socket.id);
-          if (room.hostId === socket.id) {
-            room.hostId = null;
-          }
           broadcastRoster(io, pin);
           if (room.participants.size === 0) {
             rooms.delete(pin);

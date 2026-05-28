@@ -10,6 +10,7 @@ import {
   startQuiz as emitStartQuiz,
   nextQuestion as emitNextQuestion,
   closeRoom,
+  cancelSession as emitCancelSession,
 } from '../services/socket';
 
 /* =============================================
@@ -167,6 +168,12 @@ const HostSession = () => {
     setPhase('ended');
   }, [pin]);
 
+  const handleCancelSession = useCallback(() => {
+    emitCancelSession(pin);
+    disconnectSocket();
+    navigate('/dashboard', { replace: true });
+  }, [pin, navigate]);
+
   /* =============================================
      RENDER
      ============================================= */
@@ -280,6 +287,18 @@ const HostSession = () => {
                 Start Quiz
               </span>
             </button>
+            <div className="mt-4">
+              <button
+                onClick={handleCancelSession}
+                className="px-8 py-3 rounded-xl text-sm font-extrabold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] border border-red-500 text-red-500 hover:bg-red-500/10"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                <span className="flex items-center gap-2 justify-center">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                  Cancel Session
+                </span>
+              </button>
+            </div>
             {roster.length === 0 && totalQuestions > 0 && (
               <p className="text-xs mt-3" style={{ color: 'var(--color-text-muted)' }}>
                 At least one student must join before starting

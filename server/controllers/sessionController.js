@@ -80,6 +80,52 @@ export const startSession = async (req, res, next) => {
   }
 };
 
+export const cancelSession = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation Error: session ID must be a valid MongoDB ObjectId.",
+      });
+    }
+
+    const session = await Session.findById(id);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: "Session not found.",
+      });
+    }
+
+    if (session.hostId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden — you do not own this session.",
+      });
+    }
+
+    if (session.status === "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Session is already completed.",
+      });
+    }
+
+    session.status = "completed";
+    await session.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Session cancelled successfully.",
+      data: session,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const submitAnswer = async (req, res, next) => {
   try {
     res.status(501).json({

@@ -65,6 +65,22 @@ const StudentSession = () => {
       setIsConnecting(false);
     };
 
+    const onSessionError = ({ message }) => {
+      clearInterval(countdownRef.current);
+      disconnectSocket();
+      setError(message || 'This session is no longer active.');
+      setPhase('join');
+      setIsConnecting(false);
+    };
+
+    const onRoomTerminated = ({ message }) => {
+      clearInterval(countdownRef.current);
+      disconnectSocket();
+      setError(message || 'The host has ended this session.');
+      setPhase('join');
+      setIsConnecting(false);
+    };
+
     const onRoster = (data) => {
       const players = (Array.isArray(data) ? data : data?.roster || [])
         .filter((p) => p.role !== 'host');
@@ -76,7 +92,6 @@ const StudentSession = () => {
     };
 
     const onRevealQuestion = (question) => {
-      // Reset question state
       setCurrentQuestion(question);
       setFrozen(false);
       setSelectedOption(null);
@@ -99,7 +114,6 @@ const StudentSession = () => {
     const onLeaderboard = ({ leaderboard: lb }) => {
       if (Array.isArray(lb)) {
         setLeaderboard(lb);
-        // Only show leaderboard view if we're in feedback phase or question phase
         setPhase((currentPhase) => {
           if (currentPhase === 'feedback' || currentPhase === 'question') {
             return 'leaderboard';
@@ -120,6 +134,8 @@ const StudentSession = () => {
     };
 
     socket.on('join-error', onJoinError);
+    socket.on('session-error', onSessionError);
+    socket.on('room-terminated', onRoomTerminated);
     socket.on('room-roster-updated', onRoster);
     socket.on('quiz-started', onQuizStarted);
     socket.on('reveal-question', onRevealQuestion);
@@ -131,6 +147,8 @@ const StudentSession = () => {
 
     return () => {
       socket.off('join-error', onJoinError);
+      socket.off('session-error', onSessionError);
+      socket.off('room-terminated', onRoomTerminated);
       socket.off('room-roster-updated', onRoster);
       socket.off('quiz-started', onQuizStarted);
       socket.off('reveal-question', onRevealQuestion);
@@ -140,7 +158,7 @@ const StudentSession = () => {
       socket.off('quiz-terminated', onTerminated);
       socket.off('connect_error', onConnectError);
     };
-  }, []); // Bind exactly once on mount
+  }, []);
 
   /* ---- Countdown timer ---- */
   useEffect(() => {

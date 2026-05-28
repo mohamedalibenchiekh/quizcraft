@@ -100,6 +100,14 @@ export const closeRoom = (pin) => {
   socket.emit('roomClosed', { pin });
 };
 
+/**
+ * Professor cancels a session before starting, tearing down the lobby.
+ * @param {string} pin — room PIN
+ */
+export const cancelSession = (pin) => {
+  socket.emit('cancelSession', { pin });
+};
+
 /* ---------------------------------------------
    Diagnostic Event Listeners
    --------------------------------------------- */

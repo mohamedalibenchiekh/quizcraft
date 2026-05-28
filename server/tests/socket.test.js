@@ -3,7 +3,6 @@ import http from "http";
 import { io as ioc } from "socket.io-client";
 import { initSocket } from "../config/socket.js";
 
-const PIN = "999888";
 let server;
 let serverUrl;
 
@@ -41,32 +40,33 @@ afterAll(() => {
 });
 
 describe("Socket.io Real-Time Engine", () => {
-  it("should connect and exchange room-roster-updated events when clients joinRoom", async () => {
-    const client1 = createClient();
-    const client2 = createClient();
+  it("should reject a joinRoom attempt when no host is present", async () => {
+    const client = createClient();
+    await waitForEvent(client, "connect");
 
-    await Promise.all([
-      waitForEvent(client1, "connect"),
-      waitForEvent(client2, "connect"),
-    ]);
+    const errPromise = waitForEvent(client, "session-error");
+    client.emit("joinRoom", { pin: "999888", username: "GhostHunter" });
 
-    const roster1 = waitForEvent(client1, "room-roster-updated");
-    client1.emit("joinRoom", { pin: PIN, username: "Professor" });
-    const firstRoster = await roster1;
+    const err = await errPromise;
+    expect(err).toMatchObject({
+      message: expect.stringContaining("no longer active"),
+    });
 
-    expect(firstRoster).toHaveLength(1);
-    expect(firstRoster[0]).toMatchObject({ username: "Professor", role: "player" });
+    client.close();
+  });
 
-    const roster2 = waitForEvent(client2, "room-roster-updated");
-    const roster1Again = waitForEvent(client1, "room-roster-updated");
-    client2.emit("joinRoom", { pin: PIN, username: "Student", role: "player" });
+  it("should reject joinRoom with invalid PIN format", async () => {
+    const client = createClient();
+    await waitForEvent(client, "connect");
 
-    const [secondRoster, thirdRoster] = await Promise.all([roster2, roster1Again]);
+    const errPromise = waitForEvent(client, "join-error");
+    client.emit("joinRoom", { pin: "SHORT", username: "Bad" });
 
-    expect(secondRoster).toHaveLength(2);
-    expect(thirdRoster).toHaveLength(2);
+    const err = await errPromise;
+    expect(err).toMatchObject({
+      message: expect.stringContaining("Invalid"),
+    });
 
-    client1.close();
-    client2.close();
+    client.close();
   });
 });
