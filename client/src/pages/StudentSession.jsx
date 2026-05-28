@@ -59,6 +59,19 @@ const StudentSession = () => {
     }
   }, [location.state]);
 
+  /* ---- Transition from Results to Leaderboard ---- */
+  useEffect(() => {
+    let timer;
+    if (phase === 'results') {
+      timer = setTimeout(() => {
+        setPhase('leaderboard');
+      }, 5000);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [phase]);
+
   /* ---- Socket event wiring ---- */
   useEffect(() => {
     const onJoinError = ({ message }) => {
@@ -126,12 +139,6 @@ const StudentSession = () => {
     const onLeaderboard = ({ leaderboard: lb }) => {
       if (Array.isArray(lb)) {
         setLeaderboard(lb);
-        setPhase((currentPhase) => {
-          if (currentPhase === 'results') {
-            return 'leaderboard';
-          }
-          return currentPhase;
-        });
       }
     };
 
@@ -538,35 +545,6 @@ const StudentSession = () => {
               </div>
             )}
 
-            {/* Leaderboard */}
-            {Array.isArray(resultsData?.scoreboard) && resultsData.scoreboard.length > 0 && (
-              <div className="mt-6 text-left">
-                <h4 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-muted)' }}>
-                  Standings
-                </h4>
-                <div className="space-y-2">
-                  {resultsData.scoreboard.map((entry, i) => (
-                    <div
-                      key={entry.playerId}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-500"
-                      style={{
-                        background: i === 0 ? 'rgba(234, 179, 8, 0.1)' : 'var(--color-surface-elevated)',
-                        border: `1px solid ${i === 0 ? 'rgba(234, 179, 8, 0.25)' : 'rgba(139, 92, 246, 0.08)'}`,
-                      }}
-                    >
-                      <span className="text-base mr-1">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${entry.placement}`}</span>
-                      <span className="flex-1 font-bold text-sm truncate" style={{ color: 'var(--color-text-primary)' }}>{entry.username}</span>
-                      <span className="text-sm font-semibold" style={{ color: 'var(--color-brand-300)' }}>{entry.score.toLocaleString()} pts</span>
-                      {entry.positionChange !== 0 && (
-                        <span className="text-xs font-semibold" style={{ color: entry.positionChange > 0 ? '#4ade80' : '#f87171' }}>
-                          {entry.positionChange > 0 ? `▲${entry.positionChange}` : `▼${Math.abs(entry.positionChange)}`}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <p className="text-xs mt-6" style={{ color: 'var(--color-text-muted)' }}>
               Waiting for the next question…
