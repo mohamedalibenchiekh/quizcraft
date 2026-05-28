@@ -187,6 +187,10 @@ describe("Socket.io Live Quiz Orchestration", () => {
     hostSocket.emit("startQuiz", { pin: PIN });
     await waitForEvent(studentSocket, "quiz-started");
 
+    const revealPromise = waitForEvent(studentSocket, "reveal-question");
+    hostSocket.emit("nextQuestion", { pin: PIN, questionIndex: 0, durationMs: 10000 });
+    await revealPromise;
+
     const ackPromise = waitForEvent(studentSocket, "answer-acknowledged");
     studentSocket.emit("submitAnswer", {
       pin: PIN,
@@ -198,22 +202,19 @@ describe("Socket.io Live Quiz Orchestration", () => {
     expect(ack).toMatchObject({
       questionId: questionId.toString(),
       correct: true,
-      score: 1,
+      score: expect.any(Number),
+      pointsAwarded: expect.any(Number),
     });
+    expect(ack.score).toBeGreaterThan(0);
 
-    const wrongAckPromise = waitForEvent(studentSocket, "answer-acknowledged");
+    const dupErr = waitForEvent(studentSocket, "submit-error");
     studentSocket.emit("submitAnswer", {
       pin: PIN,
       questionId: questionId.toString(),
       chosenOption: "3",
     });
-    const wrongAck = await wrongAckPromise;
-
-    expect(wrongAck).toMatchObject({
-      questionId: questionId.toString(),
-      correct: false,
-      score: 1,
-    });
+    const dupPayload = await dupErr;
+    expect(dupPayload).toMatchObject({ message: expect.stringContaining("already answered") });
 
     hostSocket.close();
     studentSocket.close();
