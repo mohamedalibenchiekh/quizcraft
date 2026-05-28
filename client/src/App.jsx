@@ -8,6 +8,7 @@ import Signup from './pages/Signup';
 import ProfessorDashboard from './pages/ProfessorDashboard';
 import QuizGenerator from './pages/QuizGenerator';
 import StudentSession from './pages/StudentSession';
+import HostSession from './pages/HostSession';
 
 import './App.css';
 
@@ -90,6 +91,18 @@ const AppRoutes = () => {
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
               <Navbar />
               <QuizGenerator />
+            </div>
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/host-session" 
+        element={
+          <ProtectedRoute allowedRole="professor">
+            <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+              <Navbar />
+              <HostSession />
             </div>
           </ProtectedRoute>
         } 
