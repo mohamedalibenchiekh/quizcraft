@@ -14,6 +14,7 @@ describe("Session Router — POST /api/sessions/start", () => {
   let mongoServer;
   let professorToken;
   let studentToken;
+  let professorId;
   let validQuizId;
 
   beforeAll(async () => {
@@ -21,7 +22,7 @@ describe("Session Router — POST /api/sessions/start", () => {
     const uri = mongoServer.getUri();
     await mongoose.connect(uri);
 
-    const professorId = new mongoose.Types.ObjectId();
+    professorId = new mongoose.Types.ObjectId();
     const studentId = new mongoose.Types.ObjectId();
     validQuizId = new mongoose.Types.ObjectId();
 
@@ -49,16 +50,23 @@ describe("Session Router — POST /api/sessions/start", () => {
   });
 
   it("should create a session and return a 6-character PIN when a valid professor token and quizId are provided", async () => {
+    const quiz = await Quiz.create({
+      title: "My Quiz",
+      professorId,
+      questions: [],
+      isApproved: true,
+    });
+
     const res = await request(app)
       .post("/api/sessions/start")
       .set("Authorization", `Bearer ${professorToken}`)
-      .send({ quizId: validQuizId.toString() });
+      .send({ quizId: quiz._id.toString() });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data.pin).toBeDefined();
     expect(res.body.data.pin).toHaveLength(6);
-    expect(res.body.data.quizId).toBe(validQuizId.toString());
+    expect(res.body.data.quizId).toBe(quiz._id.toString());
     expect(res.body.data.status).toBe("waiting");
     expect(res.body.data.hostId).toBeDefined();
 
@@ -85,7 +93,7 @@ describe("Session Router — POST /api/sessions/start", () => {
     const quiz = await Quiz.create({
       title: "Hydration Test Quiz",
       description: "Quiz for testing question hydration",
-      professorId: new mongoose.Types.ObjectId(),
+      professorId,
       questions: [question1._id, question2._id],
       isApproved: true,
     });
@@ -125,6 +133,37 @@ describe("Session Router — POST /api/sessions/start", () => {
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
     expect(res.body.message).toMatch(/valid.*ObjectId/i);
+  });
+
+  it("should return 404 when the quiz does not exist in the database", async () => {
+    const phantomId = new mongoose.Types.ObjectId();
+
+    const res = await request(app)
+      .post("/api/sessions/start")
+      .set("Authorization", `Bearer ${professorToken}`)
+      .send({ quizId: phantomId.toString() });
+
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/quiz not found/i);
+  });
+
+  it("should return 403 when the quiz belongs to a different professor", async () => {
+    const otherProfessorsQuiz = await Quiz.create({
+      title: "Not my quiz",
+      professorId: new mongoose.Types.ObjectId(),
+      questions: [],
+      isApproved: true,
+    });
+
+    const res = await request(app)
+      .post("/api/sessions/start")
+      .set("Authorization", `Bearer ${professorToken}`)
+      .send({ quizId: otherProfessorsQuiz._id.toString() });
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch(/do not own/i);
   });
 
   it("should return 403 when a student role token attempts to start a session", async () => {

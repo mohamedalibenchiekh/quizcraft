@@ -45,13 +45,27 @@ export const startSession = async (req, res, next) => {
       });
     }
 
+    const quiz = await Quiz.findById(quizId).populate("questions");
+    if (!quiz) {
+      return res.status(404).json({
+        success: false,
+        message: "Quiz not found.",
+      });
+    }
+
+    if (quiz.professorId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden — you do not own this quiz.",
+      });
+    }
+
+    const totalQuestions = quiz.questions?.length || 0;
+
     const session = await createSessionWithUniquePin({
       quizId,
       hostId: req.user.id,
     });
-
-    const quiz = await Quiz.findById(quizId).populate("questions");
-    const totalQuestions = quiz?.questions?.length || 0;
 
     res.status(201).json({
       success: true,
