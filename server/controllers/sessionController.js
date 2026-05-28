@@ -17,10 +17,21 @@ const generatePin = () => {
 const createSessionWithUniquePin = async (data, opts = {}) => {
   for (let attempt = 0; attempt < MAX_PIN_RETRIES; attempt++) {
     data.pin = generatePin();
+    
+    // Check for PIN collision proactively to avoid triggering E11000 duplicate key errors,
+    // which would irreversibly abort the Mongoose transaction
+    const existing = await Session.findOne({ pin: data.pin }, null, opts);
+    if (existing) continue;
+
     try {
       const created = await Session.create([data], opts);
       return created[0];
     } catch (error) {
+      // If a concurrent transaction sneaks in and causes an E11000, the current transaction
+      // is aborted by MongoDB and cannot be retried. Let it throw so the user can try again.
+      if (error.code === 11000 && opts.session) {
+        throw error;
+      }
       if (error.code !== 11000) throw error;
     }
   }
@@ -48,6 +59,7 @@ export const startSession = async (req, res, next) => {
     await Session.createCollection();
     const session = await mongoose.startSession();
     session.startTransaction();
+    let transactionCommitted = false;
 
     try {
       // Clean up any stale sessions for this quiz+host before creating a new one
@@ -63,6 +75,7 @@ export const startSession = async (req, res, next) => {
       }, { session });
 
       await session.commitTransaction();
+      transactionCommitted = true;
       session.endSession();
 
       res.status(201).json({
@@ -70,7 +83,9 @@ export const startSession = async (req, res, next) => {
         data: newSession,
       });
     } catch (transactionError) {
-      await session.abortTransaction();
+      if (!transactionCommitted) {
+        await session.abortTransaction();
+      }
       session.endSession();
       throw transactionError;
     }
