@@ -21,13 +21,36 @@ const TakeQuiz = () => {
   const [answers, setAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const pendingAdaptiveRef = useRef(null);
   const adaptiveRef = useRef(null);
 
+  // Sync latest adaptive questions from result into ref so handleRetry can use them
+  useEffect(() => {
+    if (result?.adaptiveQuestions?.length > 0) {
+      pendingAdaptiveRef.current = result.adaptiveQuestions;
+    }
+  }, [result]);
+
   const handleRetry = useCallback(() => {
-    setResult(null);
-    setAnswers({});
-    setError('');
-  }, []);
+    const adaptiveQs = pendingAdaptiveRef.current;
+    if (adaptiveQs && adaptiveQs.length > 0) {
+      // Build a virtual quiz from the adaptive question set
+      setQuiz({
+        _id: `${quizId}-adaptive`,
+        title: 'Adaptive Challenge',
+        description: 'Questions tailored to your performance',
+        questions: adaptiveQs,
+      });
+      setAnswers({});
+      setError('');
+      setResult(null);
+      pendingAdaptiveRef.current = null;
+    } else {
+      setResult(null);
+      setAnswers({});
+      setError('');
+    }
+  }, [quizId]);
 
   useEffect(() => {
     if (!quizId) return;
