@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import mongoose from "mongoose";
 import Session from "../models/Session.js";
+import Quiz from "../models/Quiz.js";
 
 const PIN_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const PIN_LENGTH = 6;
@@ -44,6 +45,23 @@ export const startSession = async (req, res, next) => {
       });
     }
 
+    const quiz = await Quiz.findById(quizId).populate("questions");
+    if (!quiz) {
+      return res.status(404).json({
+        success: false,
+        message: "Quiz not found.",
+      });
+    }
+
+    if (quiz.professorId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden — you do not own this quiz.",
+      });
+    }
+
+    const totalQuestions = quiz.questions?.length || 0;
+
     const session = await createSessionWithUniquePin({
       quizId,
       hostId: req.user.id,
@@ -51,7 +69,11 @@ export const startSession = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      data: session,
+      data: {
+        ...session.toObject(),
+        totalQuestions,
+        quiz,
+      },
     });
   } catch (error) {
     next(error);

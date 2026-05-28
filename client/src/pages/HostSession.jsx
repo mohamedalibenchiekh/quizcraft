@@ -30,6 +30,7 @@ const HostSession = () => {
   const [leaderboard, setLeaderboard] = useState([]);
   const [questionIndex, setQuestionIndex] = useState(-1);
   const [totalQuestions, setTotalQuestions] = useState(0);
+  const [currentQuiz, setCurrentQuiz] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [error, setError] = useState('');
 
@@ -48,13 +49,17 @@ const HostSession = () => {
       try {
         const res = await api.post('/sessions/start', { quizId });
         const sessionPin = res.data?.data?.pin || res.data?.pin;
-        const total = res.data?.data?.totalQuestions || res.data?.totalQuestions || 0;
+        const quizData = res.data?.data?.quiz || null;
+        const total = quizData?.questions?.length ?? res.data?.data?.totalQuestions ?? 0;
+
+        console.log("Hydrated Quiz Data on Host Screen:", quizData);
 
         if (!sessionPin) throw new Error('No PIN returned from server.');
 
         if (cancelled) return;
 
         setPin(sessionPin);
+        setCurrentQuiz(quizData);
         setTotalQuestions(total);
         pinRef.current = sessionPin;
 
