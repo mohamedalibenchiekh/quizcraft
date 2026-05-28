@@ -240,7 +240,8 @@ export const initSocket = (httpServer) => {
           clearTimeout(room.questionTimeoutId);
         }
         room.questionTimeoutId = setTimeout(() => {
-          const r = getRoom(pinStr);
+          const r = rooms.get(pinStr);
+          if (!r) return;
           if (r.questionStartTime && !r.resultsRevealed) {
             r.resultsRevealed = true;
             finalizeUnansweredPlayers(pinStr);
