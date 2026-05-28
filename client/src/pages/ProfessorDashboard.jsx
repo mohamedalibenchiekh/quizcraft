@@ -233,7 +233,7 @@ const ProfessorDashboard = () => {
                   {/* Core quiz actions */}
                   <div className="flex gap-3">
                     <button 
-                      onClick={() => navigate('/session', { state: { quizId: quiz._id } })}
+                      onClick={() => navigate('/host-session', { state: { quizId: quiz._id } })}
                       disabled={!quiz.isApproved}
                       className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-1.5 text-white ${
                         quiz.isApproved 

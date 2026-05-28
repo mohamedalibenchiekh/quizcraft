@@ -89,14 +89,24 @@ The domain model is `User → Quiz → Question → Session → Attempt` (where 
 *Satisfies: TAG: LIVE — Real-Time Quiz Sessions*
 
 * **Deliverables**:
-  * [ ] Create real-time state listeners inside the backend application using an explicit `Socket.io` server instantiator.
-  * [ ] Build the room session generator router (`POST /api/sessions/start`) returning a random, 6-character room access passcode.
-  * [ ] Implement structural socket events to orchestrate live actions: `joinRoom`, `nextQuestion`, `submitAnswer`, and `roomClosed`.
-  * [ ] **QC-BR-03**: Answer submissions submitted past an active question countdown window must be dropped server-side and recorded as a point value score of zero.
-  * [ ] Create the live real-time point tracking map, calculating scoreboard differentials and piping streaming update event blocks back out to connected clients immediately.
+  * [x] Create real-time state listeners inside the backend application using an explicit `Socket.io` server instantiator.
+  * [x] Build the room session generator router (`POST /api/sessions/start`) returning a random, 6-character room access passcode.
+  * [x] Implement structural socket events to orchestrate live actions: `joinRoom`, `nextQuestion`, `submitAnswer`, and `roomClosed`.
+  * [x] **QC-BR-03**: Answer submissions submitted past an active question countdown window must be dropped server-side and recorded as a point value score of zero.
+  * [x] Create the live real-time point tracking map, calculating scoreboard differentials and piping streaming update event blocks back out to connected clients immediately.
 
 * **Exit criteria**:
-  * Opening a student viewpoint tab and submitting test answers updates a professor's presentation monitor view instantly, shifting leaderboard items dynamically without a browser refresh.
+  * [x] Opening a student viewpoint tab and submitting test answers updates a professor's presentation monitor view instantly, shifting leaderboard items dynamically without a browser refresh.
+
+#### Phase 3 Implementation Metrics
+
+* **Socket.io Server Instantiator**: Fully integrated backend WebSocket architecture in `server/config/socket.js`, running on the standard Express server instance and utilizing rooms for isolated game sessions.
+* **6-Character PIN Generation**: Employs secure cryptographic selection (`crypto.randomInt`) to construct exactly 6-character uppercase alphanumeric room passcodes, complete with up to 5 automatic collision retries backed by a unique index on MongoDB.
+* **Speed-Weighted Scoring Formula**: Correct answers are awarded points using the dynamic response time ratio:
+  $$\text{Points} = \text{round}(1000 - (\frac{\text{Response Time}}{\text{Question Duration}} \times 500)) + \text{Streak Bonus}$$
+  * An additional streak bonus of $+100$ points is automatically awarded for players on a correct answer streak of 2 or more.
+* **Client-Side Input Freeze (QC-BR-03)**: The student component (`StudentSession.jsx`) instantly freezes all visual controls (setting all option buttons to `disabled`) as soon as the user selects an option OR when the circular SVG countdown timer reaches zero, preventing duplicate submissions or late submissions.
+* **Integration Test Coverage**: Automated suite written in Vitest and React Testing Library (`LiveSession.test.jsx`) verifying key game loops including connection event listeners, real-time roster updates, and complete button freeze constraints.
 
 ---
 
