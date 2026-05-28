@@ -89,6 +89,18 @@ const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode } = {}) =>
   }
 
   const room = getRoom(pinStr);
+
+  const nameExists = Array.from(room.participants.values()).some(
+    (p) => p.username.toLowerCase().trim() === (username || "Anonymous").toLowerCase().trim()
+  );
+  if (nameExists) {
+    socket.emit("join-rejected", {
+      reason: "name_taken",
+      message: "This username is already taken in this room.",
+    });
+    return;
+  }
+
   const id = generatePlayerId();
 
   room.participants.set(socket.id, {
