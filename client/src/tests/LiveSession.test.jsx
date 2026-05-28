@@ -126,6 +126,7 @@ describe('LiveSession Student Portal Tests', () => {
     const mockQuestion = {
       _id: 'q123',
       text: 'Which course material is the source of truth?',
+      type: 'MCQ',
       options: ['Syllabus', 'Slides', 'AI Generator', 'Wikipedia'],
     };
 

@@ -42,6 +42,8 @@ const StudentSession = () => {
   const [countdown, setCountdown] = useState(QUESTION_DURATION_S);
   const [frozen, setFrozen] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
+  const [shortAnswerText, setShortAnswerText] = useState('');
+  const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [answerStatus, setAnswerStatus] = useState('idle'); // idle | submitted | received | rejected
   const countdownRef = useRef(null);
 
@@ -110,6 +112,8 @@ const StudentSession = () => {
       setCurrentQuestion(question);
       setFrozen(false);
       setSelectedOption(null);
+      setShortAnswerText('');
+      setSubmittedAnswer('');
       setAnswerStatus('idle');
       setResultsData(null);
       setYourQuestionResult(null);
@@ -262,6 +266,22 @@ const StudentSession = () => {
       emitSubmitAnswer(activePin, currentQuestion._id, option);
     }
   }, [frozen, currentQuestion, activePin]);
+
+  const handleShortAnswerSubmit = useCallback(() => {
+    if (frozen || !shortAnswerText.trim()) return;
+
+    const text = shortAnswerText.trim();
+
+    // QC-BR-03: Freeze input immediately upon submission
+    setFrozen(true);
+    setSubmittedAnswer(text);
+    setAnswerStatus('submitted');
+    clearInterval(countdownRef.current);
+
+    if (currentQuestion && activePin) {
+      emitSubmitAnswer(activePin, currentQuestion._id, text);
+    }
+  }, [frozen, shortAnswerText, currentQuestion, activePin]);
 
   /* ---- Countdown ring SVG math ---- */
   const RING_RADIUS = 54;
@@ -429,34 +449,58 @@ const StudentSession = () => {
             </div>
           )}
 
-          {/* Options */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" data-testid="options-container">
-            {(currentQuestion?.options || []).map((option, i) => {
-              const colors = OPTION_COLORS[i % OPTION_COLORS.length];
-              const isSelected = selectedOption === option;
+          {/* Options / Input — polymorphic by question type */}
+          {['MCQ', 'True-False'].includes(currentQuestion?.type) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" data-testid="options-container">
+              {(currentQuestion?.options || []).map((option, i) => {
+                const colors = OPTION_COLORS[i % OPTION_COLORS.length];
+                const isSelected = selectedOption === option;
 
-              return (
-                <button
-                  key={i}
-                  data-testid={`option-btn-${i}`}
-                  onClick={() => handleSelectOption(option)}
-                  disabled={frozen}
-                  className="relative px-6 py-5 rounded-2xl text-left font-bold text-base transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{
-                    background: isSelected ? colors.border : colors.bg,
-                    border: `2px solid ${isSelected ? colors.accent : colors.border}`,
-                    color: 'var(--color-text-primary)',
-                    transform: isSelected ? 'scale(0.97)' : undefined,
-                  }}
-                >
-                  <span className="mr-3 inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-extrabold" style={{ background: colors.border, color: colors.accent }}>
-                    {String.fromCharCode(65 + i)}
-                  </span>
-                  {option}
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button
+                    key={i}
+                    data-testid={`option-btn-${i}`}
+                    onClick={() => handleSelectOption(option)}
+                    disabled={frozen}
+                    className="relative px-6 py-5 rounded-2xl text-left font-bold text-base transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{
+                      background: isSelected ? colors.border : colors.bg,
+                      border: `2px solid ${isSelected ? colors.accent : colors.border}`,
+                      color: 'var(--color-text-primary)',
+                      transform: isSelected ? 'scale(0.97)' : undefined,
+                    }}
+                  >
+                    <span className="mr-3 inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-extrabold" style={{ background: colors.border, color: colors.accent }}>
+                      {String.fromCharCode(65 + i)}
+                    </span>
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {currentQuestion?.type === 'Short-Answer' && (
+            <div className="w-full max-w-xl mx-auto space-y-4">
+              <textarea
+                data-testid="short-answer-input"
+                className="w-full p-4 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-colors"
+                placeholder="Type your answer clearly here..."
+                value={shortAnswerText}
+                onChange={(e) => setShortAnswerText(e.target.value)}
+                disabled={frozen}
+                rows={3}
+              />
+              <button
+                data-testid="short-answer-submit"
+                className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                onClick={handleShortAnswerSubmit}
+                disabled={frozen || !shortAnswerText.trim()}
+              >
+                Submit Response
+              </button>
+            </div>
+          )}
 
           {/* Waiting overlay — semi-transparent, options stay visible underneath */}
           {frozen && answerStatus === 'submitted' && (
@@ -483,12 +527,23 @@ const StudentSession = () => {
               </div>
             </div>
           )}
-          {frozen && !selectedOption && (
+          {frozen && answerStatus === 'idle' && (
             <div className="mt-6 relative">
               <div className="absolute inset-0 flex items-center justify-center z-10">
                 <div className="w-full max-w-md mx-auto text-center px-6 py-4 rounded-2xl backdrop-blur-sm" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
                   <p className="text-sm font-semibold text-red-300">
                     Time's up! Waiting for results…
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {frozen && answerStatus === 'rejected' && (
+            <div className="mt-6 relative">
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <div className="w-full max-w-md mx-auto text-center px-6 py-4 rounded-2xl backdrop-blur-sm" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  <p className="text-sm font-semibold text-red-300">
+                    Answer rejected — submitted too late!
                   </p>
                 </div>
               </div>
@@ -502,7 +557,8 @@ const StudentSession = () => {
   // --- Results (delayed reveal after question window closes) ---
   if (phase === 'results') {
     const isLate = answerStatus === 'rejected';
-    const isCorrect = !isLate && selectedOption === resultsData?.correctAnswer;
+    const studentAnswer = currentQuestion?.type === 'Short-Answer' ? submittedAnswer : selectedOption;
+    const isCorrect = !isLate && studentAnswer === resultsData?.correctAnswer;
 
     const myEntry = Array.isArray(resultsData?.scoreboard)
       ? resultsData.scoreboard.find((e) => e.playerId)
@@ -527,6 +583,11 @@ const StudentSession = () => {
               {isCorrect ? 'Correct!' : isLate ? "Time's Up!" : 'Incorrect'}
             </h3>
 
+            {(currentQuestion?.type === 'Short-Answer' && submittedAnswer) && (
+              <p className="text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                Your answer: <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>{submittedAnswer}</span>
+              </p>
+            )}
             <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
               The correct answer was: <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>{resultsData?.correctAnswer}</span>
             </p>
