@@ -10,6 +10,7 @@ import QuizGenerator from './pages/QuizGenerator';
 import QuizEdit from './pages/QuizEdit';
 import StudentSession from './pages/StudentSession';
 import HostSession from './pages/HostSession';
+import TakeQuiz from './pages/TakeQuiz';
 
 import './App.css';
 
@@ -115,6 +116,19 @@ const AppRoutes = () => {
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
               <Navbar />
               <HostSession />
+            </div>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Self-assessment Quiz Player */}
+      <Route 
+        path="/quiz/:id/take" 
+        element={
+          <ProtectedRoute allowedRole="student">
+            <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+              <Navbar />
+              <TakeQuiz />
             </div>
           </ProtectedRoute>
         } 
