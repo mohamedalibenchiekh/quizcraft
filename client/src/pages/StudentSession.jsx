@@ -527,12 +527,23 @@ const StudentSession = () => {
               </div>
             </div>
           )}
-          {frozen && !selectedOption && (
+          {frozen && answerStatus === 'idle' && (
             <div className="mt-6 relative">
               <div className="absolute inset-0 flex items-center justify-center z-10">
                 <div className="w-full max-w-md mx-auto text-center px-6 py-4 rounded-2xl backdrop-blur-sm" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
                   <p className="text-sm font-semibold text-red-300">
                     Time's up! Waiting for results…
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {frozen && answerStatus === 'rejected' && (
+            <div className="mt-6 relative">
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <div className="w-full max-w-md mx-auto text-center px-6 py-4 rounded-2xl backdrop-blur-sm" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  <p className="text-sm font-semibold text-red-300">
+                    Answer rejected — submitted too late!
                   </p>
                 </div>
               </div>
