@@ -213,7 +213,7 @@ export const updateQuizMetadata = async (req, res, next) => {
         const activeSession = await Session.findOne({
           quizId: quiz._id,
           hostId: req.user.id,
-          status: { $in: ['waiting', 'active'] },
+          status: 'active',
         }).session(session);
         if (activeSession) {
           await session.abortTransaction();
