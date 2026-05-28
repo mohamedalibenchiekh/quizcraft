@@ -5,7 +5,6 @@ import { MemoryRouter } from 'react-router-dom';
 import StudentSession from '../pages/StudentSession.jsx';
 import { socket } from '../services/socket';
 
-// 1. Mock the socket singleton service
 vi.mock('../services/socket', () => {
   const callbacks = {};
   const mockSocket = {
@@ -53,7 +52,6 @@ vi.mock('../services/socket', () => {
   };
 });
 
-// 2. Mock useAuth hook from AuthContext
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
     user: { name: 'Test Student', email: 'student@test.com', role: 'student' },
@@ -63,11 +61,10 @@ vi.mock('../context/AuthContext', () => ({
   }),
 }));
 
-describe('LiveSession Student Portal Tests', () => {
+describe('Short-Answer Input Rendering', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     socket.connected = false;
-    // Clear callbacks dictionary
     Object.keys(socket._callbacks).forEach((key) => {
       delete socket._callbacks[key];
     });
@@ -84,82 +81,84 @@ describe('LiveSession Student Portal Tests', () => {
       </MemoryRouter>
     );
 
-    // Enter PIN and username
     const pinInput = screen.getByPlaceholderText('ABC123');
     const nameInput = screen.getByPlaceholderText('Your name');
     const joinButton = screen.getByRole('button', { name: /join lobby/i });
 
     fireEvent.change(pinInput, { target: { value: 'XYZ789' } });
     fireEvent.change(nameInput, { target: { value: 'Alice' } });
-
-    // Click join
     fireEvent.click(joinButton);
   };
 
-  it('Test Case 2 — Roster Streaming Loop: should dynamically render participant list when room-roster-updated is emitted', () => {
+  it('should render a textarea and submit button when a Short-Answer question is active, and remove the options grid', () => {
     joinLobbyHelper();
 
-    // Verify in lobby state
-    expect(screen.getByText(/Waiting for Host…/i)).toBeInTheDocument();
-
-    // Simulate server roster update
-    const mockRoster = [
-      { socketId: '1', username: 'Alice', role: 'student' },
-      { socketId: '2', username: 'Bob', role: 'student' },
-      { socketId: '3', username: 'Charlie', role: 'student' },
-    ];
-
-    act(() => {
-      if (socket._callbacks['room-roster-updated']) {
-        socket._callbacks['room-roster-updated'](mockRoster);
-      }
-    });
-
-    // Roster count is updated in the subtitle: "3 players in the lobby."
-    expect(screen.getByText(/3 players in the lobby/i)).toBeInTheDocument();
-  });
-
-  it('Test Case 1 — Input Freeze Realization: should freeze all options as soon as an option is selected and show waiting overlay', () => {
-    joinLobbyHelper();
-
-    // Simulate quiz starting and question being revealed
-    const mockQuestion = {
-      _id: 'q123',
-      text: 'Which course material is the source of truth?',
-      type: 'MCQ',
-      options: ['Syllabus', 'Slides', 'AI Generator', 'Wikipedia'],
+    const mockShortAnswerQuestion = {
+      _id: 'q456',
+      text: 'What is the capital of France?',
+      type: 'Short-Answer',
     };
 
     act(() => {
       if (socket._callbacks['reveal-question']) {
-        socket._callbacks['reveal-question'](mockQuestion);
+        socket._callbacks['reveal-question'](mockShortAnswerQuestion);
       }
     });
 
-    // Check we entered the active question phase
-    expect(screen.getByText('Which course material is the source of truth?')).toBeInTheDocument();
+    expect(screen.getByText('What is the capital of France?')).toBeInTheDocument();
 
-    // Verify options are displayed and enabled initially
-    const opt0 = screen.getByTestId('option-btn-0');
-    const opt1 = screen.getByTestId('option-btn-1');
-    const opt2 = screen.getByTestId('option-btn-2');
-    const opt3 = screen.getByTestId('option-btn-3');
+    expect(screen.getByTestId('short-answer-input')).toBeInTheDocument();
+    expect(screen.getByTestId('short-answer-input').tagName).toBe('TEXTAREA');
 
-    expect(opt0).not.toBeDisabled();
-    expect(opt1).not.toBeDisabled();
-    expect(opt2).not.toBeDisabled();
-    expect(opt3).not.toBeDisabled();
+    expect(screen.getByTestId('short-answer-submit')).toBeInTheDocument();
 
-    // Click Option A (opt0)
-    fireEvent.click(opt0);
+    expect(screen.queryByTestId('options-container')).not.toBeInTheDocument();
+  });
 
-    // Verify all option buttons are disabled immediately (QC-BR-03 Input Freeze)
-    expect(opt0).toBeDisabled();
-    expect(opt1).toBeDisabled();
-    expect(opt2).toBeDisabled();
-    expect(opt3).toBeDisabled();
+  it('should keep the options grid for MCQ type questions', () => {
+    joinLobbyHelper();
 
-    // Verify the waiting overlay appears
-    expect(screen.getByText(/Answer locked in! Waiting for other participants/i)).toBeInTheDocument();
+    const mockMCQQuestion = {
+      _id: 'q789',
+      text: 'Which is the largest planet?',
+      type: 'MCQ',
+      options: ['Earth', 'Jupiter', 'Mars', 'Venus'],
+    };
+
+    act(() => {
+      if (socket._callbacks['reveal-question']) {
+        socket._callbacks['reveal-question'](mockMCQQuestion);
+      }
+    });
+
+    expect(screen.getByTestId('options-container')).toBeInTheDocument();
+    expect(screen.queryByTestId('short-answer-input')).not.toBeInTheDocument();
+  });
+
+  it('should freeze short-answer input and submit button upon submission', () => {
+    joinLobbyHelper();
+
+    const mockShortAnswerQuestion = {
+      _id: 'q456',
+      text: 'What is the capital of France?',
+      type: 'Short-Answer',
+    };
+
+    act(() => {
+      if (socket._callbacks['reveal-question']) {
+        socket._callbacks['reveal-question'](mockShortAnswerQuestion);
+      }
+    });
+
+    const textarea = screen.getByTestId('short-answer-input');
+    fireEvent.change(textarea, { target: { value: 'Paris' } });
+
+    const submitBtn = screen.getByTestId('short-answer-submit');
+    expect(submitBtn).not.toBeDisabled();
+
+    fireEvent.click(submitBtn);
+
+    expect(textarea).toBeDisabled();
+    expect(submitBtn).toBeDisabled();
   });
 });
