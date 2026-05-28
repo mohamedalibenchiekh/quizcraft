@@ -29,7 +29,7 @@ const StudentSession = () => {
   const navigate = useNavigate();
 
   /* ---- State ---- */
-  const [phase, setPhase] = useState('join');           // join | lobby | question | feedback | leaderboard | ended
+  const [phase, setPhase] = useState('join');           // join | lobby | question | results | leaderboard | ended
   const [isConnecting, setIsConnecting] = useState(false);
   const [pinInput, setPinInput] = useState(location.state?.roomCode || '');
   const [usernameInput, setUsernameInput] = useState('');
@@ -42,10 +42,11 @@ const StudentSession = () => {
   const [countdown, setCountdown] = useState(QUESTION_DURATION_S);
   const [frozen, setFrozen] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
+  const [answerStatus, setAnswerStatus] = useState('idle'); // idle | submitted | received | rejected
   const countdownRef = useRef(null);
 
-  // Feedback state
-  const [feedback, setFeedback] = useState(null); // { type: 'acknowledged'|'rejected', data }
+  // Results state
+  const [resultsData, setResultsData] = useState(null); // { correctAnswer, scoreboard }
   const [leaderboard, setLeaderboard] = useState([]);
 
   const activePinRef = useRef('');
@@ -95,27 +96,32 @@ const StudentSession = () => {
       setCurrentQuestion(question);
       setFrozen(false);
       setSelectedOption(null);
-      setFeedback(null);
+      setAnswerStatus('idle');
+      setResultsData(null);
       setCountdown(QUESTION_DURATION_S);
       setPhase('question');
     };
 
-    const onAcknowledged = (data) => {
-      setFeedback({ type: 'acknowledged', data });
-      setPhase('feedback');
+    const onAnswerReceived = () => {
+      setAnswerStatus('received');
     };
 
     const onRejected = (data) => {
-      setFeedback({ type: 'rejected', data });
+      setAnswerStatus('rejected');
       setFrozen(true);
-      setPhase('feedback');
+    };
+
+    const onRevealQuestionResults = ({ correctAnswer, scoreboard }) => {
+      setResultsData({ correctAnswer, scoreboard });
+      setLeaderboard(Array.isArray(scoreboard) ? scoreboard : []);
+      setPhase('results');
     };
 
     const onLeaderboard = ({ leaderboard: lb }) => {
       if (Array.isArray(lb)) {
         setLeaderboard(lb);
         setPhase((currentPhase) => {
-          if (currentPhase === 'feedback' || currentPhase === 'question') {
+          if (currentPhase === 'results') {
             return 'leaderboard';
           }
           return currentPhase;
@@ -139,21 +145,18 @@ const StudentSession = () => {
     socket.on('room-roster-updated', onRoster);
     socket.on('quiz-started', onQuizStarted);
     socket.on('reveal-question', onRevealQuestion);
-    socket.on('answer-acknowledged', onAcknowledged);
+    socket.on('answer-received', onAnswerReceived);
     socket.on('answer-rejected', onRejected);
+    socket.on('reveal-question-results', onRevealQuestionResults);
     socket.on('leaderboard-updated', onLeaderboard);
     socket.on('quiz-terminated', onTerminated);
     socket.on('connect_error', onConnectError);
 
     return () => {
-      socket.off('join-error', onJoinError);
-      socket.off('session-error', onSessionError);
-      socket.off('room-terminated', onRoomTerminated);
-      socket.off('room-roster-updated', onRoster);
-      socket.off('quiz-started', onQuizStarted);
       socket.off('reveal-question', onRevealQuestion);
-      socket.off('answer-acknowledged', onAcknowledged);
+      socket.off('answer-received', onAnswerReceived);
       socket.off('answer-rejected', onRejected);
+      socket.off('reveal-question-results', onRevealQuestionResults);
       socket.off('leaderboard-updated', onLeaderboard);
       socket.off('quiz-terminated', onTerminated);
       socket.off('connect_error', onConnectError);
@@ -229,6 +232,7 @@ const StudentSession = () => {
     // QC-BR-03: Immediately freeze all inputs on selection
     setFrozen(true);
     setSelectedOption(option);
+    setAnswerStatus('submitted');
     clearInterval(countdownRef.current);
 
     // Emit answer
@@ -398,7 +402,7 @@ const StudentSession = () => {
           {currentQuestion && (
             <div className="glass-card p-6 mb-6">
               <p className="text-xl font-bold text-center" style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-display)' }}>
-                {currentQuestion.question}
+                {currentQuestion.text}
               </p>
             </div>
           )}
@@ -432,12 +436,40 @@ const StudentSession = () => {
             })}
           </div>
 
-          {/* Frozen indicator */}
-          {frozen && (
-            <div className="mt-6 text-center">
-              <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold" style={{ background: 'rgba(139, 92, 246, 0.12)', color: 'var(--color-brand-300)' }}>
-                {selectedOption ? '✓ Answer submitted — waiting for results…' : "⏱ Time's up!"}
-              </span>
+          {/* Waiting overlay — semi-transparent, options stay visible underneath */}
+          {frozen && answerStatus === 'submitted' && (
+            <div className="mt-6 relative">
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <div className="w-full max-w-md mx-auto text-center px-6 py-4 rounded-2xl backdrop-blur-sm" style={{ background: 'rgba(15, 10, 30, 0.75)', border: '1px solid rgba(139, 92, 246, 0.25)' }}>
+                  <div className="w-8 h-8 mx-auto mb-2 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--color-brand-400)', borderTopColor: 'transparent' }} />
+                  <p className="text-sm font-semibold" style={{ color: 'var(--color-brand-300)' }}>
+                    Answer locked in! Waiting for other participants…
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {frozen && answerStatus === 'received' && (
+            <div className="mt-6 relative">
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <div className="w-full max-w-md mx-auto text-center px-6 py-4 rounded-2xl backdrop-blur-sm" style={{ background: 'rgba(15, 10, 30, 0.75)', border: '1px solid rgba(139, 92, 246, 0.25)' }}>
+                  <div className="w-8 h-8 mx-auto mb-2 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--color-brand-400)', borderTopColor: 'transparent' }} />
+                  <p className="text-sm font-semibold" style={{ color: 'var(--color-brand-300)' }}>
+                    Answer received! Waiting for question to close…
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {frozen && !selectedOption && (
+            <div className="mt-6 relative">
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <div className="w-full max-w-md mx-auto text-center px-6 py-4 rounded-2xl backdrop-blur-sm" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  <p className="text-sm font-semibold text-red-300">
+                    Time's up! Waiting for results…
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -445,62 +477,72 @@ const StudentSession = () => {
     );
   }
 
-  // --- Feedback ---
-  if (phase === 'feedback') {
-    const isCorrect = feedback?.type === 'acknowledged' && feedback?.data?.correct;
-    const isTimeout = feedback?.type === 'rejected' && feedback?.data?.reason === 'timeout';
+  // --- Results (delayed reveal after question window closes) ---
+  if (phase === 'results') {
+    const isLate = answerStatus === 'rejected';
+    const isCorrect = selectedOption === resultsData?.correctAnswer;
+
+    const myEntry = Array.isArray(resultsData?.scoreboard)
+      ? resultsData.scoreboard.find((e) => e.playerId)
+      : null;
 
     return (
       <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4" style={{ background: 'var(--color-surface-base)' }}>
-        <div className="w-full max-w-md text-center animate-fade-in-up">
-          {!feedback ? (
-            /* Loading state for answer-acknowledged */
-            <div>
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--color-brand-400)', borderTopColor: 'transparent' }} />
-              <p className="text-lg font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Processing your answer…</p>
+        <div className="w-full max-w-lg animate-fade-in-up">
+          <div className="glass-card p-8 text-center">
+            {/* Result Icon */}
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center" style={{
+              background: isCorrect ? 'rgba(34, 197, 94, 0.12)' : isLate ? 'rgba(234, 179, 8, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+              border: `2px solid ${isCorrect ? 'rgba(34, 197, 94, 0.3)' : isLate ? 'rgba(234, 179, 8, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+            }}>
+              <span className="text-5xl">{isCorrect ? '🎉' : isLate ? '⏰' : '😔'}</span>
             </div>
-          ) : (
-            <div className="glass-card p-8">
-              {/* Result Icon */}
-              <div className="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center" style={{
-                background: isCorrect ? 'rgba(34, 197, 94, 0.12)' : isTimeout ? 'rgba(234, 179, 8, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                border: `2px solid ${isCorrect ? 'rgba(34, 197, 94, 0.3)' : isTimeout ? 'rgba(234, 179, 8, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-              }}>
-                <span className="text-5xl">{isCorrect ? '🎉' : isTimeout ? '⏰' : '😔'}</span>
-              </div>
 
-              <h3 className="text-2xl font-extrabold mb-2" style={{
-                fontFamily: 'var(--font-display)',
-                color: isCorrect ? '#4ade80' : isTimeout ? '#fbbf24' : '#f87171',
-              }}>
-                {isCorrect ? 'Correct!' : isTimeout ? 'Time\'s Up!' : 'Incorrect'}
-              </h3>
+            <h3 className="text-2xl font-extrabold mb-2" style={{
+              fontFamily: 'var(--font-display)',
+              color: isCorrect ? '#4ade80' : isLate ? '#fbbf24' : '#f87171',
+            }}>
+              {isCorrect ? 'Correct!' : isLate ? "Time's Up!" : 'Incorrect'}
+            </h3>
 
-              {feedback.type === 'acknowledged' && (
-                <div className="space-y-2 mb-4">
-                  <p className="text-lg font-bold" style={{ color: 'var(--color-brand-300)' }}>
-                    +{feedback.data.pointsAwarded || 0} points
-                  </p>
-                  {feedback.data.streakBonus > 0 && (
-                    <p className="text-sm" style={{ color: '#f59e0b' }}>🔥 Streak bonus: +{feedback.data.streakBonus}</p>
-                  )}
-                  <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    Total: {feedback.data.score?.toLocaleString() || 0} pts
-                  </p>
+            <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
+              The correct answer was: <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>{resultsData?.correctAnswer}</span>
+            </p>
+
+            {/* Leaderboard */}
+            {Array.isArray(resultsData?.scoreboard) && resultsData.scoreboard.length > 0 && (
+              <div className="mt-6 text-left">
+                <h4 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-muted)' }}>
+                  Standings
+                </h4>
+                <div className="space-y-2">
+                  {resultsData.scoreboard.map((entry, i) => (
+                    <div
+                      key={entry.playerId}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-500"
+                      style={{
+                        background: i === 0 ? 'rgba(234, 179, 8, 0.1)' : 'var(--color-surface-elevated)',
+                        border: `1px solid ${i === 0 ? 'rgba(234, 179, 8, 0.25)' : 'rgba(139, 92, 246, 0.08)'}`,
+                      }}
+                    >
+                      <span className="text-base mr-1">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${entry.placement}`}</span>
+                      <span className="flex-1 font-bold text-sm truncate" style={{ color: 'var(--color-text-primary)' }}>{entry.username}</span>
+                      <span className="text-sm font-semibold" style={{ color: 'var(--color-brand-300)' }}>{entry.score.toLocaleString()} pts</span>
+                      {entry.positionChange !== 0 && (
+                        <span className="text-xs font-semibold" style={{ color: entry.positionChange > 0 ? '#4ade80' : '#f87171' }}>
+                          {entry.positionChange > 0 ? `▲${entry.positionChange}` : `▼${Math.abs(entry.positionChange)}`}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
+            )}
 
-              {isTimeout && (
-                <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
-                  You didn't answer in time. No points awarded.
-                </p>
-              )}
-
-              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                Waiting for the next question…
-              </p>
-            </div>
-          )}
+            <p className="text-xs mt-6" style={{ color: 'var(--color-text-muted)' }}>
+              Waiting for the next question…
+            </p>
+          </div>
         </div>
       </div>
     );

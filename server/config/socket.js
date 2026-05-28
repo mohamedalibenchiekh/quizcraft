@@ -22,7 +22,17 @@ const rooms = new Map();
 
 const getRoom = (pin) => {
   if (!rooms.has(pin)) {
-    rooms.set(pin, { hostId: null, participants: new Map(), questionExpiresAt: 0, questionStartTime: null, questionDuration: DEFAULT_QUESTION_DURATION_MS });
+    rooms.set(pin, {
+      hostId: null,
+      participants: new Map(),
+      questionExpiresAt: 0,
+      questionStartTime: null,
+      questionDuration: DEFAULT_QUESTION_DURATION_MS,
+      currentCorrectAnswer: null,
+      currentQuestionId: null,
+      questionTimeoutId: null,
+      resultsRevealed: false,
+    });
   }
   return rooms.get(pin);
 };
@@ -181,9 +191,20 @@ export const initSocket = (httpServer) => {
         const filteredQuestion = questionDoc.toObject();
         delete filteredQuestion.correctAnswer;
 
-        if (room.questionStartTime) {
+        if (room.questionStartTime && !room.resultsRevealed) {
+          room.resultsRevealed = true;
+          if (room.questionTimeoutId) {
+            clearTimeout(room.questionTimeoutId);
+            room.questionTimeoutId = null;
+          }
           finalizeUnansweredPlayers(pinStr);
           const prevLb = compileLeaderboard(pinStr);
+          if (room.currentCorrectAnswer) {
+            io.to(pinStr).emit("reveal-question-results", {
+              correctAnswer: room.currentCorrectAnswer,
+              scoreboard: prevLb,
+            });
+          }
           if (prevLb.length > 0) {
             io.to(pinStr).emit("leaderboard-updated", { leaderboard: prevLb });
           }
@@ -196,6 +217,29 @@ export const initSocket = (httpServer) => {
         room.questionExpiresAt = Date.now() + questionDuration + NETWORK_BUFFER_MS;
         room.questionStartTime = Date.now();
         room.questionDuration = questionDuration;
+        room.currentCorrectAnswer = questionDoc.correctAnswer;
+        room.currentQuestionId = questionDoc._id;
+        room.resultsRevealed = false;
+
+        if (room.questionTimeoutId) {
+          clearTimeout(room.questionTimeoutId);
+        }
+        room.questionTimeoutId = setTimeout(() => {
+          const r = getRoom(pinStr);
+          if (r.questionStartTime && !r.resultsRevealed) {
+            r.resultsRevealed = true;
+            finalizeUnansweredPlayers(pinStr);
+            const lb = compileLeaderboard(pinStr);
+            io.to(pinStr).emit("reveal-question-results", {
+              correctAnswer: r.currentCorrectAnswer,
+              scoreboard: lb,
+            });
+            if (lb.length > 0) {
+              io.to(pinStr).emit("leaderboard-updated", { leaderboard: lb });
+            }
+          }
+          r.questionTimeoutId = null;
+        }, questionDuration + NETWORK_BUFFER_MS);
 
         startQuestion(pinStr, room.questionStartTime);
 
@@ -269,7 +313,7 @@ export const initSocket = (httpServer) => {
         }
 
         const responseTimeMs = receivedAt - room.questionStartTime;
-        const result = recordAnswer(pinStr, {
+        recordAnswer(pinStr, {
           playerId: pid,
           username: participant.username,
           isCorrect,
@@ -277,18 +321,22 @@ export const initSocket = (httpServer) => {
           questionDurationMs: room.questionDuration,
         });
 
-        socket.emit("answer-acknowledged", {
+        socket.emit("answer-received", {
           questionId,
-          correct: isCorrect,
-          score: result.cumulativeScore,
-          pointsAwarded: result.pointsAwarded,
-          speedPoints: result.speedPoints,
-          streakBonus: result.streakBonus,
         });
 
         const nonHostCount = Array.from(room.participants.values()).filter((p) => p.role !== "host").length;
-        if (allAnsweredThisRound(pinStr, nonHostCount)) {
+        if (allAnsweredThisRound(pinStr, nonHostCount) && !room.resultsRevealed) {
+          room.resultsRevealed = true;
+          if (room.questionTimeoutId) {
+            clearTimeout(room.questionTimeoutId);
+            room.questionTimeoutId = null;
+          }
           const lb = compileLeaderboard(pinStr);
+          io.to(pinStr).emit("reveal-question-results", {
+            correctAnswer: room.currentCorrectAnswer,
+            scoreboard: lb,
+          });
           if (lb.length > 0) {
             io.to(pinStr).emit("leaderboard-updated", { leaderboard: lb });
           }

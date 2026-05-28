@@ -130,20 +130,17 @@ describe("QC-BR-04 — Real-Time Point Tracking & Scoreboard", () => {
     hostSocket.emit("nextQuestion", { pin, questionIndex: 0, durationMs: 10000 });
     await Promise.all([reveal1, reveal2]);
 
-    const ackP1 = waitForEvent(p1, "answer-acknowledged");
-    await delay(1000);
     p1.emit("submitAnswer", { pin, questionId: questionIds[0].toString(), chosenOption: "A" });
-    const result1 = await ackP1;
+    await delay(1000);
 
-    const ackP2 = waitForEvent(p2, "answer-acknowledged");
-    await delay(3000);
+    const resultsPromise = waitForEvent(p1, "reveal-question-results", 10000);
     p2.emit("submitAnswer", { pin, questionId: questionIds[0].toString(), chosenOption: "A" });
-    const result2 = await ackP2;
 
-    expect(result1.correct).toBe(true);
-    expect(result2.correct).toBe(true);
-    expect(result1.pointsAwarded).toBeGreaterThan(result2.pointsAwarded);
-    expect(result1.speedPoints).toBeGreaterThan(result2.speedPoints);
+    const results = await resultsPromise;
+    expect(results).toHaveProperty("correctAnswer", "A");
+    expect(results).toHaveProperty("scoreboard");
+    expect(results.scoreboard.length).toBe(2);
+    expect(results.scoreboard[0].score).toBeGreaterThan(results.scoreboard[1].score);
 
     hostSocket.close();
     p1.close();
@@ -159,32 +156,32 @@ describe("QC-BR-04 — Real-Time Point Tracking & Scoreboard", () => {
     hostSocket.emit("nextQuestion", { pin, questionIndex: 0, durationMs: 10000 });
     await reveal;
 
-    let ack = waitForEvent(p1, "answer-acknowledged");
+    const results1 = waitForEvent(p1, "reveal-question-results");
     p1.emit("submitAnswer", { pin, questionId: questionIds[0].toString(), chosenOption: "A" });
-    const q1 = await ack;
-    expect(q1.correct).toBe(true);
-    expect(q1.streakBonus).toBe(0);
+    let res1 = await results1;
+    expect(res1.scoreboard[0].score).toBeGreaterThan(0);
+    const scoreAfterQ1 = res1.scoreboard[0].score;
 
     reveal = waitForEvent(p1, "reveal-question");
     hostSocket.emit("nextQuestion", { pin, questionIndex: 1, durationMs: 10000 });
     await reveal;
 
-    ack = waitForEvent(p1, "answer-acknowledged");
+    const results2 = waitForEvent(p1, "reveal-question-results");
     p1.emit("submitAnswer", { pin, questionId: questionIds[1].toString(), chosenOption: "A" });
-    const q2 = await ack;
-    expect(q2.correct).toBe(true);
-    expect(q2.streakBonus).toBe(0);
+    let res2 = await results2;
+    const scoreAfterQ2 = res2.scoreboard[0].score;
+    expect(scoreAfterQ2).toBeGreaterThan(scoreAfterQ1);
 
     reveal = waitForEvent(p1, "reveal-question");
     hostSocket.emit("nextQuestion", { pin, questionIndex: 2, durationMs: 10000 });
     await reveal;
 
-    ack = waitForEvent(p1, "answer-acknowledged");
+    const results3 = waitForEvent(p1, "reveal-question-results");
     p1.emit("submitAnswer", { pin, questionId: questionIds[2].toString(), chosenOption: "A" });
-    const q3 = await ack;
-    expect(q3.correct).toBe(true);
-    expect(q3.streakBonus).toBe(100);
-    expect(q3.pointsAwarded).toBe(q3.speedPoints + 100);
+    let res3 = await results3;
+    const scoreAfterQ3 = res3.scoreboard[0].score;
+    expect(scoreAfterQ3).toBeGreaterThan(scoreAfterQ2);
+    expect(scoreAfterQ3 - scoreAfterQ2).toBeGreaterThan(scoreAfterQ2 - scoreAfterQ1);
 
     hostSocket.close();
     p1.close();
@@ -203,29 +200,21 @@ describe("QC-BR-04 — Real-Time Point Tracking & Scoreboard", () => {
     hostSocket.emit("nextQuestion", { pin, questionIndex: 0, durationMs: 10000 });
     await Promise.all(reveals);
 
-    const lbPromise = waitForEvent(p1, "leaderboard-updated", 15000);
-
-    const ackP1 = waitForEvent(p1, "answer-acknowledged");
     await delay(1000);
     p1.emit("submitAnswer", { pin, questionId: questionIds[0].toString(), chosenOption: "A" });
-    await ackP1;
-
-    const ackP2 = waitForEvent(p2, "answer-acknowledged");
     await delay(2000);
     p2.emit("submitAnswer", { pin, questionId: questionIds[0].toString(), chosenOption: "A" });
-    await ackP2;
 
-    const ackP3 = waitForEvent(p3, "answer-acknowledged");
+    const resultsPromise = waitForEvent(p1, "reveal-question-results", 15000);
     await delay(3000);
     p3.emit("submitAnswer", { pin, questionId: questionIds[0].toString(), chosenOption: "A" });
-    await ackP3;
 
-    const lbPayload = await lbPromise;
-    expect(lbPayload).toHaveProperty("leaderboard");
-    expect(lbPayload.leaderboard.length).toBe(3);
+    const resultsPayload = await resultsPromise;
+    expect(resultsPayload).toHaveProperty("scoreboard");
+    expect(resultsPayload.scoreboard.length).toBe(3);
 
-    for (let i = 1; i < lbPayload.leaderboard.length; i++) {
-      expect(lbPayload.leaderboard[i - 1].score).toBeGreaterThanOrEqual(lbPayload.leaderboard[i].score);
+    for (let i = 1; i < resultsPayload.scoreboard.length; i++) {
+      expect(resultsPayload.scoreboard[i - 1].score).toBeGreaterThanOrEqual(resultsPayload.scoreboard[i].score);
     }
 
     hostSocket.close();
