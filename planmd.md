@@ -114,13 +114,22 @@ The domain model is `User → Quiz → Question → Session → Attempt` (where 
 *Satisfies: TAG: DIFF — Adaptive Difficulty Engine*
 
 * **Deliverables**:
-  * [ ] Create an assessment evaluation process block firing immediately on an evaluation attempt termination endpoint (`POST /api/attempts/submit`).
-  * [ ] **QC-BR-04**: If a student's finalized performance ratio falls strictly underneath `50%`, the platform generates a lower-tier retry block using simplified questions retrieved from the question bank.
-  * [ ] **QC-BR-05**: If a student's score ratio surfaces higher than `85%`, the platform triggers an advanced variant block using higher difficulty questions to test concept depth.
-  * [ ] Build dynamic React notification alerts mapping remediation opportunities cleanly to target student tracking interfaces.
+  * [x] Create an assessment evaluation process block firing immediately on an evaluation attempt termination endpoint (`POST /api/attempts/submit`).
+  * [x] **QC-BR-04**: If a student's finalized performance ratio falls strictly underneath `50%`, the platform generates a lower-tier retry block using simplified questions retrieved from the question bank.
+  * [x] **QC-BR-05**: If a student's score ratio surfaces higher than `85%`, the platform triggers an advanced variant block using higher difficulty questions to test concept depth.
+  * [x] Build dynamic React notification alerts mapping remediation opportunities cleanly to target student tracking interfaces.
 
 * **Exit criteria**:
   * Completing a sample assessment card array with poor scores changes the layout flow to a prompt providing a simplified revision retry deck.
+
+#### Phase 4 Implementation Metrics
+
+* **Integration of `POST /api/attempts/submit`**: Evaluates correct answers directly through `attemptController.js` and securely evaluates business conditions based on an exact finalized correct answer score ratio.
+* **Mathematical Compliance Boundaries**:
+  * **QC-BR-04 (< 50% easy fallback routing)**: Triggers `adaptiveStatus: 'remediation'` and surfaces simplified questions filtering by `difficulty: 'easy'` matching the current quiz topic category.
+  * **QC-BR-05 (> 85% advanced enrichment routing)**: Triggers `adaptiveStatus: 'enrichment'` generating a challenge matrix filtering by `difficulty: 'hard'`.
+* **Polymorphic UI Component Pivots**: Handled dynamically inside `client/src/pages/TakeQuiz.jsx` mapping `status === 'remediation'` to override the screen container presenting an encouraging React alert panel ("Let's reinforce the basics!") and `status === 'enrichment'` triggering a high-impact celebration badge.
+* **Test Integration Coverage**: Full integration suite within `server/tests/adaptiveEngine.test.js` validating exactly 20% score remediation extraction alongside 90% score advanced enrichment items.
 
 ---
 
