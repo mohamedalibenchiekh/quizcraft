@@ -48,12 +48,14 @@ const setupClients = async () => {
   ]);
 
   hostSocket.emit("hostClaim", { pin: PIN, token: hostToken });
-  studentSocket.emit("joinRoom", { pin: PIN, username: "Tester" });
-
   await Promise.all([
     waitForEvent(hostSocket, "host-claimed"),
     waitForEvent(hostSocket, "room-roster-updated"),
-    waitForEvent(studentSocket, "room-roster-updated"),
+  ]);
+
+  studentSocket.emit("joinRoom", { pin: PIN, username: "Tester" });
+
+  await Promise.all([
     waitForEvent(hostSocket, "room-roster-updated"),
     waitForEvent(studentSocket, "room-roster-updated"),
   ]);

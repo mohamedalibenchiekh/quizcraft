@@ -52,15 +52,18 @@ const setupClients = async (pin, numStudents = 1) => {
   ]);
 
   hostSocket.emit("hostClaim", { pin, token: hostToken });
+  await Promise.all([
+    waitForEvent(hostSocket, "host-claimed"),
+    waitForEvent(hostSocket, "room-roster-updated"),
+  ]);
+
   studentSockets.forEach((s, i) => {
     s.emit("joinRoom", { pin, username: `Player${i + 1}` });
   });
 
   await Promise.all([
-    waitForEvent(hostSocket, "host-claimed"),
     waitForEvent(hostSocket, "room-roster-updated"),
     ...studentSockets.map((s) => waitForEvent(s, "room-roster-updated")),
-    ...studentSockets.map(() => waitForEvent(hostSocket, "room-roster-updated")),
   ]);
 
   hostSocket.emit("startQuiz", { pin });

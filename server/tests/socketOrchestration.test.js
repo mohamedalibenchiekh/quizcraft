@@ -140,11 +140,13 @@ describe("Socket.io Live Quiz Orchestration", () => {
     ]);
 
     hostSocket.emit("hostClaim", { pin: PIN, token: hostToken });
+    await Promise.all([
+      waitForEvent(hostSocket, "host-claimed"),
+      waitForEvent(hostSocket, "room-roster-updated"),
+    ]);
+
     studentSocket.emit("joinRoom", { pin: PIN, username: "Alice" });
     await Promise.all([
-      waitForEvent(hostSocket, "room-roster-updated"),
-      waitForEvent(hostSocket, "host-claimed"),
-      waitForEvent(studentSocket, "room-roster-updated"),
       waitForEvent(hostSocket, "room-roster-updated"),
       waitForEvent(studentSocket, "room-roster-updated"),
     ]);
@@ -175,11 +177,13 @@ describe("Socket.io Live Quiz Orchestration", () => {
     ]);
 
     hostSocket.emit("hostClaim", { pin: PIN, token: hostToken });
+    await Promise.all([
+      waitForEvent(hostSocket, "host-claimed"),
+      waitForEvent(hostSocket, "room-roster-updated"),
+    ]);
+
     studentSocket.emit("joinRoom", { pin: PIN, username: "Alice" });
     await Promise.all([
-      waitForEvent(hostSocket, "room-roster-updated"),
-      waitForEvent(hostSocket, "host-claimed"),
-      waitForEvent(studentSocket, "room-roster-updated"),
       waitForEvent(hostSocket, "room-roster-updated"),
       waitForEvent(studentSocket, "room-roster-updated"),
     ]);
@@ -232,13 +236,14 @@ describe("Socket.io Live Quiz Orchestration", () => {
     ]);
 
     hostSocket.emit("hostClaim", { pin: ALT_PIN, token: hostToken });
-    student1.emit("joinRoom", { pin: ALT_PIN, username: "Alice" });
-    student2.emit("joinRoom", { pin: ALT_PIN, username: "Bob" });
     await Promise.all([
       waitForEvent(hostSocket, "host-claimed"),
       waitForEvent(hostSocket, "room-roster-updated"),
-      waitForEvent(student1, "room-roster-updated"),
-      waitForEvent(student2, "room-roster-updated"),
+    ]);
+
+    student1.emit("joinRoom", { pin: ALT_PIN, username: "Alice" });
+    student2.emit("joinRoom", { pin: ALT_PIN, username: "Bob" });
+    await Promise.all([
       waitForEvent(hostSocket, "room-roster-updated"),
       waitForEvent(student1, "room-roster-updated"),
       waitForEvent(student2, "room-roster-updated"),
