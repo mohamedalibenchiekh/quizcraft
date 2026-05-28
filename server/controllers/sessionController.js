@@ -15,18 +15,6 @@ const generatePin = () => {
   return pin;
 };
 
-const createSessionWithUniquePin = async (data) => {
-  for (let attempt = 0; attempt < MAX_PIN_RETRIES; attempt++) {
-    data.pin = generatePin();
-    try {
-      return await Session.create(data);
-    } catch (error) {
-      if (error.code !== 11000) throw error;
-    }
-  }
-  throw new Error("Failed to generate a unique session PIN after multiple attempts.");
-};
-
 export const startSession = async (req, res, next) => {
   try {
     const { quizId } = req.body;
@@ -62,20 +50,57 @@ export const startSession = async (req, res, next) => {
 
     const totalQuestions = quiz.questions?.length || 0;
 
-    const session = await createSessionWithUniquePin({
-      quizId,
-      hostId: req.user.id,
-    });
+    await Session.createCollection();
 
-    res.status(201).json({
-      success: true,
-      data: {
-        ...session.toObject(),
-        totalQuestions,
-        quiz,
-      },
-    });
+    for (let attempt = 0; attempt < MAX_PIN_RETRIES; attempt++) {
+      const dbSession = await mongoose.startSession();
+      dbSession.startTransaction();
+
+      try {
+        await Session.updateMany(
+          { quizId, hostId: req.user.id, status: { $in: ["waiting", "active"] } },
+          { $set: { status: "completed" } },
+          { session: dbSession }
+        );
+
+        const pin = generatePin();
+        const existing = await Session.findOne({ pin }, null, { session: dbSession });
+        if (existing) {
+          await dbSession.abortTransaction();
+          dbSession.endSession();
+          continue;
+        }
+
+        const newSessionData = { quizId, hostId: req.user.id, pin };
+        const created = await Session.create([newSessionData], { session: dbSession });
+        await dbSession.commitTransaction();
+        dbSession.endSession();
+
+        return res.status(201).json({
+          success: true,
+          data: {
+            ...created[0].toObject(),
+            totalQuestions,
+            quiz,
+          },
+        });
+      } catch (transactionError) {
+        if (dbSession.inTransaction()) {
+          await dbSession.abortTransaction();
+        }
+        dbSession.endSession();
+
+        if (transactionError.code === 11000) {
+          continue;
+        }
+        throw transactionError;
+      }
+    }
+
+    throw new Error("Failed to generate a unique session PIN after multiple attempts.");
+
   } catch (error) {
+    console.error("startSession error:", error);
     next(error);
   }
 };
@@ -122,6 +147,7 @@ export const cancelSession = async (req, res, next) => {
       data: session,
     });
   } catch (error) {
+    console.error("startSession error:", error);
     next(error);
   }
 };

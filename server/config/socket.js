@@ -388,11 +388,29 @@ export const initSocket = (httpServer) => {
           break;
         }
         if (room.participants.has(socket.id)) {
+          const wasHost = room.hostId === socket.id;
           room.participants.delete(socket.id);
-          broadcastRoster(io, pin);
-          if (room.participants.size === 0) {
+          if (wasHost) {
+            room.hostId = null;
+            const finalLb = compileLeaderboard(pin);
+            if (finalLb.length > 0) {
+              io.to(pin).emit("leaderboard-updated", { leaderboard: finalLb });
+            }
+            io.to(pin).emit("room-terminated", { message: "Host has disconnected. The session has ended." });
+            io.in(pin).socketsLeave(pin);
             rooms.delete(pin);
             deleteScoreboard(pin);
+            try {
+              await Session.findOneAndUpdate({ pin }, { status: "completed" });
+            } catch (error) {
+              console.error(`[Socket] Failed to mark session ${pin} as completed: ${error.message}`);
+            }
+          } else {
+            broadcastRoster(io, pin);
+            if (room.participants.size === 0) {
+              rooms.delete(pin);
+              deleteScoreboard(pin);
+            }
           }
           break;
         }
