@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Quiz from "../models/Quiz.js";
 import Question from "../models/Question.js";
+import Session from "../models/Session.js";
 
 const VALID_TYPES = ['MCQ', 'True-False', 'Short-Answer'];
 const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'];
@@ -208,6 +209,20 @@ export const updateQuizMetadata = async (req, res, next) => {
       let transactionCommitted = false;
 
       try {
+        // Block if an active session is using this quiz
+        const activeSession = await Session.findOne({
+          quizId: quiz._id,
+          status: { $in: ['waiting', 'active'] },
+        }).session(session);
+        if (activeSession) {
+          await session.abortTransaction();
+          session.endSession();
+          return res.status(409).json({
+            success: false,
+            message: "Cannot edit a quiz while a live session is in progress. End the session first.",
+          });
+        }
+
         // Delete old questions
         if (quiz.questions.length > 0) {
           await Question.deleteMany({ _id: { $in: quiz.questions } }, { session });
@@ -222,8 +237,8 @@ export const updateQuizMetadata = async (req, res, next) => {
         }
 
         // Update quiz fields
-        if (title !== undefined) quiz.title = title.trim();
-        if (description !== undefined) quiz.description = description.trim();
+        if (typeof title === 'string') quiz.title = title.trim();
+        if (typeof description === 'string') quiz.description = description.trim();
         if (isApproved !== undefined) quiz.isApproved = isApproved;
         quiz.questions = newQuestionIds;
 
@@ -249,8 +264,8 @@ export const updateQuizMetadata = async (req, res, next) => {
     }
 
     // No questions — just update metadata
-    if (title !== undefined) quiz.title = title.trim();
-    if (description !== undefined) quiz.description = description.trim();
+    if (typeof title === 'string') quiz.title = title.trim();
+    if (typeof description === 'string') quiz.description = description.trim();
     if (isApproved !== undefined) quiz.isApproved = isApproved;
 
     const updatedQuiz = await quiz.save();
