@@ -28,38 +28,38 @@ describe("Home Screen Tests", () => {
     expect(joinLiveSessionBtn.id).toBe("hero-join-session");
   });
 
-  it("should update local state cleanly and enable Join button when typing exactly 6 numeric characters", async () => {
+  it("should update local state cleanly and enable Join button when typing exactly 6 alphanumeric characters", async () => {
     render(
       <MemoryRouter>
         <Home />
       </MemoryRouter>
     );
 
-    const input = screen.getByPlaceholderText("000000");
+    const input = screen.getByPlaceholderText("ABC123");
     const joinButton = screen.getByRole("button", { name: /^join$/i });
 
     // 1. Initial State: Input is empty, Join button is disabled
     expect(input.value).toBe("");
     expect(joinButton).toBeDisabled();
 
-    // 2. Typing non-numeric input should be stripped
+    // 2. Typing special characters should be stripped, but alphanumeric kept and uppercased
+    fireEvent.change(input, { target: { value: "a@b#c!" } });
+    expect(input.value).toBe("ABC");
+    expect(joinButton).toBeDisabled();
+
+    // 3. Typing 3 alphanumeric chars (should be uppercased)
     fireEvent.change(input, { target: { value: "abc" } });
-    expect(input.value).toBe("");
+    expect(input.value).toBe("ABC");
     expect(joinButton).toBeDisabled();
 
-    // 3. Typing 3 digits
-    fireEvent.change(input, { target: { value: "123" } });
-    expect(input.value).toBe("123");
-    expect(joinButton).toBeDisabled();
-
-    // 4. Typing 6 digits
-    fireEvent.change(input, { target: { value: "123456" } });
-    expect(input.value).toBe("123456");
+    // 4. Typing 6 alphanumeric chars
+    fireEvent.change(input, { target: { value: "abc123" } });
+    expect(input.value).toBe("ABC123");
     expect(joinButton).not.toBeDisabled();
 
-    // 5. Attempting to type more than 6 digits (should trim at 6)
-    fireEvent.change(input, { target: { value: "1234567" } });
-    expect(input.value).toBe("123456");
+    // 5. Attempting to type more than 6 characters (should trim at 6)
+    fireEvent.change(input, { target: { value: "abc1234" } });
+    expect(input.value).toBe("ABC123");
     expect(joinButton).not.toBeDisabled();
   });
 });
