@@ -485,7 +485,7 @@ const StudentSession = () => {
   // --- Results (delayed reveal after question window closes) ---
   if (phase === 'results') {
     const isLate = answerStatus === 'rejected';
-    const isCorrect = selectedOption === resultsData?.correctAnswer;
+    const isCorrect = !isLate && selectedOption === resultsData?.correctAnswer;
 
     const myEntry = Array.isArray(resultsData?.scoreboard)
       ? resultsData.scoreboard.find((e) => e.playerId)
