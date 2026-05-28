@@ -44,6 +44,12 @@ export const startSession = async (req, res, next) => {
       });
     }
 
+    // Clean up any stale sessions for this quiz+host before creating a new one
+    await Session.updateMany(
+      { quizId, hostId: req.user.id, status: { $in: ["waiting", "active"] } },
+      { $set: { status: "completed" } }
+    );
+
     const session = await createSessionWithUniquePin({
       quizId,
       hostId: req.user.id,

@@ -325,19 +325,32 @@ export const initSocket = (httpServer) => {
       console.log(`[Socket] Room ${pinStr} closed by host ${socket.id}`);
     });
 
-    socket.on("disconnect", (reason) => {
+    socket.on("disconnect", async (reason) => {
       console.log(`[Socket] Disconnected: ${socket.id} (${reason})`);
 
       for (const [pin, room] of rooms.entries()) {
         if (room.participants.has(socket.id)) {
+          const wasHost = room.hostId === socket.id;
           room.participants.delete(socket.id);
-          if (room.hostId === socket.id) {
+          if (wasHost) {
             room.hostId = null;
-          }
-          broadcastRoster(io, pin);
-          if (room.participants.size === 0) {
+            // Mark DB session as completed so the quiz is not locked for editing
+            try {
+              await Session.findOneAndUpdate({ pin }, { status: "completed" });
+              console.log(`[Socket] Host disconnected — session ${pin} marked as completed in DB`);
+            } catch (err) {
+              console.error(`[Socket] Failed to mark session ${pin} as completed: ${err.message}`);
+            }
+            io.to(pin).emit("quiz-terminated", { message: "Host has disconnected. The session has ended." });
+            io.in(pin).socketsLeave(pin);
             rooms.delete(pin);
             deleteScoreboard(pin);
+          } else {
+            broadcastRoster(io, pin);
+            if (room.participants.size === 0) {
+              rooms.delete(pin);
+              deleteScoreboard(pin);
+            }
           }
           break;
         }
