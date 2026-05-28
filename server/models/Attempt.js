@@ -21,7 +21,6 @@ const AttemptSchema = new mongoose.Schema(
         },
         selectedAnswer: {
           type: String,
-          required: true,
         },
         isCorrect: {
           type: Boolean,

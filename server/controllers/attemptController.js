@@ -50,10 +50,19 @@ export const submitAttempt = async (req, res, next) => {
         continue;
       }
 
+      const rawSelected = userAnswer.selectedAnswer;
+      const selectedStr =
+        rawSelected != null && typeof rawSelected === 'string'
+          ? rawSelected.trim()
+          : '';
+      const correctStr =
+        question.correctAnswer != null && typeof question.correctAnswer === 'string'
+          ? question.correctAnswer.trim()
+          : '';
+
       const isCorrect =
-        userAnswer.selectedAnswer != null &&
-        userAnswer.selectedAnswer.trim().toLowerCase() ===
-          question.correctAnswer.trim().toLowerCase();
+        selectedStr !== '' &&
+        selectedStr.toLowerCase() === correctStr.toLowerCase();
 
       if (isCorrect) correctCount++;
 

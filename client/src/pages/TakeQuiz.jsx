@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -21,6 +21,13 @@ const TakeQuiz = () => {
   const [answers, setAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const adaptiveRef = useRef(null);
+
+  const handleRetry = useCallback(() => {
+    setResult(null);
+    setAnswers({});
+    setError('');
+  }, []);
 
   useEffect(() => {
     if (!quizId) return;
@@ -135,11 +142,11 @@ const TakeQuiz = () => {
                 </div>
               )}
               <button
-                onClick={() => window.location.reload()}
+                onClick={handleRetry}
                 className="px-6 py-3 rounded-xl text-sm font-extrabold text-white transition-all duration-200 cursor-pointer hover:translate-y-[-1px]"
                 style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 4px 16px rgba(245, 158, 11, 0.25)' }}
               >
-                Enter Simplified Revision Deck
+                Retry Quiz with Reinforced Concepts
               </button>
             </div>
           )}
@@ -174,7 +181,7 @@ const TakeQuiz = () => {
                 </div>
               )}
               <button
-                onClick={() => window.location.reload()}
+                onClick={handleRetry}
                 className="px-6 py-3 rounded-xl text-sm font-extrabold text-white transition-all duration-200 cursor-pointer hover:translate-y-[-1px]"
                 style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', boxShadow: '0 4px 16px rgba(34, 197, 94, 0.25)' }}
               >
