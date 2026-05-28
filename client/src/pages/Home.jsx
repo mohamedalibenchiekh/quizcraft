@@ -223,7 +223,7 @@ const Home = () => {
   };
 
   const handleCodeChange = (e) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6);
     setRoomCode(value);
   };
 
@@ -454,15 +454,15 @@ const Home = () => {
                     <input
                       id="room-code-input"
                       type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
+                      inputMode="text"
+                      pattern="[A-Za-z0-9]*"
                       maxLength={6}
                       value={roomCode}
                       onChange={handleCodeChange}
                       onKeyDown={handleCodeKeyDown}
                       onFocus={() => setIsCodeFocused(true)}
                       onBlur={() => setIsCodeFocused(false)}
-                      placeholder="000000"
+                      placeholder="ABC123"
                       className="w-full px-4 py-3.5 rounded-xl text-center text-xl font-mono font-bold tracking-[0.3em] outline-none transition-all duration-300 placeholder:text-text-muted"
                       style={{
                         background: 'var(--color-surface-input)',
