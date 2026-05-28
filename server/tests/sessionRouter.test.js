@@ -5,6 +5,8 @@ import { MongoMemoryReplSet } from "mongodb-memory-server";
 import jwt from "jsonwebtoken";
 import app from "../app.js";
 import Session from "../models/Session.js";
+import Question from "../models/Question.js";
+import Quiz from "../models/Quiz.js";
 
 process.env.JWT_SECRET = "supersecretfortesting";
 
@@ -63,6 +65,44 @@ describe("Session Router — POST /api/sessions/start", () => {
     const sessionInDb = await Session.findById(res.body.data._id);
     expect(sessionInDb).not.toBeNull();
     expect(sessionInDb.pin).toBe(res.body.data.pin);
+  });
+
+  it("should return totalQuestions > 0 and a fully populated quiz.questions array when the quiz has questions", async () => {
+    const question1 = await Question.create({
+      text: "What is 2+2?",
+      type: "MCQ",
+      options: ["3", "4", "5", "6"],
+      correctAnswer: "4",
+      difficulty: "easy",
+    });
+    const question2 = await Question.create({
+      text: "Is the sky blue?",
+      type: "True-False",
+      correctAnswer: "True",
+      difficulty: "easy",
+    });
+
+    const quiz = await Quiz.create({
+      title: "Hydration Test Quiz",
+      description: "Quiz for testing question hydration",
+      professorId: new mongoose.Types.ObjectId(),
+      questions: [question1._id, question2._id],
+      isApproved: true,
+    });
+
+    const res = await request(app)
+      .post("/api/sessions/start")
+      .set("Authorization", `Bearer ${professorToken}`)
+      .send({ quizId: quiz._id.toString() });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.totalQuestions).toBe(2);
+    expect(res.body.data.quiz).toBeDefined();
+    expect(res.body.data.quiz.questions).toBeInstanceOf(Array);
+    expect(res.body.data.quiz.questions).toHaveLength(2);
+    expect(res.body.data.quiz.questions[0]).toHaveProperty("text", "What is 2+2?");
+    expect(res.body.data.quiz.questions[1]).toHaveProperty("text", "Is the sky blue?");
   });
 
   it("should return 400 when quizId is missing from the request body", async () => {

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import mongoose from "mongoose";
 import Session from "../models/Session.js";
+import Quiz from "../models/Quiz.js";
 
 const PIN_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const PIN_LENGTH = 6;
@@ -49,9 +50,16 @@ export const startSession = async (req, res, next) => {
       hostId: req.user.id,
     });
 
+    const quiz = await Quiz.findById(quizId).populate("questions");
+    const totalQuestions = quiz?.questions?.length || 0;
+
     res.status(201).json({
       success: true,
-      data: session,
+      data: {
+        ...session.toObject(),
+        totalQuestions,
+        quiz,
+      },
     });
   } catch (error) {
     next(error);
