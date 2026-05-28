@@ -4,7 +4,7 @@
     "ai-sdk": {
       "source": "vercel/ai",
       "sourceType": "github",
-      "skillPath": "skills/use-ai-sdk/SKILL.md",
+      "skillPath": "skills/ai-sdk/SKILL.md",
       "computedHash": "56de19e586bbd23a75dca11044247fac4b02a9a1413518ddf0e60ae011431dbe"
     },
     "frontend-design": {

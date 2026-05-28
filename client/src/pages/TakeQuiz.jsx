@@ -33,10 +33,9 @@ const TakeQuiz = () => {
 
   const handleRetry = useCallback(() => {
     const adaptiveQs = pendingAdaptiveRef.current;
-    if (adaptiveQs && adaptiveQs.length > 0) {
-      // Build a virtual quiz from the adaptive question set
+    if (adaptiveQs && adaptiveQs.length > 0 && quiz) {
       setQuiz({
-        _id: `${quizId}-adaptive`,
+        _id: quiz._id,
         title: 'Adaptive Challenge',
         description: 'Questions tailored to your performance',
         questions: adaptiveQs,
@@ -50,7 +49,7 @@ const TakeQuiz = () => {
       setAnswers({});
       setError('');
     }
-  }, [quizId]);
+  }, [quizId, quiz]);
 
   useEffect(() => {
     if (!quizId) return;
