@@ -14,11 +14,12 @@ const generatePin = () => {
   return pin;
 };
 
-const createSessionWithUniquePin = async (data) => {
+const createSessionWithUniquePin = async (data, opts = {}) => {
   for (let attempt = 0; attempt < MAX_PIN_RETRIES; attempt++) {
     data.pin = generatePin();
     try {
-      return await Session.create(data);
+      const created = await Session.create([data], opts);
+      return created[0];
     } catch (error) {
       if (error.code !== 11000) throw error;
     }
@@ -44,21 +45,34 @@ export const startSession = async (req, res, next) => {
       });
     }
 
-    // Clean up any stale sessions for this quiz+host before creating a new one
-    await Session.updateMany(
-      { quizId, hostId: req.user.id, status: { $in: ["waiting", "active"] } },
-      { $set: { status: "completed" } }
-    );
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const session = await createSessionWithUniquePin({
-      quizId,
-      hostId: req.user.id,
-    });
+    try {
+      // Clean up any stale sessions for this quiz+host before creating a new one
+      await Session.updateMany(
+        { quizId, hostId: req.user.id, status: { $in: ["waiting", "active"] } },
+        { $set: { status: "completed" } },
+        { session }
+      );
 
-    res.status(201).json({
-      success: true,
-      data: session,
-    });
+      const newSession = await createSessionWithUniquePin({
+        quizId,
+        hostId: req.user.id,
+      }, { session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      res.status(201).json({
+        success: true,
+        data: newSession,
+      });
+    } catch (transactionError) {
+      await session.abortTransaction();
+      session.endSession();
+      throw transactionError;
+    }
   } catch (error) {
     next(error);
   }

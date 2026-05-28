@@ -334,17 +334,21 @@ export const initSocket = (httpServer) => {
           room.participants.delete(socket.id);
           if (wasHost) {
             room.hostId = null;
-            // Mark DB session as completed so the quiz is not locked for editing
-            try {
-              await Session.findOneAndUpdate({ pin }, { status: "completed" });
-              console.log(`[Socket] Host disconnected — session ${pin} marked as completed in DB`);
-            } catch (err) {
-              console.error(`[Socket] Failed to mark session ${pin} as completed: ${err.message}`);
+            // Broadcast final leaderboard before terminating the room
+            const finalLb = compileLeaderboard(pin);
+            if (finalLb.length > 0) {
+              io.to(pin).emit("leaderboard-updated", { leaderboard: finalLb });
             }
+
             io.to(pin).emit("quiz-terminated", { message: "Host has disconnected. The session has ended." });
             io.in(pin).socketsLeave(pin);
             rooms.delete(pin);
             deleteScoreboard(pin);
+
+            // Mark DB session as completed so the quiz is not locked for editing (fire and forget)
+            Session.findOneAndUpdate({ pin }, { status: "completed" })
+              .then(() => console.log(`[Socket] Host disconnected — session ${pin} marked as completed in DB`))
+              .catch((err) => console.error(`[Socket] Failed to mark session ${pin} as completed: ${err.message}`));
           } else {
             broadcastRoster(io, pin);
             if (room.participants.size === 0) {
