@@ -251,7 +251,7 @@ const ProfessorDashboard = () => {
 
                     <button 
                       className="px-4 py-2.5 rounded-lg text-sm font-semibold border transition-all duration-200 cursor-pointer text-slate-300 border-slate-800 hover:bg-slate-950 hover:text-white"
-                      onClick={() => alert('Editing feature coming soon in Phase 1 details.')}
+                      onClick={() => navigate(`/quizzes/edit/${quiz._id}`)}
                     >
                       Edit
                     </button>
