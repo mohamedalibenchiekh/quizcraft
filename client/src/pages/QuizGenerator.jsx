@@ -4,22 +4,36 @@ import api from '../services/api';
 import FileDropzone from '../components/FileDropzone';
 import AIParameterForm from '../components/AIParameterForm';
 import QuestionPreviewCard from '../components/QuestionPreviewCard';
+import useQuizForm from '../hooks/useQuizForm';
 import {
   DIFFICULTIES,
   MAX_FILES,
   clampQuestionCount,
-  createBlankQuestion,
   normalizeQuestion,
 } from '../utils/quizConstants';
 
 const QuizGenerator = () => {
   const navigate = useNavigate();
 
+  const {
+    questions: generatedQuestions,
+    setQuestions: setGeneratedQuestions,
+    difficulty,
+    setDifficulty,
+    updateQuestion,
+    updateOption,
+    handleAddManualQuestion,
+    handleRemoveQuestion,
+    handleQuestionTypeChange,
+    handleAddChoice,
+    handleRemoveChoice,
+    validateQuestions,
+    buildQuestionPayload,
+  } = useQuizForm([]);
+
   const [creationMode, setCreationMode] = useState('ai');
   const [files, setFiles] = useState([]);
   const [numQuestions, setNumQuestions] = useState(10);
-  const [difficulty, setDifficulty] = useState('medium');
-  const [generatedQuestions, setGeneratedQuestions] = useState([]);
   const [quizTitle, setQuizTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
@@ -100,96 +114,21 @@ const QuizGenerator = () => {
     }
   };
 
-  const updateQuestion = (questionIndex, updates) => {
-    setGeneratedQuestions((currentQuestions) => currentQuestions.map((question, index) => (
-      index === questionIndex ? { ...question, ...updates } : question
-    )));
-  };
-
-  const updateOption = (questionIndex, optionIndex, value) => {
-    setGeneratedQuestions((currentQuestions) => currentQuestions.map((question, index) => {
-      if (index !== questionIndex) return question;
-      const options = [...question.options];
-      options[optionIndex] = value;
-      return { ...question, options };
-    }));
-  };
-
-  const handleAddManualQuestion = () => {
-    setGeneratedQuestions((currentQuestions) => [...currentQuestions, createBlankQuestion(difficulty)]);
+  const onAddQuestion = () => {
     setError('');
     setStatusMessage('');
+    handleAddManualQuestion();
   };
 
-  const handleRemoveQuestion = (questionIndex) => {
+  const onRemoveQuestion = (index) => {
     if (interactionLocked) return;
-    setGeneratedQuestions((currentQuestions) => currentQuestions.filter((_, index) => index !== questionIndex));
-  };
-
-  const handleQuestionTypeChange = (questionIndex, type) => {
-    setGeneratedQuestions((currentQuestions) => currentQuestions.map((question, index) => {
-      if (index !== questionIndex) return question;
-
-      if (type === 'MCQ') {
-        const options = question.options.length >= 2 ? question.options : ['', '', '', ''];
-        return { ...question, type, options, correctAnswer: '', correctAnswerIndex: -1 };
-      }
-
-      if (type === 'True-False') {
-        return { ...question, type, options: ['True', 'False'], correctAnswer: 'True', correctAnswerIndex: 0 };
-      }
-
-      return { ...question, type, options: [], correctAnswer: '', correctAnswerIndex: -1 };
-    }));
-  };
-
-  const handleAddChoice = (questionIndex) => {
-    setGeneratedQuestions((currentQuestions) => currentQuestions.map((question, index) => (
-      index === questionIndex ? { ...question, options: [...question.options, ''] } : question
-    )));
-  };
-
-  const handleRemoveChoice = (questionIndex, optionIndex) => {
-    setGeneratedQuestions((currentQuestions) => currentQuestions.map((question, index) => {
-      if (index !== questionIndex || question.options.length <= 2) return question;
-      const options = question.options.filter((_, optionPosition) => optionPosition !== optionIndex);
-      let correctAnswerIndex = question.correctAnswerIndex;
-      if (correctAnswerIndex === optionIndex) {
-        correctAnswerIndex = -1;
-      } else if (correctAnswerIndex > optionIndex) {
-        correctAnswerIndex -= 1;
-      }
-      const correctAnswer = correctAnswerIndex >= 0 ? (options[correctAnswerIndex] || '') : '';
-      return { ...question, options, correctAnswerIndex, correctAnswer };
-    }));
-  };
-
-  const validateQuestionsForSave = () => {
-    if (!quizTitle.trim()) return 'Add a quiz title before saving.';
-    if (generatedQuestions.length === 0) return 'Generate or add at least one question before saving.';
-
-    for (const [index, question] of generatedQuestions.entries()) {
-      const label = `Question ${index + 1}`;
-      if (!question.text.trim()) return `${label} needs question text.`;
-      if (question.type === 'MCQ') {
-        const options = question.options.map((option) => option.trim()).filter(Boolean);
-        if (options.length < 2) return `${label} needs at least two answer choices.`;
-        if (question.correctAnswerIndex < 0 || !options.includes(question.options[question.correctAnswerIndex]?.trim())) {
-          return `${label} correct answer must match one of its choices.`;
-        }
-      } else {
-        if (!question.correctAnswer.trim()) return `${label} needs a correct answer.`;
-        if (question.type === 'True-False' && !['True', 'False'].includes(question.correctAnswer)) {
-          return `${label} correct answer must be True or False.`;
-        }
-      }
-    }
-
-    return '';
+    setError('');
+    setStatusMessage('');
+    handleRemoveQuestion(index);
   };
 
   const handleSave = async () => {
-    const validationError = validateQuestionsForSave();
+    const validationError = validateQuestions(quizTitle, generatedQuestions);
     if (validationError) {
       setError(validationError);
       return;
@@ -201,21 +140,7 @@ const QuizGenerator = () => {
     const payload = {
       title: quizTitle.trim(),
       description: description.trim(),
-      questions: generatedQuestions.map((question) => {
-        const correctAnswer = question.type === 'MCQ' && question.correctAnswerIndex >= 0
-          ? (question.options[question.correctAnswerIndex] || '').trim()
-          : question.correctAnswer.trim();
-        return {
-          text: question.text.trim(),
-          type: question.type,
-          options: question.type === 'Short-Answer'
-            ? []
-            : question.options.map((option) => option.trim()).filter(Boolean),
-          correctAnswer,
-          difficulty: question.difficulty,
-          tags: question.tags || [],
-        };
-      }),
+      questions: buildQuestionPayload(generatedQuestions),
     };
 
     try {
@@ -348,7 +273,7 @@ const QuizGenerator = () => {
               {creationMode === 'manual' && (
                 <button
                   type="button"
-                  onClick={handleAddManualQuestion}
+                  onClick={onAddQuestion}
                   disabled={interactionLocked}
                   className="rounded-xl border border-cyan-400/40 px-5 py-3 text-sm font-bold text-cyan-100 hover:bg-cyan-950/30 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -408,7 +333,7 @@ const QuizGenerator = () => {
                 onTypeChange={handleQuestionTypeChange}
                 onAddChoice={handleAddChoice}
                 onRemoveChoice={handleRemoveChoice}
-                onRemove={handleRemoveQuestion}
+                onRemove={onRemoveQuestion}
                 disabled={interactionLocked}
               />
             ))}

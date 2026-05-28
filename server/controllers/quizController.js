@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Quiz from "../models/Quiz.js";
 import Question from "../models/Question.js";
+import Session from "../models/Session.js";
 
 const VALID_TYPES = ['MCQ', 'True-False', 'Short-Answer'];
 const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'];
@@ -168,11 +169,12 @@ export const getQuizById = async (req, res, next) => {
 
 /**
  * @desc    Modify high-level quiz metadata (title, description, isApproved status)
+ *          or perform a full quiz update including transactional question replacement
  * @route   PUT /api/quizzes/:id
  */
 export const updateQuizMetadata = async (req, res, next) => {
   try {
-    const { title, description, isApproved } = req.body;
+    const { title, description, isApproved, questions } = req.body;
     const quiz = await Quiz.findById(req.params.id);
     if (!quiz) {
       return res.status(404).json({ success: false, message: "Quiz not found" });
@@ -183,8 +185,88 @@ export const updateQuizMetadata = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Forbidden — You do not own this quiz" });
     }
 
-    if (title !== undefined) quiz.title = title.trim();
-    if (description !== undefined) quiz.description = description.trim();
+    // If questions are provided, perform a transactional full replacement
+    if (questions !== undefined) {
+      if (!Array.isArray(questions) || questions.length === 0) {
+        return res.status(400).json({ success: false, message: "At least one question is required" });
+      }
+
+      const sanitizedQuestions = [];
+
+      for (const q of questions) {
+        const result = validateQuestionData(q);
+        if (result.error) {
+          return res.status(400).json({ success: false, message: result.error });
+        }
+        sanitizedQuestions.push(result.sanitized);
+      }
+
+      await Question.createCollection();
+      await Quiz.createCollection();
+
+      const session = await mongoose.startSession();
+      session.startTransaction();
+      let transactionCommitted = false;
+
+      try {
+        // Block if the quiz owner has an active session using this quiz
+        const activeSession = await Session.findOne({
+          quizId: quiz._id,
+          hostId: req.user.id,
+          status: { $in: ['waiting', 'active'] },
+        }).session(session);
+        if (activeSession) {
+          await session.abortTransaction();
+          session.endSession();
+          return res.status(409).json({
+            success: false,
+            message: "Cannot edit a quiz while a live session is in progress. End the session first.",
+          });
+        }
+
+        // Delete old questions
+        if (quiz.questions.length > 0) {
+          await Question.deleteMany({ _id: { $in: quiz.questions } }, { session });
+        }
+
+        // Create new questions
+        const newQuestionIds = [];
+        for (const sq of sanitizedQuestions) {
+          const newQuestion = new Question(sq);
+          const savedQuestion = await newQuestion.save({ session });
+          newQuestionIds.push(savedQuestion._id);
+        }
+
+        // Update quiz fields
+        if (typeof title === 'string') quiz.title = title.trim();
+        if (typeof description === 'string') quiz.description = description.trim();
+        if (isApproved !== undefined) quiz.isApproved = isApproved;
+        quiz.questions = newQuestionIds;
+
+        await quiz.save({ session });
+        await session.commitTransaction();
+        transactionCommitted = true;
+        session.endSession();
+
+        const populated = await Quiz.findById(quiz._id).populate('questions');
+
+        return res.status(200).json({
+          success: true,
+          message: "Quiz updated successfully",
+          data: populated
+        });
+      } catch (transactionError) {
+        if (!transactionCommitted) {
+          await session.abortTransaction();
+        }
+        session.endSession();
+        throw transactionError;
+      }
+    }
+
+    // No questions — just update metadata
+    if (typeof title === 'string') quiz.title = title.trim();
+    if (typeof description === 'string') quiz.description = description.trim();
     if (isApproved !== undefined) quiz.isApproved = isApproved;
 
     const updatedQuiz = await quiz.save();

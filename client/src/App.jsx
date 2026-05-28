@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ProfessorDashboard from './pages/ProfessorDashboard';
 import QuizGenerator from './pages/QuizGenerator';
+import QuizEdit from './pages/QuizEdit';
 import StudentSession from './pages/StudentSession';
 import HostSession from './pages/HostSession';
 
@@ -91,6 +92,17 @@ const AppRoutes = () => {
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
               <Navbar />
               <QuizGenerator />
+            </div>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/quizzes/edit/:id" 
+        element={
+          <ProtectedRoute allowedRole="professor">
+            <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+              <Navbar />
+              <QuizEdit />
             </div>
           </ProtectedRoute>
         } 

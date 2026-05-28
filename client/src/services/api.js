@@ -19,6 +19,11 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.updateQuiz = async (id, quizData) => {
+  const response = await api.put(`/quizzes/${id}`, quizData);
+  return response.data;
+};
+
 api.generateQuizFromFiles = async (formData) => {
   const uploadResponse = await api.post('/upload', formData);
 
