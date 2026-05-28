@@ -45,6 +45,7 @@ export const startSession = async (req, res, next) => {
       });
     }
 
+    await Session.createCollection();
     const session = await mongoose.startSession();
     session.startTransaction();
 
