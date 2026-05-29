@@ -44,7 +44,7 @@ const Login = () => {
       });
 
       login(data.token, data.user);
-      navigate(data.user.role === 'professor' ? '/dashboard' : '/session', { replace: true });
+      navigate(data.user.role === 'professor' ? '/dashboard' : '/quizzes', { replace: true });
     } catch (err) {
       setError(err?.response?.data?.message || 'Unable to sign in. Please try again.');
     } finally {

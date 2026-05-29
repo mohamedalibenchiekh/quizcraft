@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { QUESTION_TYPES, DIFFICULTIES } from '../utils/quizConstants';
 
 const QuestionPreviewCard = ({
@@ -11,6 +12,32 @@ const QuestionPreviewCard = ({
   onRemove,
   disabled,
 }) => {
+  const [tagInput, setTagInput] = useState('');
+
+  const handleAddTag = () => {
+    const tag = tagInput.trim();
+    if (!tag) return;
+    const current = Array.isArray(question.tags) ? question.tags : [];
+    if (!current.includes(tag)) {
+      onUpdate(questionIndex, { tags: [...current, tag] });
+    }
+    setTagInput('');
+  };
+
+  const handleRemoveTag = (tag) => {
+    const current = Array.isArray(question.tags) ? question.tags : [];
+    onUpdate(questionIndex, { tags: current.filter((t) => t !== tag) });
+  };
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
+
+  const tags = Array.isArray(question.tags) ? question.tags : [];
+
   return (
     <article key={question.id} className="glass-card p-5 shadow-lg">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -167,6 +194,49 @@ const QuestionPreviewCard = ({
           />
         </div>
       )}
+
+      {/* Tags */}
+      <div className="mt-4">
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">Tags</label>
+        <div className="flex gap-2 mb-2">
+          <input
+            value={tagInput}
+            disabled={disabled}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={handleTagKeyDown}
+            placeholder="Add a tag..."
+            className="flex-1 rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+          />
+          <button
+            type="button"
+            onClick={handleAddTag}
+            disabled={disabled || !tagInput.trim()}
+            className="rounded-lg border border-cyan-400/40 px-4 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-950/30 disabled:opacity-50"
+          >
+            Add Tag
+          </button>
+        </div>
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1.5 rounded-full bg-cyan-950/40 border border-cyan-400/20 px-3 py-1 text-xs font-semibold text-cyan-200"
+              >
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(tag)}
+                  disabled={disabled}
+                  className="text-cyan-400 hover:text-red-300 disabled:opacity-50"
+                >
+                  X
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </article>
   );
 };

@@ -11,6 +11,7 @@ import QuizEdit from './pages/QuizEdit';
 import StudentSession from './pages/StudentSession';
 import HostSession from './pages/HostSession';
 import TakeQuiz from './pages/TakeQuiz';
+import StudentQuizBrowser from './pages/StudentQuizBrowser';
 
 import './App.css';
 
@@ -116,6 +117,19 @@ const AppRoutes = () => {
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
               <Navbar />
               <HostSession />
+            </div>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Student Quiz Browser */}
+      <Route 
+        path="/quizzes" 
+        element={
+          <ProtectedRoute allowedRole="student">
+            <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+              <Navbar />
+              <StudentQuizBrowser />
             </div>
           </ProtectedRoute>
         } 
