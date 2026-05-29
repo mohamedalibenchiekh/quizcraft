@@ -19,29 +19,26 @@ const StudentDashboard = () => {
     setLoading(true);
     setError('');
 
-    let bothFailed = true;
+    const results = await Promise.allSettled([
+      api.get('/attempts/my'),
+      api.get('/attempts/stats'),
+    ]);
 
-    try {
-      const attemptsRes = await api.get('/attempts/my');
-      if (attemptsRes.data?.success) {
-        setAttempts(attemptsRes.data.data || []);
-        bothFailed = false;
-      }
-    } catch {
-      // attempts fetch failed — stats may still succeed
+    let anySucceeded = false;
+
+    const attemptsResult = results[0];
+    if (attemptsResult.status === 'fulfilled' && attemptsResult.value.data?.success) {
+      setAttempts(attemptsResult.value.data.data || []);
+      anySucceeded = true;
     }
 
-    try {
-      const statsRes = await api.get('/attempts/stats');
-      if (statsRes.data?.success) {
-        setStats(statsRes.data.data);
-        bothFailed = false;
-      }
-    } catch {
-      // stats fetch failed — attempts may still succeed
+    const statsResult = results[1];
+    if (statsResult.status === 'fulfilled' && statsResult.value.data?.success) {
+      setStats(statsResult.value.data.data);
+      anySucceeded = true;
     }
 
-    if (bothFailed) {
+    if (!anySucceeded) {
       setError('Failed to load dashboard data.');
     }
 
