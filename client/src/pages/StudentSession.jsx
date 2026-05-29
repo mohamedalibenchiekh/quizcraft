@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
+const isGuest = (user) => !user;
 import {
   socket,
   connectSocket,
@@ -24,7 +26,7 @@ const OPTION_COLORS = [
 ];
 
 const StudentSession = () => {
-  const { token } = useAuth();
+  const { user, token } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -679,11 +681,11 @@ const StudentSession = () => {
               The host has ended the session. Thanks for playing!
             </p>
             <button
-              onClick={() => navigate('/student/dashboard')}
+              onClick={() => navigate(isGuest(user) ? '/' : '/student/dashboard')}
               className="px-8 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 cursor-pointer hover:translate-y-[-1px]"
               style={{ background: 'linear-gradient(135deg, var(--color-brand-500), #6d28d9)', boxShadow: '0 4px 16px rgba(124, 58, 237, 0.25)' }}
             >
-              Back to Dashboard
+              {isGuest(user) ? 'Back to Home' : 'Back to Dashboard'}
             </button>
           </div>
         </div>

@@ -19,7 +19,8 @@ export const getMyAttempts = async (req, res, next) => {
 
 export const getMyStats = async (req, res, next) => {
   try {
-    const attempts = await Attempt.find({ userId: req.user.id });
+    const attempts = await Attempt.find({ userId: req.user.id })
+      .select('scoreRatio adaptiveType');
 
     const totalQuizzes = attempts.length;
 

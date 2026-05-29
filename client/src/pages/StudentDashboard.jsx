@@ -16,26 +16,33 @@ const StudentDashboard = () => {
   }, []);
 
   const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError('');
+    setLoading(true);
+    setError('');
 
-      const [attemptsRes, statsRes] = await Promise.all([
-        api.get('/attempts/my'),
-        api.get('/attempts/stats'),
-      ]);
+    const results = await Promise.allSettled([
+      api.get('/attempts/my'),
+      api.get('/attempts/stats'),
+    ]);
 
-      if (attemptsRes.data?.success) {
-        setAttempts(attemptsRes.data.data || []);
-      }
-      if (statsRes.data?.success) {
-        setStats(statsRes.data.data);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load dashboard data.');
-    } finally {
-      setLoading(false);
+    let anySucceeded = false;
+
+    const attemptsResult = results[0];
+    if (attemptsResult.status === 'fulfilled' && attemptsResult.value.data?.success) {
+      setAttempts(attemptsResult.value.data.data || []);
+      anySucceeded = true;
     }
+
+    const statsResult = results[1];
+    if (statsResult.status === 'fulfilled' && statsResult.value.data?.success) {
+      setStats(statsResult.value.data.data);
+      anySucceeded = true;
+    }
+
+    if (!anySucceeded) {
+      setError('Failed to load dashboard data.');
+    }
+
+    setLoading(false);
   };
 
   const handleJoinLiveSession = () => {
