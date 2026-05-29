@@ -134,7 +134,7 @@ export const createQuiz = async (req, res, next) => {
  */
 export const getPublishedQuizzes = async (req, res, next) => {
   try {
-    const quizzes = await Quiz.find({ isApproved: true }).populate('questions');
+    const quizzes = await Quiz.find({ isApproved: true }).select('title description questions');
     res.status(200).json({ success: true, data: quizzes });
   } catch (error) {
     next(error);
