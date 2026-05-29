@@ -64,16 +64,30 @@ const persistAttempts = async (pinStr) => {
       correctMap[q._id.toString()] = q.correctAnswer;
     }
 
-    for (const [, participant] of room.allPlayers.entries()) {
-      if (participant.role === "host") continue;
-      if (!participant.userId) continue; // skip guests (no account)
+    // Group all playerIds by userId to deduplicate reconnecting users
+    const userToPlayerIds = new Map();
+    for (const [playerId, participant] of room.allPlayers.entries()) {
+      if (participant.role === "host" || !participant.userId) continue;
+      
+      const uId = participant.userId.toString();
+      if (!userToPlayerIds.has(uId)) {
+        userToPlayerIds.set(uId, []);
+      }
+      userToPlayerIds.get(uId).push(playerId);
+    }
 
-      const playerAnswers = room.answerLog.get(participant.playerId) || [];
+    for (const [uId, playerIds] of userToPlayerIds.entries()) {
+      const allPlayerAnswers = [];
+      for (const pId of playerIds) {
+        const answers = room.answerLog.get(pId) || [];
+        allPlayerAnswers.push(...answers);
+      }
 
       // Build graded answers array — include unanswered questions
       const gradedAnswers = quiz.questions.map((q) => {
         const qId = q._id.toString();
-        const logged = playerAnswers.find((a) => a.questionId === qId);
+        // Reverse array to find the most recent answer if they answered multiple times
+        const logged = [...allPlayerAnswers].reverse().find((a) => a.questionId === qId);
         return {
           questionId: q._id,
           selectedAnswer: logged ? logged.selectedAnswer : null,
@@ -95,7 +109,7 @@ const persistAttempts = async (pinStr) => {
       }
 
       await Attempt.create({
-        userId: participant.userId,
+        userId: uId,
         quizId: room.quizId,
         answers: gradedAnswers,
         score: correctCount,
@@ -106,7 +120,7 @@ const persistAttempts = async (pinStr) => {
       });
 
       console.log(
-        `[Socket] Persisted Attempt for user ${participant.userId} – score ${correctCount}/${totalQuestions}`
+        `[Socket] Persisted Attempt for user ${uId} – score ${correctCount}/${totalQuestions}`
       );
     }
   } catch (err) {
