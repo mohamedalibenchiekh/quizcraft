@@ -129,6 +129,19 @@ export const createQuiz = async (req, res, next) => {
 };
 
 /**
+ * @desc    Fetch all published quizzes (student-facing)
+ * @route   GET /api/quizzes/published
+ */
+export const getPublishedQuizzes = async (req, res, next) => {
+  try {
+    const quizzes = await Quiz.find({ isApproved: true }).select('title description questions');
+    res.status(200).json({ success: true, data: quizzes });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @desc    Fetch a list of all quizzes created by the logged-in professor
  * @route   GET /api/quizzes
  */

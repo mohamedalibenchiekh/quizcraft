@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createQuiz,
   getMyQuizzes,
+  getPublishedQuizzes,
   getQuizById,
   updateQuizMetadata,
   deleteQuiz,
@@ -19,6 +20,9 @@ router.post("/", authenticateToken, requireRole("professor"), createQuiz);
 
 // GET /api/quizzes -> Fetch a list of all quizzes created by the logged-in professor.
 router.get("/", authenticateToken, requireRole("professor"), getMyQuizzes);
+
+// GET /api/quizzes/published -> Fetch all published quizzes (student-facing, must be before :id).
+router.get("/published", authenticateToken, getPublishedQuizzes);
 
 // GET /api/quizzes/:id -> Fetch a single quiz populated with its complete array of detailed question documents.
 router.get("/:id", authenticateToken, getQuizById);
