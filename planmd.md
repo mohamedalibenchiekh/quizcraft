@@ -137,12 +137,25 @@ The domain model is `User → Quiz → Question → Session → Attempt` (where 
 *Satisfies: TAG: STAT — Analytics Dashboard*
 
 * **Deliverables**:
-  * [ ] Implement an aggregated data pipeline processing database entities under the path `/api/analytics/professor/:quizId`.
-  * [ ] Construct question-level error metrics (heatmaps) to isolate topics showing heavy failure occurrences across whole cohorts.
-  * [ ] Create individual student dashboards presenting personalized knowledge gap summary metrics.
+  * [x] Implement an aggregated data pipeline processing database entities under the path `/api/analytics/professor/:quizId`.
+  * [x] Construct question-level error metrics (heatmaps) to isolate topics showing heavy failure occurrences across whole cohorts.
+  * [x] Create individual student dashboards presenting personalized knowledge gap summary metrics.
 
 * **Exit criteria**:
-  * Professors can open an automated session summary showing a breakdown of performance data, calling out exactly which questions caused the highest failure rates.
+  * [x] Professors can open an automated session summary showing a breakdown of performance data, calling out exactly which questions caused the highest failure rates.
+
+#### Phase 5 Implementation Metrics
+
+* **Aggregation Pipeline Structure**:
+  * **$match Stage**: Filters attempts matching the target `quizId`.
+  * **$facet Stage**: Executes two parallel pipelines for high-performance server-side data extraction:
+    * **stats Pipeline**: Groups all matched attempts to compute `totalAttempts`, `averageScore` (average of `scoreRatio * 100`), `highestScore`, `lowestScore`, and count of adaptive triggers (`remediation`, `enrichment`, `none`).
+    * **questionBreakdown Pipeline**: Unwinds individual question responses from the `answers` array, groups by `questionId` to sum correct/incorrect counts, performs a `$lookup` on the `questions` collection to pull metadata (text, difficulty, tags), and projects final percentage statistics.
+* **UI Layout Composition (QuizAnalytics.jsx)**:
+  * **KPI Cards Row**: Highlights Total Submissions, Class Average Score, and the dynamically calculated "Most Missed Concept" tag.
+  * **Adaptive Triggers Panel**: Employs a stunning, proportional pure-Tailwind stacked bar chart representing student adaptive paths (Remediation vs Baseline vs Enrichment).
+  * **Item Analysis Matrix**: Displays every question text snippet along with its correct/incorrect counts, color-coded dynamically based on class mastery levels (Green for &gt; 80% mastery, Yellow for 50%-80% baseline, and Red for &lt; 50% critical focus areas). Features a search bar and interactive tabs to filter items instantly.
+* **Regression Test Coverage**: Complete integration suite at `server/tests/analytics.test.js` validating exactly 75% average class score computation across mock student attempts alongside adaptive counts and question-level breakdowns.
 
 ---
 

@@ -70,7 +70,7 @@ const ProfessorDashboard = () => {
       {/* Header section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 
+          <h1
             className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 via-cyan-400 to-green-400 bg-clip-text text-transparent"
             style={{ fontFamily: 'var(--font-display)' }}
           >
@@ -80,7 +80,7 @@ const ProfessorDashboard = () => {
             Manage your quizzes, configure drafts, publish to classrooms, and trigger live sessions.
           </p>
         </div>
-        <button 
+        <button
           onClick={() => navigate('/generator')}
           className="inline-flex items-center px-5 py-3 text-sm font-bold rounded-lg transition-all duration-200 cursor-pointer shadow-[0_4px_12px_rgba(124,58,237,0.2)] hover:shadow-[0_4px_18px_rgba(34,211,238,0.3)] hover:translate-y-[-1px] text-white"
           style={{
@@ -112,16 +112,14 @@ const ProfessorDashboard = () => {
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id)}
-              className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 flex items-center space-x-1.5 ${
-                filter === tab.id
+              className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 flex items-center space-x-1.5 ${filter === tab.id
                   ? 'bg-indigo-600/90 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               <span>{tab.label}</span>
-              <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                filter === tab.id ? 'bg-indigo-500 text-white' : 'bg-slate-900 text-slate-500'
-              }`}>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] ${filter === tab.id ? 'bg-indigo-500 text-white' : 'bg-slate-900 text-slate-500'
+                }`}>
                 {tab.count}
               </span>
             </button>
@@ -145,21 +143,21 @@ const ProfessorDashboard = () => {
           </svg>
           <h3 className="text-slate-300 font-bold text-lg mb-1">No quizzes found</h3>
           <p className="text-slate-500 text-sm max-w-md mx-auto">
-            {filter === 'all' 
-              ? "You haven't created any quizzes yet. Click 'Create New Quiz' to get started." 
+            {filter === 'all'
+              ? "You haven't created any quizzes yet. Click 'Create New Quiz' to get started."
               : `No quizzes match the filter "${filter === 'published' ? 'Published' : 'Drafts'}".`}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredQuizzes.map((quiz) => (
-            <div 
-              key={quiz._id} 
+            <div
+              key={quiz._id}
               className="glass-card hover:translate-y-[-2px] transition-all duration-300 hover:border-indigo-500/25 flex flex-col justify-between overflow-hidden relative shadow-lg"
             >
               {/* Card top gradient bar */}
               <div className={`h-1.5 w-full ${quiz.isApproved ? 'bg-gradient-to-r from-emerald-500 to-green-400' : 'bg-gradient-to-r from-slate-600 to-slate-500'}`} />
-              
+
               <div className="p-6 flex-1 flex flex-col justify-between">
                 <div>
                   {/* Status Badge & Question Count */}
@@ -194,11 +192,10 @@ const ProfessorDashboard = () => {
                     <button
                       onClick={() => handleToggleApprove(quiz._id)}
                       disabled={toggleLoading[quiz._id]}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 flex items-center space-x-1.5 hover:translate-y-[-1px] disabled:opacity-50 ${
-                        quiz.isApproved 
-                          ? 'bg-amber-950/20 text-amber-300 border-amber-500/30 hover:bg-amber-950/40' 
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 flex items-center space-x-1.5 hover:translate-y-[-1px] disabled:opacity-50 ${quiz.isApproved
+                          ? 'bg-amber-950/20 text-amber-300 border-amber-500/30 hover:bg-amber-950/40'
                           : 'bg-emerald-950/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-950/40'
-                      }`}
+                        }`}
                     >
                       {toggleLoading[quiz._id] ? (
                         <>
@@ -224,36 +221,42 @@ const ProfessorDashboard = () => {
                         </>
                       )}
                     </button>
-                    
+
                     <span className="text-[10px] text-slate-500">
                       Created {new Date(quiz.createdAt).toLocaleDateString()}
                     </span>
                   </div>
 
                   {/* Core quiz actions */}
-                  <div className="flex gap-3">
-                    <button 
+                  <div className="flex gap-2">
+                    <button
                       onClick={() => navigate('/host-session', { state: { quizId: quiz._id } })}
                       disabled={!quiz.isApproved}
-                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-1.5 text-white ${
-                        quiz.isApproved 
-                          ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-md cursor-pointer hover:translate-y-[-1px]' 
+                      className={`flex-1 px-3 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center space-x-1 text-white ${quiz.isApproved
+                          ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-md cursor-pointer hover:translate-y-[-1px]'
                           : 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-50'
-                      }`}
+                        }`}
                       title={quiz.isApproved ? "Start a live game session" : "Publish the quiz to activate live sessions"}
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <span>Start Session</span>
+                      <span>Start</span>
                     </button>
 
-                    <button 
-                      className="px-4 py-2.5 rounded-lg text-sm font-semibold border transition-all duration-200 cursor-pointer text-slate-300 border-slate-800 hover:bg-slate-950 hover:text-white"
+                    <button
+                      className="px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all duration-200 cursor-pointer text-slate-300 border-slate-800 hover:bg-slate-950 hover:text-white"
                       onClick={() => navigate(`/quizzes/edit/${quiz._id}`)}
                     >
                       Edit
+                    </button>
+
+                    <button
+                      className="px-3 py-2.5 rounded-lg text-xs font-bold border transition-all duration-200 cursor-pointer text-cyan-400 border-cyan-950/50 bg-cyan-950/10 hover:bg-cyan-950/30 hover:text-cyan-300"
+                      onClick={() => navigate(`/quizzes/analytics/${quiz._id}`)}
+                    >
+                      Analytics
                     </button>
                   </div>
                 </div>
