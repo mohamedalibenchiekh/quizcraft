@@ -52,6 +52,8 @@ export const startSession = async (req, res, next) => {
 
     await Session.createCollection();
 
+
+
     for (let attempt = 0; attempt < MAX_PIN_RETRIES; attempt++) {
       const dbSession = await mongoose.startSession();
       dbSession.startTransaction();
@@ -90,7 +92,14 @@ export const startSession = async (req, res, next) => {
         }
         dbSession.endSession();
 
-        if (transactionError.code === 11000) {
+        const isTransient =
+          transactionError.code === 11000 ||
+          transactionError.code === 112 ||
+          transactionError.errorLabels?.includes("TransientTransactionError") ||
+          transactionError.errmsg?.includes("Write conflict") ||
+          transactionError.message?.includes("Write conflict");
+
+        if (isTransient) {
           continue;
         }
         throw transactionError;
