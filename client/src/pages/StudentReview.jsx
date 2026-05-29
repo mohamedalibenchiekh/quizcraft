@@ -13,6 +13,7 @@ const StudentReview = () => {
   useEffect(() => {
     if (!attemptId) return;
     setLoading(true);
+    setError('');
     api
       .get(`/attempts/${attemptId}`)
       .then((res) => {

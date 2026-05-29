@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-const isGuest = (user) => !user;
 import {
   socket,
   connectSocket,
@@ -10,6 +8,8 @@ import {
   joinRoom,
   submitAnswer as emitSubmitAnswer,
 } from '../services/socket';
+
+const isGuest = (user) => !user;
 
 /* =============================================
    LiveSession — Student Live Quiz Portal

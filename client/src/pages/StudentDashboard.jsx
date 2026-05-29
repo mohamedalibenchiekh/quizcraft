@@ -9,7 +9,8 @@ const StudentDashboard = () => {
   const [attempts, setAttempts] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [fetchError, setFetchError] = useState('');
+  const [pinError, setPinError] = useState('');
 
   useEffect(() => {
     fetchDashboardData();
@@ -17,7 +18,7 @@ const StudentDashboard = () => {
 
   const fetchDashboardData = async () => {
     setLoading(true);
-    setError('');
+    setFetchError('');
 
     const results = await Promise.allSettled([
       api.get('/attempts/my'),
@@ -39,7 +40,7 @@ const StudentDashboard = () => {
     }
 
     if (!anySucceeded) {
-      setError('Failed to load dashboard data.');
+      setFetchError('Failed to load dashboard data.');
     }
 
     setLoading(false);
@@ -48,16 +49,18 @@ const StudentDashboard = () => {
   const handleJoinLiveSession = () => {
     const pin = pinInput.trim().toUpperCase();
     if (!/^[A-Z0-9]{6}$/.test(pin)) {
-      setError('PIN must be exactly 6 alphanumeric characters.');
+      setPinError('PIN must be exactly 6 alphanumeric characters.');
       return;
     }
+    setPinError('');
     navigate('/session', { state: { roomCode: pin } });
   };
 
   const handlePinChange = (e) => {
     const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
     setPinInput(raw);
-    if (error) setError('');
+    if (fetchError) setFetchError('');
+    if (pinError) setPinError('');
   };
 
   return (
@@ -74,9 +77,14 @@ const StudentDashboard = () => {
         </p>
       </div>
 
-      {error && (
+      {fetchError && (
         <div className="mb-8 p-4 border border-red-500/30 bg-red-950/20 text-red-300 rounded-xl">
-          <p className="text-sm font-medium">{error}</p>
+          <p className="text-sm font-medium">{fetchError}</p>
+        </div>
+      )}
+      {pinError && (
+        <div className="mb-4 p-3 border border-red-500/30 bg-red-950/20 text-red-300 rounded-xl">
+          <p className="text-sm font-medium">{pinError}</p>
         </div>
       )}
 
