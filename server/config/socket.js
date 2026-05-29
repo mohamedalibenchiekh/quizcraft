@@ -36,6 +36,7 @@ const getRoom = (pin) => {
       resultsRevealed: false,
       quizId: null,        // set when quiz starts
       answerLog: new Map(), // playerId -> [{ questionId, selectedAnswer, isCorrect }]
+      allPlayers: new Map(), // NEW: playerId -> { playerId, username, role, userId }
     });
   }
   return rooms.get(pin);
@@ -63,7 +64,7 @@ const persistAttempts = async (pinStr) => {
       correctMap[q._id.toString()] = q.correctAnswer;
     }
 
-    for (const [, participant] of room.participants.entries()) {
+    for (const [, participant] of room.allPlayers.entries()) {
       if (participant.role === "host") continue;
       if (!participant.userId) continue; // skip guests (no account)
 
@@ -190,12 +191,15 @@ const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode, token } =
 
   const id = generatePlayerId();
 
-  room.participants.set(socket.id, {
+  const participant = {
     playerId: id,
     username: username || "Anonymous",
     role: "player",
     userId, // null for guests, ObjectId string for authenticated students
-  });
+  };
+
+  room.participants.set(socket.id, participant);
+  room.allPlayers.set(id, participant);
 
   socket.join(pinStr);
   console.log(`[Socket] ${socket.id} (player ${id}${userId ? ', user ' + userId : ', guest'}) joined room ${pinStr}`);
@@ -241,11 +245,14 @@ export const initSocket = (httpServer) => {
         const room = getRoom(pinStr);
         room.hostId = socket.id;
 
-        room.participants.set(socket.id, {
+        const hostParticipant = {
           playerId: generatePlayerId(),
           username: decoded.id || "Host",
           role: "host",
-        });
+        };
+
+        room.participants.set(socket.id, hostParticipant);
+        room.allPlayers.set(hostParticipant.playerId, hostParticipant);
 
         socket.join(pinStr);
         broadcastRoster(io, pinStr);
