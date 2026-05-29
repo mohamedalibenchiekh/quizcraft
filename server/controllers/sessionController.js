@@ -52,17 +52,18 @@ export const startSession = async (req, res, next) => {
 
     await Session.createCollection();
 
+    // Mark existing waiting/active sessions for this quiz and host as completed outside the transaction.
+    // This reduces lock contention and avoids WriteConflict errors when yielding is disabled.
+    await Session.updateMany(
+      { quizId, hostId: req.user.id, status: { $in: ["waiting", "active"] } },
+      { $set: { status: "completed" } }
+    );
+
     for (let attempt = 0; attempt < MAX_PIN_RETRIES; attempt++) {
       const dbSession = await mongoose.startSession();
       dbSession.startTransaction();
 
       try {
-        await Session.updateMany(
-          { quizId, hostId: req.user.id, status: { $in: ["waiting", "active"] } },
-          { $set: { status: "completed" } },
-          { session: dbSession }
-        );
-
         const pin = generatePin();
         const existing = await Session.findOne({ pin }, null, { session: dbSession });
         if (existing) {
@@ -90,7 +91,14 @@ export const startSession = async (req, res, next) => {
         }
         dbSession.endSession();
 
-        if (transactionError.code === 11000) {
+        const isTransient =
+          transactionError.code === 11000 ||
+          transactionError.code === 112 ||
+          transactionError.errorLabels?.includes("TransientTransactionError") ||
+          transactionError.errmsg?.includes("Write conflict") ||
+          transactionError.message?.includes("Write conflict");
+
+        if (isTransient) {
           continue;
         }
         throw transactionError;
