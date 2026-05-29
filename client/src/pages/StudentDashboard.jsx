@@ -16,26 +16,36 @@ const StudentDashboard = () => {
   }, []);
 
   const fetchDashboardData = async () => {
+    setLoading(true);
+    setError('');
+
+    let bothFailed = true;
+
     try {
-      setLoading(true);
-      setError('');
-
-      const [attemptsRes, statsRes] = await Promise.all([
-        api.get('/attempts/my'),
-        api.get('/attempts/stats'),
-      ]);
-
+      const attemptsRes = await api.get('/attempts/my');
       if (attemptsRes.data?.success) {
         setAttempts(attemptsRes.data.data || []);
+        bothFailed = false;
       }
+    } catch {
+      // attempts fetch failed — stats may still succeed
+    }
+
+    try {
+      const statsRes = await api.get('/attempts/stats');
       if (statsRes.data?.success) {
         setStats(statsRes.data.data);
+        bothFailed = false;
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load dashboard data.');
-    } finally {
-      setLoading(false);
+    } catch {
+      // stats fetch failed — attempts may still succeed
     }
+
+    if (bothFailed) {
+      setError('Failed to load dashboard data.');
+    }
+
+    setLoading(false);
   };
 
   const handleJoinLiveSession = () => {
