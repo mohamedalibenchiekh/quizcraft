@@ -98,6 +98,7 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
       expect(res.body.success).toBe(true);
       expect(res.body.status).toBe("remediation");
       expect(res.body.message).toBe("Remediation block unlocked.");
+      expect(res.body.ratio).toBe(0.25);
       expect(res.body.data.adaptiveTriggered).toBe(true);
       expect(res.body.data.adaptiveType).toBe("remediation");
       expect(res.body.data.scoreRatio).toBe(0.25);
@@ -105,9 +106,11 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
 
       // Assert remediation block has simplified questions
       expect(res.body).toHaveProperty("adaptiveQuestions");
+      expect(res.body).toHaveProperty("adaptiveDeck");
       expect(Array.isArray(res.body.adaptiveQuestions)).toBe(true);
       expect(res.body.adaptiveQuestions.length).toBeGreaterThan(0);
       expect(res.body.adaptiveQuestions.length).toBeLessThanOrEqual(5);
+      expect(res.body.adaptiveDeck).toEqual(res.body.adaptiveQuestions);
 
       // All returned questions must be difficulty "easy"
       for (const q of res.body.adaptiveQuestions) {
@@ -120,6 +123,46 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
       expect(attempt.adaptiveTriggered).toBe(true);
       expect(attempt.adaptiveType).toBe("remediation");
       expect(attempt.scoreRatio).toBe(0.25);
+    });
+
+    it("should fallback to general easy questions if no easy questions match the specific quiz tags", async () => {
+      // Seed easy questions with NO tags or mismatched tags
+      await Question.insertMany([
+        { text: "Fallback Easy Q1", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["unrelated"] },
+        { text: "Fallback Easy Q2", type: "MCQ", options: ["A", "B"], correctAnswer: "B", difficulty: "easy", tags: ["mismatched"] },
+      ]);
+
+      // Create quiz with 2 medium questions
+      const mediumQs = await Question.insertMany([
+        { text: "Medium Q1", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "medium", tags: ["algebra"] },
+        { text: "Medium Q2", type: "MCQ", options: ["A", "B"], correctAnswer: "B", difficulty: "medium", tags: ["algebra"] },
+      ]);
+
+      const quiz = await Quiz.create({
+        title: "Algebra Basics Fallback",
+        professorId: new mongoose.Types.ObjectId(),
+        questions: mediumQs.map((q) => q._id),
+      });
+
+      // Submit with 0 correct out of 2 (0% ratio)
+      const payload = {
+        quizId: quiz._id.toString(),
+        answers: [
+          { questionId: mediumQs[0]._id, selectedAnswer: "X" },
+          { questionId: mediumQs[1]._id, selectedAnswer: "Y" },
+        ],
+      };
+
+      const res = await request(app)
+        .post("/api/attempts/submit")
+        .set("Authorization", `Bearer ${studentToken}`)
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("remediation");
+      expect(res.body).toHaveProperty("adaptiveDeck");
+      expect(res.body.adaptiveDeck.length).toBeGreaterThan(0);
+      expect(res.body.adaptiveDeck[0].difficulty).toBe("easy");
     });
   });
 
@@ -164,6 +207,7 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
       expect(res.body.success).toBe(true);
       expect(res.body.status).toBe("enrichment");
       expect(res.body.message).toBe("Advanced variant block triggered!");
+      expect(res.body.ratio).toBe(1);
       expect(res.body.data.adaptiveTriggered).toBe(true);
       expect(res.body.data.adaptiveType).toBe("enrichment");
       expect(res.body.data.scoreRatio).toBe(1);
@@ -171,9 +215,11 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
 
       // Assert enrichment block has advanced questions
       expect(res.body).toHaveProperty("adaptiveQuestions");
+      expect(res.body).toHaveProperty("adaptiveDeck");
       expect(Array.isArray(res.body.adaptiveQuestions)).toBe(true);
       expect(res.body.adaptiveQuestions.length).toBeGreaterThan(0);
       expect(res.body.adaptiveQuestions.length).toBeLessThanOrEqual(5);
+      expect(res.body.adaptiveDeck).toEqual(res.body.adaptiveQuestions);
 
       // All returned questions must be difficulty "hard"
       for (const q of res.body.adaptiveQuestions) {
@@ -186,6 +232,46 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
       expect(attempt.adaptiveTriggered).toBe(true);
       expect(attempt.adaptiveType).toBe("enrichment");
       expect(attempt.scoreRatio).toBe(1);
+    });
+
+    it("should fallback to general hard questions if no hard questions match the specific quiz tags", async () => {
+      // Seed hard questions with NO tags or mismatched tags
+      await Question.insertMany([
+        { text: "Fallback Hard Q1", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "hard", tags: ["unrelated"] },
+        { text: "Fallback Hard Q2", type: "MCQ", options: ["A", "B"], correctAnswer: "B", difficulty: "hard", tags: ["mismatched"] },
+      ]);
+
+      // Create quiz with 2 easy questions
+      const easyQs = await Question.insertMany([
+        { text: "Easy Q1", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["algebra"] },
+        { text: "Easy Q2", type: "MCQ", options: ["A", "B"], correctAnswer: "B", difficulty: "easy", tags: ["algebra"] },
+      ]);
+
+      const quiz = await Quiz.create({
+        title: "Algebra Basics Fallback Enrichment",
+        professorId: new mongoose.Types.ObjectId(),
+        questions: easyQs.map((q) => q._id),
+      });
+
+      // Submit with 2 correct out of 2 (100% ratio)
+      const payload = {
+        quizId: quiz._id.toString(),
+        answers: [
+          { questionId: easyQs[0]._id, selectedAnswer: "A" },
+          { questionId: easyQs[1]._id, selectedAnswer: "B" },
+        ],
+      };
+
+      const res = await request(app)
+        .post("/api/attempts/submit")
+        .set("Authorization", `Bearer ${studentToken}`)
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("enrichment");
+      expect(res.body).toHaveProperty("adaptiveDeck");
+      expect(res.body.adaptiveDeck.length).toBeGreaterThan(0);
+      expect(res.body.adaptiveDeck[0].difficulty).toBe("hard");
     });
   });
 

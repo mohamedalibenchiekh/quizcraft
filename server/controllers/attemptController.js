@@ -93,18 +93,23 @@ export const submitAttempt = async (req, res, next) => {
       adaptiveType = 'remediation';
       responseStatus = 'remediation';
 
-      const filter = {
-        _id: { $nin: questions.map((q) => q._id) },
-        difficulty: 'easy',
-      };
+      let simplifiedQuestions = [];
+      const excludeIds = questions.map((q) => q._id);
+
       if (topicTags.length > 0) {
-        filter.tags = { $in: topicTags };
+        simplifiedQuestions = await Question.aggregate([
+          { $match: { _id: { $nin: excludeIds }, difficulty: 'easy', tags: { $in: topicTags } } },
+          { $sample: { size: ADAPTIVE_SET_SIZE } },
+        ]);
       }
 
-      const simplifiedQuestions = await Question.aggregate([
-        { $match: filter },
-        { $sample: { size: ADAPTIVE_SET_SIZE } },
-      ]);
+      // Fallback query if no questions found matching tags
+      if (simplifiedQuestions.length === 0) {
+        simplifiedQuestions = await Question.aggregate([
+          { $match: { _id: { $nin: excludeIds }, difficulty: 'easy' } },
+          { $sample: { size: ADAPTIVE_SET_SIZE } },
+        ]);
+      }
 
       adaptiveQuestions = simplifiedQuestions.map((q) => ({
         _id: q._id,
@@ -124,18 +129,23 @@ export const submitAttempt = async (req, res, next) => {
       adaptiveType = 'enrichment';
       responseStatus = 'enrichment';
 
-      const filter = {
-        _id: { $nin: questions.map((q) => q._id) },
-        difficulty: 'hard',
-      };
+      let advancedQuestions = [];
+      const excludeIds = questions.map((q) => q._id);
+
       if (topicTags.length > 0) {
-        filter.tags = { $in: topicTags };
+        advancedQuestions = await Question.aggregate([
+          { $match: { _id: { $nin: excludeIds }, difficulty: 'hard', tags: { $in: topicTags } } },
+          { $sample: { size: ADAPTIVE_SET_SIZE } },
+        ]);
       }
 
-      const advancedQuestions = await Question.aggregate([
-        { $match: filter },
-        { $sample: { size: ADAPTIVE_SET_SIZE } },
-      ]);
+      // Fallback query if no questions found matching tags
+      if (advancedQuestions.length === 0) {
+        advancedQuestions = await Question.aggregate([
+          { $match: { _id: { $nin: excludeIds }, difficulty: 'hard' } },
+          { $sample: { size: ADAPTIVE_SET_SIZE } },
+        ]);
+      }
 
       adaptiveQuestions = advancedQuestions.map((q) => ({
         _id: q._id,
@@ -164,6 +174,8 @@ export const submitAttempt = async (req, res, next) => {
     const payload = {
       success: true,
       message: statusMessage,
+      status: responseStatus,
+      ratio: scoreRatio,
       data: {
         attemptId: attempt._id,
         score,
@@ -173,11 +185,11 @@ export const submitAttempt = async (req, res, next) => {
         adaptiveTriggered,
         adaptiveType,
       },
-      status: responseStatus,
     };
 
     if (adaptiveTriggered && adaptiveQuestions.length > 0) {
-      payload.adaptiveQuestions = adaptiveQuestions;
+      payload.adaptiveDeck = adaptiveQuestions;
+      payload.adaptiveQuestions = adaptiveQuestions; // Keep for test and client compatibility
     }
 
     res.status(200).json(payload);

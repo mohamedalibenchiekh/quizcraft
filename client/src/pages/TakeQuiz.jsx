@@ -131,11 +131,11 @@ const TakeQuiz = () => {
     const isEnrichment = status === 'enrichment';
     const isStandard = status === 'standard';
 
-    return (
-      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4" style={{ background: 'var(--color-surface-base)' }}>
-        <div className="w-full max-w-2xl animate-fade-in-up">
-          {/* Adaptive Banner — Remediation */}
-          {isRemediation && (
+    if (isRemediation) {
+      return (
+        <div className="min-h-[calc(100vh-64px)] px-4 py-8 animate-fade-in-up" style={{ background: 'var(--color-surface-base)' }}>
+          <div className="w-full max-w-3xl mx-auto">
+            {/* Empathetic supportive alert panel */}
             <div className="mb-6 p-6 rounded-2xl text-center" style={{
               background: 'rgba(234, 179, 8, 0.08)',
               border: '1px solid rgba(234, 179, 8, 0.25)',
@@ -146,33 +146,127 @@ const TakeQuiz = () => {
               <h3 className="text-xl font-extrabold mb-2" style={{ color: '#fbbf24', fontFamily: 'var(--font-display)' }}>
                 Let's reinforce the basics!
               </h3>
-              <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
-                We've prepared a quick, simplified revision retry deck to lock in these core concepts.
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                We've prepared a specialized, simplified revision retry deck to lock in these core concepts.
               </p>
-              {Array.isArray(adaptiveQuestions) && adaptiveQuestions.length > 0 && (
-                <div className="space-y-3 mb-4 text-left">
-                  {adaptiveQuestions.map((q, i) => (
-                    <div key={q._id} className="p-3 rounded-xl" style={{ background: 'var(--color-surface-elevated)', border: '1px solid rgba(234, 179, 8, 0.12)' }}>
-                      <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                        {i + 1}. {q.text}
+            </div>
+
+            {/* Questions presented right here on the spot */}
+            <div className="space-y-6 mb-8">
+              {(adaptiveQuestions || []).map((question, qIdx) => (
+                <div key={question._id} className="glass-card p-6">
+                  <div className="flex items-start gap-3 mb-4">
+                    <span className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-extrabold" style={{ background: 'rgba(139, 92, 246, 0.15)', color: 'var(--color-brand-300)' }}>
+                      {qIdx + 1}
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                        {question.text}
                       </p>
-                      <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                        {q.type} &middot; {q.difficulty}
-                      </p>
+                      <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(139, 92, 246, 0.08)', color: 'var(--color-text-muted)' }}>
+                        {question.difficulty} &middot; {question.type}
+                      </span>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* MCQ / True-False Options */}
+                  {['MCQ', 'True-False'].includes(question.type) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {question.options.map((option, oIdx) => {
+                        const colors = OPTION_COLORS[oIdx % OPTION_COLORS.length];
+                        const isSelected = answers[question._id] === option;
+                        return (
+                          <button
+                            key={oIdx}
+                            onClick={() => handleSelectOption(question._id, option)}
+                            className="relative px-4 py-3.5 rounded-2xl text-left font-semibold text-sm transition-all duration-200 cursor-pointer"
+                            style={{
+                              background: isSelected ? colors.border : colors.bg,
+                              border: `2px solid ${isSelected ? colors.accent : colors.border}`,
+                              color: 'var(--color-text-primary)',
+                              transform: isSelected ? 'scale(0.97)' : undefined,
+                            }}
+                          >
+                            <span className="mr-2 inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-extrabold" style={{ background: colors.border, color: colors.accent }}>
+                              {String.fromCharCode(65 + oIdx)}
+                            </span>
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Short Answer */}
+                  {question.type === 'Short-Answer' && (
+                    <textarea
+                      className="w-full p-4 rounded-xl outline-none transition-all duration-200 focus:ring-2 resize-none"
+                      style={{
+                        background: 'var(--color-surface-input)',
+                        color: 'var(--color-text-primary)',
+                        border: '1px solid rgba(139, 92, 246, 0.2)',
+                        caretColor: 'var(--color-brand-400)',
+                      }}
+                      placeholder="Type your answer here…"
+                      rows={3}
+                      value={answers[question._id] || ''}
+                      onChange={(e) => handleShortAnswerChange(question._id, e.target.value)}
+                    />
+                  )}
                 </div>
+              ))}
+            </div>
+
+            {/* Submit Revision Assessment */}
+            <div className="glass-card p-6 text-center">
+              {error && (
+                <div className="mb-4 p-3 rounded-lg border border-red-500/30 bg-red-950/20 text-red-300 text-sm">{error}</div>
               )}
               <button
-                onClick={handleRetry}
-                className="px-6 py-3 rounded-xl text-sm font-extrabold text-white transition-all duration-200 cursor-pointer hover:translate-y-[-1px]"
-                style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 4px 16px rgba(245, 158, 11, 0.25)' }}
+                onClick={async () => {
+                  setSubmitting(true);
+                  setError('');
+                  const answersArray = (adaptiveQuestions || []).map((q) => ({
+                    questionId: q._id,
+                    selectedAnswer: answers[q._id] || null,
+                  }));
+                  try {
+                    const res = await api.post('/attempts/submit', {
+                      quizId: quizId,
+                      answers: answersArray,
+                    });
+                    setAnswers({});
+                    setResult(res.data);
+                  } catch (err) {
+                    setError(err.response?.data?.message || 'Submission failed. Please try again.');
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+                disabled={!(adaptiveQuestions || []).every((q) => answers[q._id] != null && answers[q._id].trim() !== '') || submitting}
+                className="px-10 py-3.5 rounded-xl text-base font-extrabold text-white transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:translate-y-[-1px]"
+                style={{
+                  background: 'linear-gradient(135deg, var(--color-brand-500), #6d28d9)',
+                  boxShadow: '0 8px 24px rgba(124, 58, 237, 0.25)',
+                  fontFamily: 'var(--font-display)',
+                }}
               >
-                Retry Quiz with Reinforced Concepts
+                {submitting ? 'Submitting…' : 'Submit Revision Assessment'}
               </button>
+              {!(adaptiveQuestions || []).every((q) => answers[q._id] != null && answers[q._id].trim() !== '') && (
+                <p className="text-xs mt-3" style={{ color: 'var(--color-text-muted)' }}>
+                  Answer all questions before submitting
+                </p>
+              )}
             </div>
-          )}
+          </div>
+        </div>
+      );
+    }
 
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4" style={{ background: 'var(--color-surface-base)' }}>
+        <div className="w-full max-w-2xl animate-fade-in-up">
           {/* Adaptive Banner — Enrichment */}
           {isEnrichment && (
             <div className="mb-6 p-6 rounded-2xl text-center" style={{

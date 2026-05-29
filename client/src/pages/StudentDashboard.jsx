@@ -229,6 +229,9 @@ const StudentDashboard = () => {
                   <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
                     Final Score
                   </th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                    Adaptive Path
+                  </th>
                   <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
                     Actions
                   </th>
@@ -271,6 +274,21 @@ const StudentDashboard = () => {
                       >
                         {Math.round(attempt.scoreRatio * 100)}%
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {attempt.adaptiveType === 'enrichment' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-500/10 text-green-400 border border-green-500/20">
+                          <span>🏆</span> Enrichment
+                        </span>
+                      ) : attempt.adaptiveType === 'remediation' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                          <span>📚</span> Remediation
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-500/10 text-slate-400 border border-slate-500/10">
+                          Standard
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
