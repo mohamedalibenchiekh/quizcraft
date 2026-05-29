@@ -177,47 +177,38 @@ const StudentReview = () => {
                     {answer.selectedAnswer || '(No answer provided)'}
                   </span>
                 </p>
-                {!isCorrect && (
-                  <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    Correct answer:{' '}
-                    <span className="font-semibold" style={{ color: '#4ade80' }}>
-                      {answer.correctAnswer}
-                    </span>
-                  </p>
-                )}
+
               </div>
 
               {answer.questionType === 'MCQ' && Array.isArray(answer.options) && answer.options.length > 0 && (
                 <div className="ml-11 mt-3 flex flex-wrap gap-2">
                   {answer.options.map((opt, oi) => {
-                    const isOptionCorrect = opt === answer.correctAnswer;
                     const isOptionSelected = opt === answer.selectedAnswer;
                     return (
                       <span
                         key={oi}
                         className="px-2.5 py-1 rounded-lg text-xs font-medium"
                         style={{
-                          background: isOptionCorrect
-                            ? 'rgba(34, 197, 94, 0.12)'
-                            : isOptionSelected
-                              ? 'rgba(239, 68, 68, 0.12)'
-                              : 'rgba(139, 92, 246, 0.06)',
+                          background: isOptionSelected
+                            ? isCorrect
+                              ? 'rgba(34, 197, 94, 0.12)'
+                              : 'rgba(239, 68, 68, 0.12)'
+                            : 'rgba(139, 92, 246, 0.06)',
                           border: `1px solid ${
-                            isOptionCorrect
-                              ? 'rgba(34, 197, 94, 0.3)'
-                              : isOptionSelected
-                                ? 'rgba(239, 68, 68, 0.3)'
-                                : 'rgba(139, 92, 246, 0.1)'
+                            isOptionSelected
+                              ? isCorrect
+                                ? 'rgba(34, 197, 94, 0.3)'
+                                : 'rgba(239, 68, 68, 0.3)'
+                              : 'rgba(139, 92, 246, 0.1)'
                           }`,
-                          color: isOptionCorrect
-                            ? '#4ade80'
-                            : isOptionSelected
-                              ? '#f87171'
-                              : 'var(--color-text-muted)',
+                          color: isOptionSelected
+                            ? isCorrect
+                              ? '#4ade80'
+                              : '#f87171'
+                            : 'var(--color-text-muted)',
                         }}
                       >
                         {opt}
-                        {isOptionCorrect && ' ✓'}
                       </span>
                     );
                   })}
