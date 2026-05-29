@@ -243,7 +243,7 @@ const TakeQuiz = () => {
                     setSubmitting(false);
                   }
                 }}
-                disabled={!(adaptiveQuestions || []).every((q) => answers[q._id] != null && answers[q._id].trim() !== '') || submitting}
+                disabled={!adaptiveQuestions || adaptiveQuestions.length === 0 || !adaptiveQuestions.every((q) => answers[q._id] != null && answers[q._id].trim() !== '') || submitting}
                 className="px-10 py-3.5 rounded-xl text-base font-extrabold text-white transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:translate-y-[-1px]"
                 style={{
                   background: 'linear-gradient(135deg, var(--color-brand-500), #6d28d9)',
@@ -253,11 +253,15 @@ const TakeQuiz = () => {
               >
                 {submitting ? 'Submitting…' : 'Submit Revision Assessment'}
               </button>
-              {!(adaptiveQuestions || []).every((q) => answers[q._id] != null && answers[q._id].trim() !== '') && (
+              {(!adaptiveQuestions || adaptiveQuestions.length === 0) ? (
+                <p className="text-xs mt-3 text-red-400">
+                  No revision questions available.
+                </p>
+              ) : !adaptiveQuestions.every((q) => answers[q._id] != null && answers[q._id].trim() !== '') ? (
                 <p className="text-xs mt-3" style={{ color: 'var(--color-text-muted)' }}>
                   Answer all questions before submitting
                 </p>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
