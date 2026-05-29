@@ -679,11 +679,11 @@ const StudentSession = () => {
               The host has ended the session. Thanks for playing!
             </p>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/student/dashboard')}
               className="px-8 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 cursor-pointer hover:translate-y-[-1px]"
               style={{ background: 'linear-gradient(135deg, var(--color-brand-500), #6d28d9)', boxShadow: '0 4px 16px rgba(124, 58, 237, 0.25)' }}
             >
-              Back to Home
+              Back to Dashboard
             </button>
           </div>
         </div>

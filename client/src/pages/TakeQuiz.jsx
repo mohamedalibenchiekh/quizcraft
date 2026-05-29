@@ -117,8 +117,8 @@ const TakeQuiz = () => {
       <div className="min-h-[calc(100vh-64px)] flex items-center justify-center" style={{ background: 'var(--color-surface-base)' }}>
         <div className="glass-card p-8 text-center max-w-md">
           <p className="text-red-300 mb-4">{error}</p>
-          <button onClick={() => navigate('/')} className="px-6 py-2 rounded-xl text-sm font-bold text-white transition-all cursor-pointer" style={{ background: 'linear-gradient(135deg, var(--color-brand-500), #6d28d9)' }}>
-            Back to Home
+          <button onClick={() => navigate('/student/dashboard')} className="px-6 py-2 rounded-xl text-sm font-bold text-white transition-all cursor-pointer" style={{ background: 'linear-gradient(135deg, var(--color-brand-500), #6d28d9)' }}>
+            Back to Dashboard
           </button>
         </div>
       </div>
@@ -248,11 +248,11 @@ const TakeQuiz = () => {
             )}
 
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/student/dashboard')}
               className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 cursor-pointer hover:translate-y-[-1px]"
               style={{ background: 'linear-gradient(135deg, var(--color-brand-500), #6d28d9)', boxShadow: '0 4px 16px rgba(124, 58, 237, 0.25)' }}
             >
-              Back to Home
+              Back to Dashboard
             </button>
           </div>
         </div>
