@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import Session from "../models/Session.js";
 import Quiz from "../models/Quiz.js";
 import Question from "../models/Question.js";
+import Attempt from "../models/Attempt.js";
 import {
   startQuestion,
   recordAnswer,
@@ -33,9 +34,83 @@ const getRoom = (pin) => {
       currentQuestionId: null,
       questionTimeoutId: null,
       resultsRevealed: false,
+      quizId: null,        // set when quiz starts
+      answerLog: new Map(), // playerId -> [{ questionId, selectedAnswer, isCorrect }]
     });
   }
   return rooms.get(pin);
+};
+
+/**
+ * Persist Attempt records for every authenticated player in a room.
+ * Called when the host closes the quiz so that student dashboards
+ * display historical results.
+ */
+const persistAttempts = async (pinStr) => {
+  const room = rooms.get(pinStr);
+  if (!room || !room.quizId) return;
+
+  try {
+    const quiz = await Quiz.findById(room.quizId).populate("questions");
+    if (!quiz || !quiz.questions) return;
+
+    const totalQuestions = quiz.questions.length;
+    if (totalQuestions === 0) return;
+
+    // Build a quick-lookup for correct answers
+    const correctMap = {};
+    for (const q of quiz.questions) {
+      correctMap[q._id.toString()] = q.correctAnswer;
+    }
+
+    for (const [, participant] of room.participants.entries()) {
+      if (participant.role === "host") continue;
+      if (!participant.userId) continue; // skip guests (no account)
+
+      const playerAnswers = room.answerLog.get(participant.playerId) || [];
+
+      // Build graded answers array — include unanswered questions
+      const gradedAnswers = quiz.questions.map((q) => {
+        const qId = q._id.toString();
+        const logged = playerAnswers.find((a) => a.questionId === qId);
+        return {
+          questionId: q._id,
+          selectedAnswer: logged ? logged.selectedAnswer : null,
+          isCorrect: logged ? logged.isCorrect : false,
+        };
+      });
+
+      const correctCount = gradedAnswers.filter((a) => a.isCorrect).length;
+      const scoreRatio = totalQuestions > 0 ? correctCount / totalQuestions : 0;
+
+      let adaptiveTriggered = false;
+      let adaptiveType = "none";
+      if (scoreRatio < 0.5) {
+        adaptiveTriggered = true;
+        adaptiveType = "remediation";
+      } else if (scoreRatio > 0.85) {
+        adaptiveTriggered = true;
+        adaptiveType = "enrichment";
+      }
+
+      await Attempt.create({
+        userId: participant.userId,
+        quizId: room.quizId,
+        answers: gradedAnswers,
+        score: correctCount,
+        totalQuestions,
+        scoreRatio,
+        adaptiveTriggered,
+        adaptiveType,
+      });
+
+      console.log(
+        `[Socket] Persisted Attempt for user ${participant.userId} – score ${correctCount}/${totalQuestions}`
+      );
+    }
+  } catch (err) {
+    console.error(`[Socket] Failed to persist attempts for room ${pinStr}:`, err.message);
+  }
 };
 
 const emitRevealQuestionResults = (io, pinStr) => {
@@ -74,7 +149,7 @@ const broadcastRoster = (io, pin) => {
 
 const generatePlayerId = () => crypto.randomUUID();
 
-const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode } = {}) => {
+const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode, token } = {}) => {
   const pin = rawPin || roomCode;
   if (!pin || !ROOM_PIN_REGEX.test(String(pin))) {
     socket.emit("join-error", { message: "Invalid session PIN. Must be a 6-character alphanumeric code." });
@@ -101,16 +176,29 @@ const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode } = {}) =>
     return;
   }
 
+  // Try to extract userId from JWT so we can persist attempts later
+  let userId = null;
+  const authToken = token || socket.handshake?.auth?.token;
+  if (authToken) {
+    try {
+      const decoded = jwt.verify(authToken, process.env.JWT_SECRET);
+      userId = decoded.id || null;
+    } catch (_) {
+      // guest — no userId, attempts won't be saved
+    }
+  }
+
   const id = generatePlayerId();
 
   room.participants.set(socket.id, {
     playerId: id,
     username: username || "Anonymous",
     role: "player",
+    userId, // null for guests, ObjectId string for authenticated students
   });
 
   socket.join(pinStr);
-  console.log(`[Socket] ${socket.id} (player ${id}) joined room ${pinStr}`);
+  console.log(`[Socket] ${socket.id} (player ${id}${userId ? ', user ' + userId : ', guest'}) joined room ${pinStr}`);
 
   broadcastRoster(io, pinStr);
 };
@@ -188,6 +276,8 @@ export const initSocket = (httpServer) => {
           socket.emit("control-error", { message: "Session not found." });
           return;
         }
+        // Store quizId on room so we can persist attempts later
+        room.quizId = updated.quizId;
         io.to(pinStr).emit("quiz-started");
         console.log(`[Socket] Quiz started by host ${socket.id} in room ${pinStr}`);
       } catch (error) {
@@ -342,6 +432,16 @@ export const initSocket = (httpServer) => {
           questionDurationMs: room.questionDuration,
         });
 
+        // Track answer for historical persistence
+        if (!room.answerLog.has(pid)) {
+          room.answerLog.set(pid, []);
+        }
+        room.answerLog.get(pid).push({
+          questionId: questionId.toString(),
+          selectedAnswer: chosenOption,
+          isCorrect,
+        });
+
         socket.emit("answer-received", {
           questionId,
         });
@@ -387,6 +487,9 @@ export const initSocket = (httpServer) => {
         console.error(`[Socket] Error updating session on cancel: ${error.message}`);
       }
 
+      // Persist attempts even on cancel so students don't lose progress
+      await persistAttempts(pinStr);
+
       io.to(pinStr).emit("room-terminated", { message: "The host has cancelled this session." });
 
       io.in(pinStr).socketsLeave(pinStr);
@@ -420,6 +523,9 @@ export const initSocket = (httpServer) => {
       } catch (error) {
         console.error(`[Socket] Error updating session: ${error.message}`);
       }
+
+      // Persist attempts for all authenticated students before cleanup
+      await persistAttempts(pinStr);
 
       const finalLb = compileLeaderboard(pinStr);
       if (finalLb.length > 0) {
