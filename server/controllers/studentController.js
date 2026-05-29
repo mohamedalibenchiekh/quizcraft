@@ -88,7 +88,6 @@ export const getAttemptById = async (req, res, next) => {
         questionType: question ? question.type : null,
         options: question ? question.options : [],
         difficulty: question ? question.difficulty : null,
-        correctAnswer: question ? question.correctAnswer : null,
         selectedAnswer: a.selectedAnswer,
         isCorrect: a.isCorrect,
       };
