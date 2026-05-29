@@ -14,20 +14,21 @@ import StudentReview from './pages/StudentReview';
 import HostSession from './pages/HostSession';
 import TakeQuiz from './pages/TakeQuiz';
 import StudentQuizBrowser from './pages/StudentQuizBrowser';
+import QuizAnalytics from './pages/QuizAnalytics';
 
 import './App.css';
 
 const ProtectedRoute = ({ children, allowedRole }) => {
   const { user } = useAuth();
-  
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  
+
   if (allowedRole && user.role !== allowedRole) {
     return <Navigate to={user.role === 'professor' ? '/dashboard' : '/student/dashboard'} replace />;
   }
-  
+
   return children;
 };
 
@@ -78,8 +79,8 @@ const AppRoutes = () => {
       />
 
       {/* Protected Routes */}
-      <Route 
-        path="/dashboard" 
+      <Route
+        path="/dashboard"
         element={
           <ProtectedRoute allowedRole="professor">
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
@@ -87,10 +88,10 @@ const AppRoutes = () => {
               <ProfessorDashboard />
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/generator" 
+      <Route
+        path="/generator"
         element={
           <ProtectedRoute allowedRole="professor">
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
@@ -98,10 +99,10 @@ const AppRoutes = () => {
               <QuizGenerator />
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/quizzes/edit/:id" 
+      <Route
+        path="/quizzes/edit/:id"
         element={
           <ProtectedRoute allowedRole="professor">
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
@@ -109,11 +110,22 @@ const AppRoutes = () => {
               <QuizEdit />
             </div>
           </ProtectedRoute>
-        } 
+        }
+      />
+      <Route
+        path="/quizzes/analytics/:id"
+        element={
+          <ProtectedRoute allowedRole="professor">
+            <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+              <Navbar />
+              <QuizAnalytics />
+            </div>
+          </ProtectedRoute>
+        }
       />
 
-      <Route 
-        path="/host-session" 
+      <Route
+        path="/host-session"
         element={
           <ProtectedRoute allowedRole="professor">
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
@@ -121,12 +133,12 @@ const AppRoutes = () => {
               <HostSession />
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
 
       {/* Student Quiz Browser */}
-      <Route 
-        path="/quizzes" 
+      <Route
+        path="/quizzes"
         element={
           <ProtectedRoute allowedRole="student">
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
@@ -134,12 +146,12 @@ const AppRoutes = () => {
               <StudentQuizBrowser />
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
 
       {/* Self-assessment Quiz Player */}
-      <Route 
-        path="/quiz/:id/take" 
+      <Route
+        path="/quiz/:id/take"
         element={
           <ProtectedRoute allowedRole="student">
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
@@ -147,12 +159,12 @@ const AppRoutes = () => {
               <TakeQuiz />
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
 
       {/* Student Dashboard */}
-      <Route 
-        path="/student/dashboard" 
+      <Route
+        path="/student/dashboard"
         element={
           <ProtectedRoute allowedRole="student">
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
@@ -160,12 +172,12 @@ const AppRoutes = () => {
               <StudentDashboard />
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
 
       {/* Student Performance Review */}
-      <Route 
-        path="/student/review/:attemptId" 
+      <Route
+        path="/student/review/:attemptId"
         element={
           <ProtectedRoute allowedRole="student">
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
@@ -173,12 +185,12 @@ const AppRoutes = () => {
               <StudentReview />
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
 
       {/* Session – requires either auth OR a room code from the Home page */}
-      <Route 
-        path="/session" 
+      <Route
+        path="/session"
         element={
           <SessionGuard>
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
@@ -186,7 +198,7 @@ const AppRoutes = () => {
               <StudentSession />
             </div>
           </SessionGuard>
-        } 
+        }
       />
     </Routes>
   );
