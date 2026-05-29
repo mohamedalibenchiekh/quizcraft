@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import Attempt from '../models/Attempt.js';
 import Quiz from '../models/Quiz.js';
 import Question from '../models/Question.js';
@@ -152,7 +151,7 @@ export const submitAttempt = async (req, res, next) => {
 
     // Persist attempt record
     const attempt = await Attempt.create({
-      userId: req.user?.id || new mongoose.Types.ObjectId(),
+      userId: req.user.id,
       quizId: quiz._id,
       answers: gradedAnswers,
       score,

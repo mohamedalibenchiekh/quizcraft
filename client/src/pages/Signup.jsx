@@ -62,7 +62,7 @@ const Signup = () => {
       });
 
       login(data.token, data.user);
-      navigate(data.user.role === 'professor' ? '/dashboard' : '/session', { replace: true });
+      navigate(data.user.role === 'professor' ? '/dashboard' : '/student/dashboard', { replace: true });
     } catch (err) {
       setError(err?.response?.data?.message || 'Unable to create account. Please try again.');
     } finally {
