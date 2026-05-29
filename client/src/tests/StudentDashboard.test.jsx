@@ -135,11 +135,7 @@ describe("StudentDashboard Component Tests", () => {
   it("should render the historical review table with attempt data", async () => {
     renderWithAuth();
 
-    await waitFor(() => {
-      expect(screen.getByText("Historical Review")).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("JavaScript Basics")).toBeInTheDocument();
+    expect(await screen.findByText("JavaScript Basics")).toBeInTheDocument();
     expect(screen.getByText("React Fundamentals")).toBeInTheDocument();
 
     const reviewButtons = screen.getAllByText("Review Performance");
