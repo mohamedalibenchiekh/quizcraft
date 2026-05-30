@@ -86,7 +86,7 @@ router.post(
       console.error("[AI Route] Quiz generation failed:", err.message);
       res.status(500).json({
         success: false,
-        message: "AI generation failed — unable to reach or process response from the Hugging Face Inference API.",
+        message: "AI generation failed — unable to reach or process response from the Gemini API.",
       });
     }
   }

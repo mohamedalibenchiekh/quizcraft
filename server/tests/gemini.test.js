@@ -2,27 +2,29 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
 
-// ─── Mock the Hugging Face SDK BEFORE importing any module that uses it ────
-vi.mock("@huggingface/inference", () => {
-    const mockChatCompletion = vi.fn();
+// ─── Mock the Google GenAI SDK BEFORE importing any module that uses it ────
+vi.mock("@google/genai", () => {
+    const mockGenerateContent = vi.fn();
     return {
-        InferenceClient: class InferenceClient {
-            constructor() {
-                this.chatCompletion = mockChatCompletion;
-            }
-        },
-        __mockChatCompletion: mockChatCompletion,
+        GoogleGenAI: vi.fn().mockImplementation(function () {
+            return {
+                models: {
+                    generateContent: mockGenerateContent,
+                },
+            };
+        }),
+        __mockGenerateContent: mockGenerateContent,
     };
 });
 
-const { __mockChatCompletion: mockChatCompletion } = await import("@huggingface/inference");
+const { __mockGenerateContent: mockGenerateContent } = await import("@google/genai");
 const { default: app } = await import("../app.js");
 const { generateQuizFromPrompt, transformAndValidateHFQuestions } = await import("../services/aiService.js");
 
 // ─── Test fixtures ──────────────────────────────────────
 const JWT_SECRET = "supersecretfortesting";
 process.env.JWT_SECRET = JWT_SECRET;
-process.env.HF_TOKEN = "hf_mock_token_for_huggingface_integration_2026";
+process.env.GEMINI_API_KEY = "test-gemini-key-for-mocked-tests";
 
 const professorToken = jwt.sign(
     { id: "prof-001", role: "professor" },
@@ -70,7 +72,7 @@ const mockGeminiResponse = {
     ],
 };
 
-describe("Hugging Face Service & API Integration", () => {
+describe("Gemini Service & API Integration", () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -88,7 +90,7 @@ describe("Hugging Face Service & API Integration", () => {
                 options: ["Paris", "London", "Berlin", "Madrid"],
                 correctAnswer: "Paris",
                 difficulty: "easy",
-                tags: ["AI Generated", "Hugging Face"],
+                tags: ["AI Generated", "Gemini"],
             });
 
             // True-False Check
@@ -98,7 +100,7 @@ describe("Hugging Face Service & API Integration", () => {
                 options: ["True", "False"],
                 correctAnswer: "False",
                 difficulty: "easy",
-                tags: ["AI Generated", "Hugging Face"],
+                tags: ["AI Generated", "Gemini"],
             });
 
             // Short-Answer Check
@@ -108,7 +110,7 @@ describe("Hugging Face Service & API Integration", () => {
                 options: [],
                 correctAnswer: "4",
                 difficulty: "easy",
-                tags: ["AI Generated", "Hugging Face"],
+                tags: ["AI Generated", "Gemini"],
             });
         });
 
@@ -120,14 +122,8 @@ describe("Hugging Face Service & API Integration", () => {
 
     describe("Service Layer: generateQuizFromPrompt", () => {
         it("should generate and transform quiz questions successfully", async () => {
-            mockChatCompletion.mockResolvedValueOnce({
-                choices: [
-                    {
-                        message: {
-                            content: JSON.stringify(mockGeminiResponse),
-                        },
-                    },
-                ],
+            mockGenerateContent.mockResolvedValueOnce({
+                text: JSON.stringify(mockGeminiResponse),
             });
 
             const result = await generateQuizFromPrompt("Geography", 3, "easy");
@@ -145,14 +141,8 @@ describe("Hugging Face Service & API Integration", () => {
 
     describe("API Gateway: POST /api/quizzes/generate", () => {
         it("should successfully generate questions and return 200 for a professor", async () => {
-            mockChatCompletion.mockResolvedValueOnce({
-                choices: [
-                    {
-                        message: {
-                            content: JSON.stringify(mockGeminiResponse),
-                        },
-                    },
-                ],
+            mockGenerateContent.mockResolvedValueOnce({
+                text: JSON.stringify(mockGeminiResponse),
             });
 
             const res = await request(app)
@@ -173,14 +163,8 @@ describe("Hugging Face Service & API Integration", () => {
         });
 
         it("should successfully generate questions and return 200 when topic is empty string but text is provided", async () => {
-            mockChatCompletion.mockResolvedValueOnce({
-                choices: [
-                    {
-                        message: {
-                            content: JSON.stringify(mockGeminiResponse),
-                        },
-                    },
-                ],
+            mockGenerateContent.mockResolvedValueOnce({
+                text: JSON.stringify(mockGeminiResponse),
             });
 
             const res = await request(app)
@@ -257,8 +241,8 @@ describe("Hugging Face Service & API Integration", () => {
             expect(res.status).toBe(403);
         });
 
-        it("should gracefully capture Hugging Face API errors and return 500 without crashing", async () => {
-            mockChatCompletion.mockRejectedValueOnce(new Error("Rate limit exceeded"));
+        it("should gracefully capture Gemini API errors and return 500 without crashing", async () => {
+            mockGenerateContent.mockRejectedValueOnce(new Error("Rate limit exceeded"));
 
             const res = await request(app)
                 .post("/api/quizzes/generate")

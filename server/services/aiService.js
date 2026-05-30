@@ -1,14 +1,16 @@
-import { InferenceClient } from "@huggingface/inference";
+import { GoogleGenAI } from "@google/genai";
 
-const MAX_WORDS = 4000;
-const HF_REQUEST_TIMEOUT_MS = 120_000; // 2 minutes
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+const MAX_WORDS = 10000;
+const GEMINI_REQUEST_TIMEOUT_MS = 120_000;
 
 /**
- * Safely truncates text to a maximum word count to protect serverless token limits.
+ * Safely truncates text to a maximum word count to protect token limits.
  * Appends a truncation notice if the text was cut.
  *
  * @param {string} text     — The source text to truncate.
- * @param {number} maxWords — Maximum number of words allowed (default: 4000).
+ * @param {number} maxWords — Maximum number of words allowed (default: 10000).
  * @returns {string} Truncated text, or the original if within limits.
  */
 export const truncateText = (text, maxWords = MAX_WORDS) => {
@@ -18,98 +20,37 @@ export const truncateText = (text, maxWords = MAX_WORDS) => {
 };
 
 /**
- * Builds a dynamic system prompt for the Hugging Face inference model.
- * Injects the requested question count and difficulty level so the LLM
- * generates exactly the right number of questions at the right difficulty.
+ * Builds the full prompt for Gemini, combining instruction, question count,
+ * difficulty, and source text/topic into a single content block.
  *
- * @param {number} questionCount — Number of questions the model must produce.
+ * @param {string} topic         — The topic or document text.
+ * @param {number} questionCount — Number of questions to generate.
  * @param {string} difficulty    — Target difficulty: "easy" | "medium" | "hard".
- * @returns {string} The system prompt string.
+ * @param {boolean} isDocumentText — Whether topic is a grounded course document.
+ * @returns {string} The combined prompt string.
  */
-export const buildSystemPrompt = (questionCount, difficulty) => `You are a strict JSON engine. Analyze the provided source content and output exactly ${questionCount} structured quiz questions matching the required schema. You must return ONLY raw JSON. NEVER wrap your response in markdown code blocks like \`\`\`json ... \`\`\`, do not include backticks, and write no introductory or concluding conversational text.
+const buildPrompt = (topic, questionCount, difficulty, isDocumentText) => {
+  const sourceLabel = isDocumentText ? "document text" : "topic";
+  const sourceText = isDocumentText ? truncateText(topic) : topic;
 
-STRICT OUTPUT RULES:
-1. Return ONLY a raw JSON object — no markdown, no code fences (no \`\`\`json), no preamble, no postscript.
-2. The JSON MUST match this schema exactly:
-{
-  "title": "A highly descriptive, customized name based on the document topic",
-  "description": "A comprehensive 2-sentence summary outlining the learning objectives of this generated assessment.",
-  "tags": ["TopicName", "Subcategory", "Difficulty"],
-  "questions": [
-    {
-      "type": "Multiple-Choice",
-      "questionText": "...",
-      "difficulty": "${difficulty}",
-      "options": ["A", "B", "C", "D"],
-      "correctAnswer": "A"
-    }
-  ]
-}
+  return `Generate a complete quiz based on the following ${sourceLabel}.
 
-3. For each question in the "questions" array:
-   - "type" must be one of: "Multiple-Choice", "True-False", or "Short-Answer"
-   - "questionText" is the clear, academic question statement
-   - "difficulty" must be exactly "${difficulty}"
-   - For "Multiple-Choice": "options" must have EXACTLY 4 distinct plausible options; "correctAnswer" must match one of the options
-   - For "True-False": "options" must be ["True", "False"]; "correctAnswer" must be exactly "True" or "False"
-   - For "Short-Answer": "options" must be []; "correctAnswer" is a definitive grading keyword or phrase
+${sourceLabel === "document text" ? `Document:\n${sourceText}\n` : `Topic: ${topic}`}
 
-4. QUALITY REQUIREMENTS:
-   - Questions must be directly grounded in the provided document text
-   - Distractors for Multiple-Choice must be plausible but clearly incorrect
-   - "title" must be specific to the document topic, NOT generic (e.g. "Quiz on Cellular Biology", not "Quiz")
-   - "description" must be exactly 2 sentences covering what this quiz assesses
-   - "tags" must contain at least 3 relevant keywords drawn from the document domain`;
+Requirements:
+- Exactly ${questionCount} questions at "${difficulty}" difficulty level.
+- A descriptive title specific to the content.
+- A 2-sentence description of what the quiz assesses.
+- 3+ relevant tags drawn from the content domain.
+- Each question must be grounded in the provided content.
 
-/**
- * Get or initialize the Hugging Face client lazily.
- * @returns {InferenceClient} The Hugging Face client instance
- */
-const getHFClient = () => {
-  return new InferenceClient(process.env.HF_TOKEN, {
-    fetch: (url, options) => {
-      return fetch(url, {
-        ...options,
-        signal: AbortSignal.timeout(HF_REQUEST_TIMEOUT_MS),
-      });
-    },
-  });
+Output must match the provided JSON schema exactly.`;
 };
 
 /**
- * Projects a default quiz profile structure with a single fallback question.
- * Used when every question block is unparsable or the LLM returns garbage.
- *
- * @param {string} difficulty — The requested difficulty level.
- * @returns {{ title: string, description: string, tags: string[], questions: object[] }}
- */
-const buildFallbackQuizProfile = (difficulty) => {
-  const normalizedDifficulty = ["easy", "medium", "hard"].includes(difficulty)
-    ? difficulty
-    : "medium";
-
-  return {
-    title: "Auto-generated Quiz (Parser Fallback)",
-    description:
-      "This quiz was generated as a fallback because the AI output could not be parsed correctly. Please review the content and regenerate if needed.",
-    tags: ["AI Fallback", "Auto-generated", normalizedDifficulty],
-    questions: [
-      {
-        text: "Placeholder question generated due to automatic parser fallback.",
-        type: "True-False",
-        options: ["True", "False"],
-        correctAnswer: "True",
-        difficulty: normalizedDifficulty,
-        tags: ["AI Fallback", "Hugging Face"],
-      },
-    ],
-  };
-};
-
-/**
- * Processes Hugging Face raw output questions: drops unparsable/corrupt question blocks,
- * normalizes structure, maps fields to conform with the Mongoose schema (questionText -> text, Multiple-Choice -> MCQ),
- * and returns the validated array (may be empty).
+ * Validates and transforms raw question objects from the Gemini response
+ * into Mongoose-compatible question documents. Drops unparsable or corrupt
+ * blocks and normalises field names (questionText -> text, Multiple-Choice -> MCQ).
  *
  * @param {any[]} questions              — Raw question objects from the LLM.
  * @param {string} requestedDifficulty   — Target difficulty level.
@@ -157,7 +98,7 @@ export const transformAndValidateHFQuestions = (questions, requestedDifficulty) 
 
       const tags = Array.isArray(q.tags)
         ? q.tags.map(t => String(t).trim()).filter(Boolean)
-        : ["AI Generated", "Hugging Face"];
+        : ["AI Generated", "Gemini"];
 
       validated.push({
         text,
@@ -176,8 +117,8 @@ export const transformAndValidateHFQuestions = (questions, requestedDifficulty) 
 };
 
 /**
- * Generates quiz questions on a given topic using the Hugging Face Serverless Inference API.
- * Returns a full quiz profile object including title, description, tags, and questions.
+ * Generates a full quiz profile from a topic or document text using
+ * Google Gemini 2.5 Flash with structured schema enforcement.
  *
  * @param {string} topic         — The target topic/prompt or document text.
  * @param {number} questionCount — Number of questions to generate.
@@ -186,103 +127,89 @@ export const transformAndValidateHFQuestions = (questions, requestedDifficulty) 
  * @returns {Promise<{ title: string, description: string, tags: string[], questions: object[] }>}
  */
 export const generateQuizFromPrompt = async (topic, questionCount, difficulty, isDocumentText = false) => {
-  if (!process.env.HF_TOKEN || process.env.HF_TOKEN === "hf_your_actual_token_here") {
-    throw new Error("HF_TOKEN is not configured. Please set a valid Hugging Face Token in your environment.");
-  }
-
-  const client = getHFClient();
-
-  // --- Block 1: Context size defense — truncate document text if it is too large ---
-  const sourceText = isDocumentText ? truncateText(topic) : topic;
-
-  const userPrompt = isDocumentText
-    ? `Generate exactly ${questionCount} quiz questions at "${difficulty}" difficulty level strictly grounded in the following course material:\n\n---\n${sourceText}\n---`
-    : `Generate exactly ${questionCount} quiz questions at "${difficulty}" difficulty level on the topic: "${topic}".`;
-
-  let chatCompletion;
-  try {
-    // Dynamic output tokens: ~200 tokens per question + buffer, capped at 4096
-    const dynamicMaxTokens = Math.min(1024 + questionCount * 256, 4096);
-
-    chatCompletion = await client.chatCompletion({
-      model: "Qwen/Qwen2.5-7B-Instruct",
-      messages: [
-        { role: "system", content: buildSystemPrompt(questionCount, difficulty) },
-        { role: "user", content: userPrompt },
-      ],
-
-      temperature: 0.4,
-      max_tokens: dynamicMaxTokens,
-    });
-  } catch (hfError) {
-    console.error("[aiService] Hugging Face API call failed:", {
-      message: hfError.message,
-      name: hfError.name,
-      statusCode: hfError.statusCode,
-      statusText: hfError.statusText,
-    });
-    if (hfError.name === "AbortError") {
-      throw new Error(
-        "Hugging Face Inference API request timed out after " +
-          (HF_REQUEST_TIMEOUT_MS / 1000) +
-          "s. The serverless endpoint may be overloaded or the input text is too large. Try reducing the question count or text length.",
-      );
-    }
-    if (hfError.message && hfError.message.includes("fetch failed")) {
-      throw new Error(
-        "Failed to reach the Hugging Face Inference API — check your network connectivity and that HF_TOKEN is valid.",
-      );
-    }
-    if (hfError.statusCode) {
-      throw new Error(
-        `Hugging Face Inference API returned HTTP ${hfError.statusCode}${hfError.statusText ? ": " + hfError.statusText : ""}: ${hfError.message || "Unknown error"}`,
-      );
-    }
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "your_gemini_api_key_here") {
     throw new Error(
-      `Hugging Face Inference API error: ${hfError.message || "Unknown error"}`,
+      "GEMINI_API_KEY is not configured. Set a valid Gemini API key in your environment.",
     );
   }
 
-  const content = chatCompletion.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error("Empty response returned from Hugging Face Inference API.");
+  const prompt = buildPrompt(topic, questionCount, difficulty, isDocumentText);
+
+  let response;
+  try {
+    response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        abortSignal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            title: { type: "STRING" },
+            description: { type: "STRING" },
+            tags: { type: "ARRAY", items: { type: "STRING" } },
+            questions: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  type: { type: "STRING" },
+                  questionText: { type: "STRING" },
+                  difficulty: { type: "STRING" },
+                  options: { type: "ARRAY", items: { type: "STRING" } },
+                  correctAnswer: { type: "STRING" },
+                },
+                required: ["type", "questionText", "options", "correctAnswer", "difficulty"],
+              },
+            },
+          },
+          required: ["title", "description", "tags", "questions"],
+        },
+      },
+    });
+  } catch (geminiError) {
+    console.error("[aiService] Gemini API call failed:", {
+      message: geminiError.message,
+      name: geminiError.name,
+      status: geminiError.status,
+    });
+    throw new Error(`Gemini API error: ${geminiError.message || "Unknown error"}`);
   }
 
-  // --- Block 3: Defensive parsing — strip markdown fences if present ---
-  let rawContent = content.trim();
-
-  if (rawContent.includes("```")) {
-    rawContent = rawContent.replace(/```\w*/g, "").trim();
+  const rawText = response.text;
+  if (!rawText) {
+    throw new Error("Empty response returned from Gemini API.");
   }
 
   let parsed;
   try {
-    parsed = JSON.parse(rawContent);
+    parsed = JSON.parse(rawText);
   } catch (parseError) {
-    console.error("AI output parse failure. Response length:", rawContent.length, "Preview:", rawContent.slice(0, 80));
-    return buildFallbackQuizProfile(difficulty);
+    console.error("[aiService] Gemini returned unparseable JSON despite schema. Raw length:", rawText.length);
+    throw new Error("Gemini response schema enforcement failed — invalid JSON returned.");
   }
 
-  // --- Extract full profile from parsed response ---
-  const title = typeof parsed.title === "string" && parsed.title.trim()
-    ? parsed.title.trim()
-    : `Quiz on ${typeof topic === "string" ? topic.slice(0, 60) : "Generated Topic"}`;
+  const title =
+    typeof parsed.title === "string" && parsed.title.trim()
+      ? parsed.title.trim()
+      : `Quiz on ${typeof topic === "string" ? topic.slice(0, 60) : "Generated Topic"}`;
 
-  const description = typeof parsed.description === "string" && parsed.description.trim()
-    ? parsed.description.trim()
-    : "This quiz was generated from the provided source material.";
+  const description =
+    typeof parsed.description === "string" && parsed.description.trim()
+      ? parsed.description.trim()
+      : "This quiz was generated from the provided source material.";
 
   const tags = Array.isArray(parsed.tags)
     ? parsed.tags.map(t => String(t).trim()).filter(Boolean)
-    : ["AI Generated", "Hugging Face"];
+    : ["AI Generated", "Gemini"];
 
   const rawQuestions = Array.isArray(parsed.questions) ? parsed.questions : [];
 
-  // --- Execute the map to response payload ---
   const validatedQuestions = transformAndValidateHFQuestions(rawQuestions, difficulty);
 
   if (validatedQuestions.length === 0) {
-    return buildFallbackQuizProfile(difficulty);
+    throw new Error("Gemini generated 0 valid questions. Consider adjusting the prompt or difficulty.");
   }
 
   return {
@@ -294,7 +221,7 @@ export const generateQuizFromPrompt = async (topic, questionCount, difficulty, i
 };
 
 /**
- * Generates quiz questions from course text using the Hugging Face Serverless Inference API.
+ * Generates quiz questions from course text using Google Gemini.
  * Returns a full quiz profile object.
  *
  * @param {object} params

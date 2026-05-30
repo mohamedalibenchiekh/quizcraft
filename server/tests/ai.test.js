@@ -2,27 +2,29 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
 
-// ─── Mock the Hugging Face SDK BEFORE importing any module that uses it ────
-vi.mock("@huggingface/inference", () => {
-  const mockChatCompletion = vi.fn();
+// ─── Mock the Google GenAI SDK BEFORE importing any module that uses it ────
+vi.mock("@google/genai", () => {
+  const mockGenerateContent = vi.fn();
   return {
-    InferenceClient: class InferenceClient {
-      constructor() {
-        this.chatCompletion = mockChatCompletion;
-      }
-    },
-    __mockChatCompletion: mockChatCompletion,
+    GoogleGenAI: vi.fn().mockImplementation(function () {
+      return {
+        models: {
+          generateContent: mockGenerateContent,
+        },
+      };
+    }),
+    __mockGenerateContent: mockGenerateContent,
   };
 });
 
 // Retrieve the mock handle for per-test configuration
-const { __mockChatCompletion: mockChatCompletion } = await import("@huggingface/inference");
+const { __mockGenerateContent: mockGenerateContent } = await import("@google/genai");
 const { default: app } = await import("../app.js");
 
 // ─── Test fixtures ──────────────────────────────────────
 const JWT_SECRET = "supersecretfortesting";
 process.env.JWT_SECRET = JWT_SECRET;
-process.env.HF_TOKEN = "hf_mock_token_for_huggingface_integration_2026";
+process.env.GEMINI_API_KEY = "test-gemini-key-for-mocked-tests";
 
 const professorToken = jwt.sign(
   { id: "prof-001", role: "professor" },
@@ -83,14 +85,8 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
   // ─── Test Case 1: Success Flow ─────────────────────────
   describe("Success Flow", () => {
     it("should return 200 with structured questions array when given valid input and professor token", async () => {
-      mockChatCompletion.mockResolvedValueOnce({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify(mockGeminiResponse),
-            },
-          },
-        ],
+      mockGenerateContent.mockResolvedValueOnce({
+        text: JSON.stringify(mockGeminiResponse),
       });
 
       const res = await request(app)
@@ -230,7 +226,7 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
       expect(res.body.message).toMatch(/maximum length/i);
-      expect(mockChatCompletion).not.toHaveBeenCalled();
+      expect(mockGenerateContent).not.toHaveBeenCalled();
     });
   });
 
@@ -259,7 +255,7 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
   // ─── SDK Error Handling ────────────────────────────────
   describe("SDK Error Handling", () => {
     it("should return 500 when the Gemini SDK throws a network/timeout error", async () => {
-      mockChatCompletion.mockRejectedValueOnce(new Error("Request timed out"));
+      mockGenerateContent.mockRejectedValueOnce(new Error("Request timed out"));
 
       const res = await request(app)
         .post("/api/ai/generate")
@@ -273,15 +269,9 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
 
   // ─── Defensive Parsing & Fallbacks ─────────────────────
   describe("Defensive Parsing & Fallbacks", () => {
-    it("should recover gracefully and return fallback placeholder question when LLM returns invalid/broken JSON", async () => {
-      mockChatCompletion.mockResolvedValueOnce({
-        choices: [
-          {
-            message: {
-              content: "This is a completely broken JSON output from LLM.",
-            },
-          },
-        ],
+    it("should return 500 when Gemini returns invalid/broken JSON", async () => {
+      mockGenerateContent.mockResolvedValueOnce({
+        text: "This is a completely broken JSON output from LLM.",
       });
 
       const res = await request(app)
@@ -289,22 +279,9 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
         .set("Authorization", `Bearer ${professorToken}`)
         .send(validPayload);
 
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-
-      // Full fallback profile shape
-      expect(res.body.title).toBe("Auto-generated Quiz (Parser Fallback)");
-      expect(res.body.description).toMatch(/fallback/i);
-      expect(res.body.tags).toEqual(
-        expect.arrayContaining(["AI Fallback"]),
-      );
-
-      // Single fallback question
-      expect(res.body.questions).toHaveLength(1);
-      expect(res.body.generatedCount).toBe(1);
-      expect(res.body.questions[0].text).toContain("Placeholder question generated due to automatic parser fallback");
-      expect(res.body.questions[0].type).toBe("True-False");
-      expect(res.body.questions[0].correctAnswer).toBe("True");
+      expect(res.status).toBe(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toMatch(/AI generation failed/i);
     });
 
     it("should drop corrupted/unparsable question blocks and keep the valid ones", async () => {
@@ -339,14 +316,8 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
         ],
       };
 
-      mockChatCompletion.mockResolvedValueOnce({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify(mixedGeminiResponse),
-            },
-          },
-        ],
+      mockGenerateContent.mockResolvedValueOnce({
+        text: JSON.stringify(mixedGeminiResponse),
       });
 
       const res = await request(app)
