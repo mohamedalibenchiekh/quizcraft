@@ -15,10 +15,10 @@ const Navbar = () => {
   return (
     <nav
       style={{
-        background: 'rgba(15, 10, 30, 0.85)',
+        background: 'var(--color-nav-bg)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(139, 92, 246, 0.1)',
+        borderBottom: '1px solid var(--color-nav-border)',
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

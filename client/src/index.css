@@ -31,6 +31,8 @@
   --color-surface-elevated: #241d40;
   --color-surface-glass: rgba(26, 19, 51, 0.65);
   --color-surface-input: #1e1638;
+  --color-nav-bg: rgba(15, 10, 30, 0.85);
+  --color-nav-border: rgba(139, 92, 246, 0.1);
 
   /* Text Colors */
   --color-text-primary: #f8f7ff;
@@ -58,6 +60,8 @@
   --color-surface-elevated: #f0edff;
   --color-surface-glass: rgba(255, 255, 255, 0.85);
   --color-surface-input: #e8e5f0;
+  --color-nav-bg: rgba(255, 255, 255, 0.86);
+  --color-nav-border: rgba(124, 58, 237, 0.14);
   --color-text-primary: #1a1a2e;
   --color-text-secondary: #6b6480;
   --color-text-muted: #a09bb5;
