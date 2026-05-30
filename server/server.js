@@ -11,8 +11,8 @@ const start = async () => {
   await connectDB();
   const server = http.createServer(app);
   initSocket(server);
-  server.listen(PORT, () => {
-    console.log(`🚀  QuizCraft API running on http://localhost:${PORT}`);
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀  QuizCraft API running on http://0.0.0.0:${PORT}`);
   });
 
   // ─── Graceful shutdown handlers ──────────────────────────

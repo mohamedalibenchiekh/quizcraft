@@ -32,9 +32,14 @@ app.use(
   })
 ); // secure HTTP headers
 app.use(morgan("dev")); // request logging
+const allowedOrigins = [
+  process.env.CLIENT_URL, // Your live React production URL
+  'http://localhost:5173' // Retain for fallback local development testing
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true,
   })
 );

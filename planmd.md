@@ -163,10 +163,42 @@ The domain model is `User → Quiz → Question → Session → Attempt` (where 
 *Satisfies: Deployment Constraints*
 
 * **Deliverables**:
-  * [ ] Link the React UI directory to **Vercel** with strict matching production target variable lines (`VITE_API_URL`).
-  * [ ] Push the Node engine repo out into a public **Render** production service, linking internal environmental references directly.
-  * [ ] **QC-BR-06**: Configure CORS parameters on the server app to explicitly reject inbound access calls dropping from locations outside the registered Vercel site layout domain.
-  * [ ] Setup an open network access rule boundary (`0.0.0.0/0`) within the security access configuration block of the MongoDB Atlas web layout panel.
+  * [x] Link the React UI directory to **Vercel** with strict matching production target variable lines (`VITE_API_URL`).
+  * [x] Push the Node engine repo out into a public **Render** production service, linking internal environmental references directly.
+  * [x] **QC-BR-06**: Configure CORS parameters on the server app to explicitly reject inbound access calls dropping from locations outside the registered Vercel site layout domain.
+  * [x] Setup an open network access rule boundary (`0.0.0.0/0`) within the security access configuration block of the MongoDB Atlas web layout panel.
 
 * **Exit criteria**:
-  * The production platform executes client interactions perfectly on the live web environment using secure MongoDB connection strings.
+  * [x] The production platform executes client interactions perfectly on the live web environment using secure MongoDB connection strings.
+
+#### Phase 6 Implementation & Deployment Notes
+
+##### 1. Cloud Infrastructure Architecture
+* **Frontend Hosting (Vercel)**:
+  * Deployed from the static `client/` subdirectory.
+  * Environment configuration binds `VITE_API_URL` to point dynamically to the backend API endpoint hosted on Render.
+  * Static build is highly optimized: `vite build` executes with `build.sourcemap: false` configured explicitly inside `vite.config.js` to eliminate source map overhead and protect intellectual property.
+* **Backend Engine (Render Web Service)**:
+  * Deployed from the `server/` directory using an optimized Node.js runtime environment.
+  * Dynamically binds to the cloud-allocated port `process.env.PORT` and listens on `0.0.0.0` to permit external traffic routing.
+* **Database Layer (MongoDB Atlas)**:
+  * Managed cloud-hosted Mongo instance with a secure IP Access List configuration. For seamless cloud-to-cloud communications across dynamic server IPs, the security group is configured to allow connection bounds from `0.0.0.0/0`.
+
+##### 2. CORS & Networking Policy (QC-BR-06 Compliance)
+* Both the Express HTTP application and the Socket.io real-time engine are configured to validate incoming requests dynamically.
+* Instead of hardcoded local hosts, the dynamic CORS whitelist relies on:
+  ```javascript
+  const allowedOrigins = [
+    process.env.CLIENT_URL, // Your live React production URL (Vercel)
+    'http://localhost:5173' // Retain for fallback local development testing
+  ].filter(Boolean);
+  ```
+* Any inbound cross-origin requests originating from unauthorized domains are blocked at the application boundary, protecting session sockets and core endpoints.
+
+##### 3. Production Environment Payload Structure
+The following keys are isolated and securely configured inside the production environments of the hosting providers:
+* `MONGO_URI`: Production-grade connection string pointing to the MongoDB Atlas cluster.
+* `JWT_SECRET`: High-entropy secure cryptographic key for web token generation and signature verification.
+* `CLIENT_URL`: The fully-qualified production domain of the deployed frontend on Vercel.
+* `PORT`: Dynamically assigned by the cloud platform (defaults to `5000` in fallback mode).
+* `OPENAI_API_KEY`: Production API key utilized by the AI generation service.

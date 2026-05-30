@@ -7,7 +7,8 @@ import { io } from 'socket.io-client';
    backend event matrix (server/config/socket.js).
    ============================================= */
 
-const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const apiUrl = API_BASE_URL.replace(/\/+$/, '');
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || apiUrl.replace(/\/api$/, '');
 
 /**
