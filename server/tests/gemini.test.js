@@ -170,6 +170,39 @@ describe("Hugging Face Service & API Integration", () => {
             expect(res.body.message).toContain("topic");
         });
 
+        it("should return 400 if validation fails (non-string topic)", async () => {
+            const res = await request(app)
+                .post("/api/quizzes/generate")
+                .set("Authorization", `Bearer ${professorToken}`)
+                .send({ topic: 12345, questionCount: 3, difficulty: "easy" });
+
+            expect(res.status).toBe(400);
+            expect(res.body.success).toBe(false);
+            expect(res.body.message).toContain("topic");
+        });
+
+        it("should return 400 if validation fails (non-string difficulty)", async () => {
+            const res = await request(app)
+                .post("/api/quizzes/generate")
+                .set("Authorization", `Bearer ${professorToken}`)
+                .send({ topic: "Geography", questionCount: 3, difficulty: true });
+
+            expect(res.status).toBe(400);
+            expect(res.body.success).toBe(false);
+            expect(res.body.message).toContain("difficulty");
+        });
+
+        it("should return 400 if validation fails (questionCount is 0)", async () => {
+            const res = await request(app)
+                .post("/api/quizzes/generate")
+                .set("Authorization", `Bearer ${professorToken}`)
+                .send({ topic: "Geography", questionCount: 0, difficulty: "easy" });
+
+            expect(res.status).toBe(400);
+            expect(res.body.success).toBe(false);
+            expect(res.body.message).toContain("question count");
+        });
+
         it("should return 400 if validation fails (invalid difficulty)", async () => {
             const res = await request(app)
                 .post("/api/quizzes/generate")

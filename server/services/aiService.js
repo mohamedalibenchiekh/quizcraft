@@ -133,15 +133,18 @@ export const transformAndValidateHFQuestions = (questions, requestedDifficulty) 
  * @param {string} topic         — The target topic/prompt.
  * @param {number} questionCount — Number of questions to generate.
  * @param {string} difficulty    — Target difficulty: "easy" | "medium" | "hard".
+ * @param {boolean} isDocumentText — Whether the topic is actually a grounded course text.
  * @returns {Promise<object[]>} Array of question objects matching the Mongoose schema.
  */
-export const generateQuizFromPrompt = async (topic, questionCount, difficulty) => {
+export const generateQuizFromPrompt = async (topic, questionCount, difficulty, isDocumentText = false) => {
   if (!process.env.HF_TOKEN || process.env.HF_TOKEN === "hf_your_actual_token_here") {
     throw new Error("HF_TOKEN is not configured. Please set a valid Hugging Face Token in your environment.");
   }
 
   const client = getHFClient();
-  const userPrompt = `Generate exactly ${questionCount} quiz questions at "${difficulty}" difficulty level on the topic: "${topic}".`;
+  const userPrompt = isDocumentText
+    ? `Generate exactly ${questionCount} quiz questions at "${difficulty}" difficulty level strictly grounded in the following course material:\n\n---\n${topic}\n---`
+    : `Generate exactly ${questionCount} quiz questions at "${difficulty}" difficulty level on the topic: "${topic}".`;
 
   const chatCompletion = await client.chatCompletion({
     model: "Qwen/Qwen2.5-72B-Instruct",
@@ -180,7 +183,7 @@ export const generateQuizFromPrompt = async (topic, questionCount, difficulty) =
  * @returns {Promise<object[]>} Array of question objects matching the Mongoose schema.
  */
 export const generateQuestions = async ({ text, numQuestions, difficulty }) => {
-  return generateQuizFromPrompt(text, numQuestions, difficulty);
+  return generateQuizFromPrompt(text, numQuestions, difficulty, true);
 };
 
 // Dummy exports for backward compatibility and testing

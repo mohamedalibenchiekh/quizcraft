@@ -13,8 +13,18 @@ import {
 } from "../controllers/quizController.js";
 import { authenticateToken, requireRole } from "../middleware/auth.js";
 import { generateQuizFromPrompt } from "../services/aiService.js";
+import rateLimit from "express-rate-limit";
 
 const router = Router();
+
+// Rate limit: max 20 AI generation requests per hour per IP
+const aiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: { success: false, message: "Too many AI generation requests. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // POST /api/quizzes -> Create a new Quiz and its nested Question documents simultaneously.
 router.post("/", authenticateToken, requireRole("professor"), createQuiz);
@@ -24,13 +34,38 @@ router.post(
   "/generate",
   authenticateToken,
   requireRole("professor"),
+  aiLimiter,
   async (req, res) => {
     try {
       const { topic, text, questionCount, numQuestions, difficulty } = req.body;
 
-      const targetTopic = (topic || text || "").trim();
-      const targetCount = Number(questionCount || numQuestions || 5);
-      const targetDifficulty = (difficulty || "medium").trim().toLowerCase();
+      // Type validation before calling string/number methods
+      if (topic !== undefined && typeof topic !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Validation failed — 'topic' must be a string.",
+        });
+      }
+      if (text !== undefined && typeof text !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Validation failed — 'text' must be a string.",
+        });
+      }
+      if (difficulty !== undefined && typeof difficulty !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Validation failed — 'difficulty' must be a string.",
+        });
+      }
+
+      const rawTopic = topic !== undefined ? topic : text;
+      const targetTopic = typeof rawTopic === "string" ? rawTopic.trim() : "";
+
+      const rawCount = questionCount ?? numQuestions ?? 5;
+      const targetCount = Number(rawCount);
+
+      const targetDifficulty = typeof difficulty === "string" ? difficulty.trim().toLowerCase() : "medium";
 
       if (!targetTopic) {
         return res.status(400).json({
