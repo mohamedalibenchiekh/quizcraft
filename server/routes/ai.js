@@ -61,19 +61,33 @@ router.post(
         });
       }
 
+      // ── Route-level text length truncation ──────────────
+      const sourceText = text.trim();
+      const truncatedText = sourceText.length > MAX_TEXT_LENGTH
+        ? sourceText.slice(0, MAX_TEXT_LENGTH)
+        : sourceText;
+
       // ── AI generation ───────────────────────────────────
-      const questions = await generateQuestions({
-        text: text.trim(),
+      const quizProfile = await generateQuestions({
+        text: truncatedText,
         numQuestions: parsedNum,
         difficulty,
       });
 
       res.status(200).json({
         success: true,
-        questions,
+        title: quizProfile.title,
+        description: quizProfile.description,
+        tags: quizProfile.tags,
+        questions: quizProfile.questions,
+        generatedCount: quizProfile.questions.length,
       });
     } catch (err) {
-      next(err);
+      console.error("[AI Route] Quiz generation failed:", err.message);
+      res.status(500).json({
+        success: false,
+        message: "AI generation failed — unable to reach or process response from the Hugging Face Inference API.",
+      });
     }
   }
 );

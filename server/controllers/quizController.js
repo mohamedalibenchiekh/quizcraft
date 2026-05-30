@@ -2,9 +2,11 @@ import mongoose from "mongoose";
 import Quiz from "../models/Quiz.js";
 import Question from "../models/Question.js";
 import Session from "../models/Session.js";
+import { generateQuizFromPrompt, truncateText } from "../services/aiService.js";
 
 const VALID_TYPES = ['MCQ', 'True-False', 'Short-Answer'];
 const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'];
+const MAX_TEXT_LENGTH = 30000;
 
 const validateQuestionData = (q) => {
   if (!q.text || !q.text.trim()) {
@@ -125,6 +127,103 @@ export const createQuiz = async (req, res, next) => {
     }
   } catch (error) {
     next(error);
+  }
+};
+
+/**
+ * @desc    AI-generate a full quiz profile from a topic or document text
+ * @route   POST /api/quizzes/generate
+ */
+export const generateQuiz = async (req, res, next) => {
+  try {
+    const { topic, text, questionCount, numQuestions, difficulty } = req.body;
+
+    // --- Type validation ---
+    if (topic !== undefined && typeof topic !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed — 'topic' must be a string.",
+      });
+    }
+    if (text !== undefined && typeof text !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed — 'text' must be a string.",
+      });
+    }
+    if (difficulty !== undefined && typeof difficulty !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed — 'difficulty' must be a string.",
+      });
+    }
+
+    // --- Determine source: prefer topic, fallback to document text ---
+    const hasTopic = typeof topic === "string" && topic.trim() !== "";
+    const hasText = typeof text === "string" && text.trim() !== "";
+
+    if (!hasTopic && !hasText) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Validation failed — 'topic' or 'text' is required and must be a non-empty string.",
+      });
+    }
+
+    const targetTopic = hasTopic ? topic.trim() : text.trim();
+    const isDocumentText = !hasTopic && hasText;
+
+    // --- Route-level text length defense ---
+    if (isDocumentText && text.length > MAX_TEXT_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `Validation failed — 'text' exceeds the maximum length of ${MAX_TEXT_LENGTH} characters.`,
+      });
+    }
+
+    // --- Parse count ---
+    const rawCount = questionCount ?? numQuestions ?? 5;
+    const targetCount = Number(rawCount);
+    if (!Number.isInteger(targetCount) || targetCount < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed — question count must be a positive integer.",
+      });
+    }
+
+    // --- Parse difficulty ---
+    const targetDifficulty =
+      typeof difficulty === "string" ? difficulty.trim().toLowerCase() : "medium";
+    if (!["easy", "medium", "hard"].includes(targetDifficulty)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Validation failed — 'difficulty' must be one of: easy, medium, hard.",
+      });
+    }
+
+    // --- Generate via AI service ---
+    const quizProfile = await generateQuizFromPrompt(
+      targetTopic,
+      targetCount,
+      targetDifficulty,
+      isDocumentText,
+    );
+
+    res.status(200).json({
+      success: true,
+      title: quizProfile.title,
+      description: quizProfile.description,
+      tags: quizProfile.tags,
+      questions: quizProfile.questions,
+      generatedCount: quizProfile.questions.length,
+    });
+  } catch (err) {
+    console.error("[QuizController] Quiz generation failed:", err.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate quiz due to an AI service error.",
+    });
   }
 };
 

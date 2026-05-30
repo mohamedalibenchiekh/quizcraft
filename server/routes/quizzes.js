@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createQuiz,
+  generateQuiz,
   getMyQuizzes,
   getPublishedQuizzes,
   getQuizById,
@@ -12,7 +13,6 @@ import {
   toggleQuizApproval,
 } from "../controllers/quizController.js";
 import { authenticateToken, requireRole } from "../middleware/auth.js";
-import { generateQuizFromPrompt } from "../services/aiService.js";
 import rateLimit from "express-rate-limit";
 
 const router = Router();
@@ -35,74 +35,7 @@ router.post(
   authenticateToken,
   requireRole("professor"),
   aiLimiter,
-  async (req, res) => {
-    try {
-      const { topic, text, questionCount, numQuestions, difficulty } = req.body;
-
-      // Type validation before calling string/number methods
-      if (topic !== undefined && typeof topic !== "string") {
-        return res.status(400).json({
-          success: false,
-          message: "Validation failed — 'topic' must be a string.",
-        });
-      }
-      if (text !== undefined && typeof text !== "string") {
-        return res.status(400).json({
-          success: false,
-          message: "Validation failed — 'text' must be a string.",
-        });
-      }
-      if (difficulty !== undefined && typeof difficulty !== "string") {
-        return res.status(400).json({
-          success: false,
-          message: "Validation failed — 'difficulty' must be a string.",
-        });
-      }
-
-      const rawTopic = (typeof topic === "string" && topic.trim() !== "") ? topic : text;
-      const targetTopic = typeof rawTopic === "string" ? rawTopic.trim() : "";
-
-      const rawCount = questionCount ?? numQuestions ?? 5;
-      const targetCount = Number(rawCount);
-
-      const targetDifficulty = typeof difficulty === "string" ? difficulty.trim().toLowerCase() : "medium";
-
-      if (!targetTopic) {
-        return res.status(400).json({
-          success: false,
-          message: "Validation failed — 'topic' or 'text' is required and must be a non-empty string.",
-        });
-      }
-
-      if (!Number.isInteger(targetCount) || targetCount < 1) {
-        return res.status(400).json({
-          success: false,
-          message: "Validation failed — question count must be a positive integer.",
-        });
-      }
-
-      if (!["easy", "medium", "hard"].includes(targetDifficulty)) {
-        return res.status(400).json({
-          success: false,
-          message: "Validation failed — 'difficulty' must be one of: easy, medium, hard.",
-        });
-      }
-
-      const questions = await generateQuizFromPrompt(targetTopic, targetCount, targetDifficulty);
-
-      res.status(200).json({
-        success: true,
-        questions,
-      });
-    } catch (err) {
-      // Respond with a clean data error notification format if model hits rate limiting thresholds
-      res.status(500).json({
-        success: false,
-        message: "Failed to generate quiz due to an AI service error.",
-        error: err.message,
-      });
-    }
-  }
+  generateQuiz,
 );
 
 // GET /api/quizzes -> Fetch a list of all quizzes created by the logged-in professor.

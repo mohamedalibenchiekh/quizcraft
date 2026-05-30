@@ -41,6 +41,10 @@ const validPayload = {
 };
 
 const mockGeminiResponse = {
+  title: "Machine Learning Fundamentals Quiz",
+  description:
+    "This quiz assesses understanding of core machine learning concepts including supervised learning and neural networks. It covers the relationship between ML and AI as well as biological inspiration for neural architectures.",
+  tags: ["Machine Learning", "Artificial Intelligence", "Supervised Learning"],
   questions: [
     {
       type: "Multiple-Choice",
@@ -96,8 +100,18 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+
+      // Full profile shape
+      expect(res.body.title).toBe("Machine Learning Fundamentals Quiz");
+      expect(res.body.description).toMatch(/supervised learning/i);
+      expect(res.body.tags).toEqual(
+        expect.arrayContaining(["Machine Learning", "Artificial Intelligence"]),
+      );
+
+      // Questions array
       expect(res.body.questions).toBeInstanceOf(Array);
       expect(res.body.questions).toHaveLength(3);
+      expect(res.body.generatedCount).toBe(3);
 
       // Validate schema compliance
       const [q1, q2, q3] = res.body.questions;
@@ -277,7 +291,17 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+
+      // Full fallback profile shape
+      expect(res.body.title).toBe("Auto-generated Quiz (Parser Fallback)");
+      expect(res.body.description).toMatch(/fallback/i);
+      expect(res.body.tags).toEqual(
+        expect.arrayContaining(["AI Fallback"]),
+      );
+
+      // Single fallback question
       expect(res.body.questions).toHaveLength(1);
+      expect(res.body.generatedCount).toBe(1);
       expect(res.body.questions[0].text).toContain("Placeholder question generated due to automatic parser fallback");
       expect(res.body.questions[0].type).toBe("True-False");
       expect(res.body.questions[0].correctAnswer).toBe("True");
@@ -285,6 +309,9 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
 
     it("should drop corrupted/unparsable question blocks and keep the valid ones", async () => {
       const mixedGeminiResponse = {
+        title: "Mixed Quality Quiz",
+        description: "This quiz contains both valid and invalid question blocks to test filtering.",
+        tags: ["Testing", "Validation"],
         questions: [
           {
             // Valid question block
@@ -329,8 +356,14 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+
+      // Full profile present
+      expect(res.body.title).toBe("Mixed Quality Quiz");
+      expect(res.body.tags).toEqual(expect.arrayContaining(["Testing"]));
+
       // It should drop the 2 corrupt ones, and keep only the 1 valid one
       expect(res.body.questions).toHaveLength(1);
+      expect(res.body.generatedCount).toBe(1);
       expect(res.body.questions[0].text).toBe("Valid interrogation?");
       expect(res.body.questions[0].correctAnswer).toBe("A");
     });

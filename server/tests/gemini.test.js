@@ -41,6 +41,10 @@ const validPayload = {
 };
 
 const mockGeminiResponse = {
+    title: "Geography & General Knowledge Quiz",
+    description:
+        "This quiz tests fundamental geography knowledge and basic facts. It covers capital cities, earth science, and simple arithmetic.",
+    tags: ["Geography", "General Knowledge", "Science"],
     questions: [
         {
             type: "Multiple-Choice",
@@ -108,11 +112,9 @@ describe("Hugging Face Service & API Integration", () => {
             });
         });
 
-        it("should fallback to atomic fallback question if input is invalid/empty", () => {
+        it("should return empty array when input is invalid/empty (fallback is handled at service level)", () => {
             const result = transformAndValidateHFQuestions([], "easy");
-            expect(result).toHaveLength(1);
-            expect(result[0].tags).toContain("AI Fallback");
-            expect(result[0].type).toBe("True-False");
+            expect(result).toHaveLength(0);
         });
     });
 
@@ -128,11 +130,16 @@ describe("Hugging Face Service & API Integration", () => {
                 ],
             });
 
-            const questions = await generateQuizFromPrompt("Geography", 3, "easy");
+            const result = await generateQuizFromPrompt("Geography", 3, "easy");
 
-            expect(questions).toHaveLength(3);
-            expect(questions[0].type).toBe("MCQ");
-            expect(questions[0].text).toBe("What is the capital of France?");
+            expect(result.title).toBe("Geography & General Knowledge Quiz");
+            expect(result.description).toMatch(/geography/i);
+            expect(result.tags).toEqual(
+                expect.arrayContaining(["Geography", "General Knowledge"]),
+            );
+            expect(result.questions).toHaveLength(3);
+            expect(result.questions[0].type).toBe("MCQ");
+            expect(result.questions[0].text).toBe("What is the capital of France?");
         });
     });
 
@@ -155,7 +162,13 @@ describe("Hugging Face Service & API Integration", () => {
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
+            expect(res.body.title).toBe("Geography & General Knowledge Quiz");
+            expect(res.body.description).toMatch(/geography/i);
+            expect(res.body.tags).toEqual(
+                expect.arrayContaining(["Geography"]),
+            );
             expect(res.body.questions).toHaveLength(3);
+            expect(res.body.generatedCount).toBe(3);
             expect(res.body.questions[0].type).toBe("MCQ");
         });
 
@@ -255,7 +268,7 @@ describe("Hugging Face Service & API Integration", () => {
             expect(res.status).toBe(500);
             expect(res.body.success).toBe(false);
             expect(res.body.message).toContain("AI service error");
-            expect(res.body.error).toBe("Rate limit exceeded");
+            expect(res.body.error).toBeUndefined();
         });
     });
 });
