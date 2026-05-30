@@ -11,6 +11,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@google/genai": "^2.7.0",
+    "@google/generative-ai": "npm:@google/genai@^2.7.0",
+    "@huggingface/inference": "^4.13.18",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
