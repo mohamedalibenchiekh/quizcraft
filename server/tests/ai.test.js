@@ -2,29 +2,27 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
 
-// ─── Mock the Google Gen AI SDK BEFORE importing any module that uses it ────
-vi.mock("@google/generative-ai", () => {
-  const mockGenerateContent = vi.fn();
+// ─── Mock the Hugging Face SDK BEFORE importing any module that uses it ────
+vi.mock("@huggingface/inference", () => {
+  const mockChatCompletion = vi.fn();
   return {
-    GoogleGenAI: class GoogleGenAI {
+    InferenceClient: class InferenceClient {
       constructor() {
-        this.models = {
-          generateContent: mockGenerateContent,
-        };
+        this.chatCompletion = mockChatCompletion;
       }
     },
-    __mockGenerateContent: mockGenerateContent,
+    __mockChatCompletion: mockChatCompletion,
   };
 });
 
 // Retrieve the mock handle for per-test configuration
-const { __mockGenerateContent: mockGenerateContent } = await import("@google/generative-ai");
+const { __mockChatCompletion: mockChatCompletion } = await import("@huggingface/inference");
 const { default: app } = await import("../app.js");
 
 // ─── Test fixtures ──────────────────────────────────────
 const JWT_SECRET = "supersecretfortesting";
 process.env.JWT_SECRET = JWT_SECRET;
-process.env.GEMINI_API_KEY = "AIzaSyMockKeyForGeminiAPIIntegration2026";
+process.env.HF_TOKEN = "hf_mock_token_for_huggingface_integration_2026";
 
 const professorToken = jwt.sign(
   { id: "prof-001", role: "professor" },
@@ -81,8 +79,14 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
   // ─── Test Case 1: Success Flow ─────────────────────────
   describe("Success Flow", () => {
     it("should return 200 with structured questions array when given valid input and professor token", async () => {
-      mockGenerateContent.mockResolvedValueOnce({
-        text: JSON.stringify(mockGeminiResponse),
+      mockChatCompletion.mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify(mockGeminiResponse),
+            },
+          },
+        ],
       });
 
       const res = await request(app)
@@ -212,7 +216,7 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
       expect(res.body.message).toMatch(/maximum length/i);
-      expect(mockGenerateContent).not.toHaveBeenCalled();
+      expect(mockChatCompletion).not.toHaveBeenCalled();
     });
   });
 
@@ -241,7 +245,7 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
   // ─── SDK Error Handling ────────────────────────────────
   describe("SDK Error Handling", () => {
     it("should return 500 when the Gemini SDK throws a network/timeout error", async () => {
-      mockGenerateContent.mockRejectedValueOnce(new Error("Request timed out"));
+      mockChatCompletion.mockRejectedValueOnce(new Error("Request timed out"));
 
       const res = await request(app)
         .post("/api/ai/generate")
@@ -256,8 +260,14 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
   // ─── Defensive Parsing & Fallbacks ─────────────────────
   describe("Defensive Parsing & Fallbacks", () => {
     it("should recover gracefully and return fallback placeholder question when LLM returns invalid/broken JSON", async () => {
-      mockGenerateContent.mockResolvedValueOnce({
-        text: "This is a completely broken JSON output from LLM.",
+      mockChatCompletion.mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: "This is a completely broken JSON output from LLM.",
+            },
+          },
+        ],
       });
 
       const res = await request(app)
@@ -302,8 +312,14 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
         ],
       };
 
-      mockGenerateContent.mockResolvedValueOnce({
-        text: JSON.stringify(mixedGeminiResponse),
+      mockChatCompletion.mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify(mixedGeminiResponse),
+            },
+          },
+        ],
       });
 
       const res = await request(app)

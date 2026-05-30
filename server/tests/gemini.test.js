@@ -2,29 +2,27 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
 
-// ─── Mock the Google Gen AI SDK BEFORE importing any module that uses it ────
-vi.mock("@google/generative-ai", () => {
-    const mockGenerateContent = vi.fn();
+// ─── Mock the Hugging Face SDK BEFORE importing any module that uses it ────
+vi.mock("@huggingface/inference", () => {
+    const mockChatCompletion = vi.fn();
     return {
-        GoogleGenAI: class GoogleGenAI {
+        InferenceClient: class InferenceClient {
             constructor() {
-                this.models = {
-                    generateContent: mockGenerateContent,
-                };
+                this.chatCompletion = mockChatCompletion;
             }
         },
-        __mockGenerateContent: mockGenerateContent,
+        __mockChatCompletion: mockChatCompletion,
     };
 });
 
-const { __mockGenerateContent: mockGenerateContent } = await import("@google/generative-ai");
+const { __mockChatCompletion: mockChatCompletion } = await import("@huggingface/inference");
 const { default: app } = await import("../app.js");
-const { generateQuizFromPrompt, transformAndValidateGeminiQuestions } = await import("../services/geminiService.js");
+const { generateQuizFromPrompt, transformAndValidateHFQuestions } = await import("../services/aiService.js");
 
 // ─── Test fixtures ──────────────────────────────────────
 const JWT_SECRET = "supersecretfortesting";
 process.env.JWT_SECRET = JWT_SECRET;
-process.env.GEMINI_API_KEY = "AIzaSyMockKeyForGeminiAPIIntegration2026";
+process.env.HF_TOKEN = "hf_mock_token_for_huggingface_integration_2026";
 
 const professorToken = jwt.sign(
     { id: "prof-001", role: "professor" },
@@ -68,14 +66,14 @@ const mockGeminiResponse = {
     ],
 };
 
-describe("Gemini Service & API Integration", () => {
+describe("Hugging Face Service & API Integration", () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    describe("Service Layer: transformAndValidateGeminiQuestions", () => {
-        it("should correctly map and validate valid Gemini questions to Mongoose schema", () => {
-            const result = transformAndValidateGeminiQuestions(mockGeminiResponse.questions, "easy");
+    describe("Service Layer: transformAndValidateHFQuestions", () => {
+        it("should correctly map and validate valid HF questions to Mongoose schema", () => {
+            const result = transformAndValidateHFQuestions(mockGeminiResponse.questions, "easy");
 
             expect(result).toHaveLength(3);
 
@@ -86,7 +84,7 @@ describe("Gemini Service & API Integration", () => {
                 options: ["Paris", "London", "Berlin", "Madrid"],
                 correctAnswer: "Paris",
                 difficulty: "easy",
-                tags: ["AI Generated", "Gemini"],
+                tags: ["AI Generated", "Hugging Face"],
             });
 
             // True-False Check
@@ -96,7 +94,7 @@ describe("Gemini Service & API Integration", () => {
                 options: ["True", "False"],
                 correctAnswer: "False",
                 difficulty: "easy",
-                tags: ["AI Generated", "Gemini"],
+                tags: ["AI Generated", "Hugging Face"],
             });
 
             // Short-Answer Check
@@ -106,12 +104,12 @@ describe("Gemini Service & API Integration", () => {
                 options: [],
                 correctAnswer: "4",
                 difficulty: "easy",
-                tags: ["AI Generated", "Gemini"],
+                tags: ["AI Generated", "Hugging Face"],
             });
         });
 
         it("should fallback to atomic fallback question if input is invalid/empty", () => {
-            const result = transformAndValidateGeminiQuestions([], "easy");
+            const result = transformAndValidateHFQuestions([], "easy");
             expect(result).toHaveLength(1);
             expect(result[0].tags).toContain("AI Fallback");
             expect(result[0].type).toBe("True-False");
@@ -120,8 +118,14 @@ describe("Gemini Service & API Integration", () => {
 
     describe("Service Layer: generateQuizFromPrompt", () => {
         it("should generate and transform quiz questions successfully", async () => {
-            mockGenerateContent.mockResolvedValueOnce({
-                text: JSON.stringify(mockGeminiResponse),
+            mockChatCompletion.mockResolvedValueOnce({
+                choices: [
+                    {
+                        message: {
+                            content: JSON.stringify(mockGeminiResponse),
+                        },
+                    },
+                ],
             });
 
             const questions = await generateQuizFromPrompt("Geography", 3, "easy");
@@ -134,8 +138,14 @@ describe("Gemini Service & API Integration", () => {
 
     describe("API Gateway: POST /api/quizzes/generate", () => {
         it("should successfully generate questions and return 200 for a professor", async () => {
-            mockGenerateContent.mockResolvedValueOnce({
-                text: JSON.stringify(mockGeminiResponse),
+            mockChatCompletion.mockResolvedValueOnce({
+                choices: [
+                    {
+                        message: {
+                            content: JSON.stringify(mockGeminiResponse),
+                        },
+                    },
+                ],
             });
 
             const res = await request(app)
@@ -180,8 +190,8 @@ describe("Gemini Service & API Integration", () => {
             expect(res.status).toBe(403);
         });
 
-        it("should gracefully capture Gemini API errors and return 500 without crashing", async () => {
-            mockGenerateContent.mockRejectedValueOnce(new Error("Rate limit exceeded"));
+        it("should gracefully capture Hugging Face API errors and return 500 without crashing", async () => {
+            mockChatCompletion.mockRejectedValueOnce(new Error("Rate limit exceeded"));
 
             const res = await request(app)
                 .post("/api/quizzes/generate")

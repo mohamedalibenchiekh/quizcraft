@@ -12,14 +12,14 @@ import {
   toggleQuizApproval,
 } from "../controllers/quizController.js";
 import { authenticateToken, requireRole } from "../middleware/auth.js";
-import { generateQuizFromPrompt } from "../services/geminiService.js";
+import { generateQuizFromPrompt } from "../services/aiService.js";
 
 const router = Router();
 
 // POST /api/quizzes -> Create a new Quiz and its nested Question documents simultaneously.
 router.post("/", authenticateToken, requireRole("professor"), createQuiz);
 
-// POST /api/quizzes/generate -> Programmatically generate a quiz using Google AI Studio Gemini API.
+// POST /api/quizzes/generate -> Programmatically generate a quiz using Hugging Face Serverless Inference API.
 router.post(
   "/generate",
   authenticateToken,
@@ -60,6 +60,7 @@ router.post(
         questions,
       });
     } catch (err) {
+      // Respond with a clean data error notification format if model hits rate limiting thresholds
       res.status(500).json({
         success: false,
         message: "Failed to generate quiz due to an AI service error.",

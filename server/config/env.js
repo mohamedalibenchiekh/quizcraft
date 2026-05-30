@@ -1,7 +1,7 @@
 import "dotenv/config";
 
-export const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+export const HF_TOKEN = process.env.HF_TOKEN;
 
 export default {
-    GEMINI_API_KEY,
+    HF_TOKEN,
 };
