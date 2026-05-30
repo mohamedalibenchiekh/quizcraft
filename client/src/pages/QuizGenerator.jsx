@@ -36,6 +36,7 @@ const QuizGenerator = () => {
   const [numQuestions, setNumQuestions] = useState(10);
   const [quizTitle, setQuizTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [tags, setTags] = useState([]);
   const [error, setError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -102,8 +103,10 @@ const QuizGenerator = () => {
         return;
       }
 
+      setQuizTitle(payload.title || "");
+      setDescription(payload.description || "");
+      setTags(Array.isArray(payload.tags) ? payload.tags : ["AI Generated", "Gemini"]);
       setGeneratedQuestions(questions.map((question, index) => normalizeQuestion(question, index, difficulty)));
-      setQuizTitle((currentTitle) => currentTitle || `AI Quiz - ${files[0]?.name?.replace(/\.[^/.]+$/, '') || 'Generated Draft'}`);
       setStatusMessage(`${questions.length} AI question${questions.length === 1 ? '' : 's'} ready for review.`);
     } catch (err) {
       console.error(err);
@@ -140,6 +143,7 @@ const QuizGenerator = () => {
     const payload = {
       title: quizTitle.trim(),
       description: description.trim(),
+      tags,
       questions: buildQuestionPayload(generatedQuestions),
     };
 

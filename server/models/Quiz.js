@@ -22,6 +22,10 @@ const QuizSchema = new mongoose.Schema(
         ref: 'Question',
       },
     ],
+    tags: {
+      type: [String],
+      default: [],
+    },
     isApproved: {
       type: Boolean,
       required: true,
