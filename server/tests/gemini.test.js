@@ -268,7 +268,7 @@ describe("Hugging Face Service & API Integration", () => {
             expect(res.status).toBe(500);
             expect(res.body.success).toBe(false);
             expect(res.body.message).toContain("AI service error");
-            expect(res.body.error).toContain("Rate limit exceeded");
+            expect(res.body.error).toBeUndefined();
         });
     });
 });

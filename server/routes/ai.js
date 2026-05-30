@@ -83,10 +83,10 @@ router.post(
         generatedCount: quizProfile.questions.length,
       });
     } catch (err) {
+      console.error("[AI Route] Quiz generation failed:", err.message);
       res.status(500).json({
         success: false,
         message: "AI generation failed — unable to reach or process response from the Hugging Face Inference API.",
-        error: err.message,
       });
     }
   }

@@ -219,10 +219,10 @@ export const generateQuiz = async (req, res, next) => {
       generatedCount: quizProfile.questions.length,
     });
   } catch (err) {
+    console.error("[QuizController] Quiz generation failed:", err.message);
     res.status(500).json({
       success: false,
       message: "Failed to generate quiz due to an AI service error.",
-      error: err.message,
     });
   }
 };
