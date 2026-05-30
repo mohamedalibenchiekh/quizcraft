@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* =============================================
    QuizCraft Design System – Global Tokens
    ============================================= */
@@ -44,6 +46,21 @@
   --radius-button: 0.75rem;
   --radius-pill: 9999px;
   --radius-input: 0.625rem;
+}
+
+/* =============================================
+   Light Mode Overrides
+   ============================================= */
+
+.light {
+  --color-surface-base: #f8f9fc;
+  --color-surface-card: #ffffff;
+  --color-surface-elevated: #f0edff;
+  --color-surface-glass: rgba(255, 255, 255, 0.85);
+  --color-surface-input: #e8e5f0;
+  --color-text-primary: #1a1a2e;
+  --color-text-secondary: #6b6480;
+  --color-text-muted: #a09bb5;
 }
 
 /* =============================================
