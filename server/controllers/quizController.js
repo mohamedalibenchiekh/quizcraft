@@ -59,7 +59,7 @@ const validateQuestionData = (q) => {
  */
 export const createQuiz = async (req, res, next) => {
   try {
-    const { title, description, questions, isApproved } = req.body;
+    const { title, description, tags, questions, isApproved } = req.body;
 
     if (!title || !title.trim()) {
       return res.status(400).json({ success: false, message: "Quiz title is required" });
@@ -101,6 +101,7 @@ export const createQuiz = async (req, res, next) => {
       const newQuiz = new Quiz({
         title: title.trim(),
         description: description ? description.trim() : "",
+        tags: Array.isArray(tags) ? tags.map(t => String(t).trim()).filter(Boolean) : [],
         professorId: req.user.id,
         questions: questionIds,
         isApproved: isApproved !== undefined ? isApproved : false
