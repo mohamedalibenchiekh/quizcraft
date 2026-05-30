@@ -50,7 +50,7 @@ const QuestionPreviewCard = ({
             value={question.type}
             disabled={disabled}
             onChange={(event) => onTypeChange(questionIndex, event.target.value)}
-            className="rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-xs font-bold text-white outline-none"
+            className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-3 py-2 text-xs font-bold text-slate-800 dark:text-white outline-none"
           >
             {QUESTION_TYPES.map((type) => (
               <option key={type} value={type}>{type}</option>
@@ -63,7 +63,7 @@ const QuestionPreviewCard = ({
             value={question.difficulty}
             disabled={disabled}
             onChange={(event) => onUpdate(questionIndex, { difficulty: event.target.value })}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm font-semibold text-white outline-none md:w-36"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-white outline-none md:w-36"
           >
             {DIFFICULTIES.map((option) => (
               <option key={option} value={option}>{option}</option>
@@ -74,14 +74,14 @@ const QuestionPreviewCard = ({
             onClick={() => onRemove(questionIndex)}
             disabled={disabled}
             aria-label={`Remove question ${questionIndex + 1}`}
-            className="rounded-lg border border-red-500/25 px-3 py-2 text-sm font-bold text-red-300 hover:bg-red-950/25 disabled:opacity-50"
+            className="rounded-lg border border-red-500/25 px-3 py-2 text-sm font-bold text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/25 disabled:opacity-50"
           >
             X
           </button>
         </div>
       </div>
 
-      <label htmlFor={`question-${question.id}`} className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">
+      <label htmlFor={`question-${question.id}`} className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
         Question Text
       </label>
       <textarea
@@ -90,18 +90,18 @@ const QuestionPreviewCard = ({
         disabled={disabled}
         onChange={(event) => onUpdate(questionIndex, { text: event.target.value })}
         rows={2}
-        className="w-full resize-none rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+        className="w-full resize-none rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-4 py-3 text-sm text-slate-800 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
       />
 
       {question.type === 'MCQ' && (
         <div className="mt-4 space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <span className="block text-xs font-bold uppercase tracking-wider text-slate-400">Answer Choices</span>
+            <span className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Answer Choices</span>
             <button
               type="button"
               onClick={() => onAddChoice(questionIndex)}
               disabled={disabled}
-              className="text-xs font-bold text-cyan-300 hover:text-cyan-100 disabled:opacity-50"
+              className="text-xs font-bold text-cyan-700 dark:text-cyan-300 hover:text-cyan-900 dark:hover:text-cyan-100 disabled:opacity-50"
             >
               Add Choice
             </button>
@@ -122,7 +122,7 @@ const QuestionPreviewCard = ({
                 value={option}
                 disabled={disabled}
                 onChange={(event) => onUpdateOption(questionIndex, optionIndex, event.target.value)}
-                className="flex-1 rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+                className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-3 py-2 text-sm text-slate-800 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
               />
               {question.options.length > 2 && (
                 <button
@@ -130,14 +130,14 @@ const QuestionPreviewCard = ({
                   onClick={() => onRemoveChoice(questionIndex, optionIndex)}
                   disabled={disabled}
                   aria-label={`Remove option ${optionIndex + 1}`}
-                  className="rounded-lg px-2 py-1 text-sm font-bold text-slate-500 hover:text-red-300 disabled:opacity-50"
+                  className="rounded-lg px-2 py-1 text-sm font-bold text-slate-500 hover:text-red-600 dark:hover:text-red-300 disabled:opacity-50"
                 >
                   X
                 </button>
               )}
             </div>
           ))}
-          <label htmlFor={`answer-${question.id}`} className="mt-3 block text-xs font-bold uppercase tracking-wider text-slate-400">
+          <label htmlFor={`answer-${question.id}`} className="mt-3 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Correct Answer
           </label>
           <input
@@ -152,14 +152,14 @@ const QuestionPreviewCard = ({
                 correctAnswerIndex: idx >= 0 ? idx : question.correctAnswerIndex,
               });
             }}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-3 py-2 text-sm text-slate-800 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
           />
         </div>
       )}
 
       {question.type === 'True-False' && (
         <div className="mt-4">
-          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Correct Answer</span>
+          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Correct Answer</span>
           <div className="flex gap-2">
             {['True', 'False'].map((option) => (
               <button
@@ -170,7 +170,7 @@ const QuestionPreviewCard = ({
                 className={`rounded-lg px-4 py-2 text-sm font-bold ${
                   question.correctAnswer === option
                     ? 'bg-emerald-400 text-slate-950'
-                    : 'border border-slate-700 text-slate-300 hover:text-white'
+                    : 'border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 {option}
@@ -182,7 +182,7 @@ const QuestionPreviewCard = ({
 
       {question.type === 'Short-Answer' && (
         <div className="mt-4">
-          <label htmlFor={`answer-${question.id}`} className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">
+          <label htmlFor={`answer-${question.id}`} className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Correct Answer
           </label>
           <input
@@ -190,14 +190,14 @@ const QuestionPreviewCard = ({
             value={question.correctAnswer}
             disabled={disabled}
             onChange={(event) => onUpdate(questionIndex, { correctAnswer: event.target.value })}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-3 py-2 text-sm text-slate-800 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
           />
         </div>
       )}
 
       {/* Tags */}
       <div className="mt-4">
-        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">Tags</label>
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tags</label>
         <div className="flex gap-2 mb-2">
           <input
             value={tagInput}
@@ -205,13 +205,13 @@ const QuestionPreviewCard = ({
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagKeyDown}
             placeholder="Add a tag..."
-            className="flex-1 rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+            className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-3 py-2 text-sm text-slate-800 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
           />
           <button
             type="button"
             onClick={handleAddTag}
             disabled={disabled || !tagInput.trim()}
-            className="rounded-lg border border-cyan-400/40 px-4 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-950/30 disabled:opacity-50"
+            className="rounded-lg border border-cyan-400/40 px-4 py-2 text-xs font-bold text-cyan-700 dark:text-cyan-200 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 disabled:opacity-50"
           >
             Add Tag
           </button>
@@ -221,14 +221,14 @@ const QuestionPreviewCard = ({
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center gap-1.5 rounded-full bg-cyan-950/40 border border-cyan-400/20 px-3 py-1 text-xs font-semibold text-cyan-200"
+                className="inline-flex items-center gap-1.5 rounded-full bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-400/20 px-3 py-1 text-xs font-semibold text-cyan-700 dark:text-cyan-200"
               >
                 {tag}
                 <button
                   type="button"
                   onClick={() => handleRemoveTag(tag)}
                   disabled={disabled}
-                  className="text-cyan-400 hover:text-red-300 disabled:opacity-50"
+                  className="text-cyan-400 hover:text-red-600 dark:hover:text-red-300 disabled:opacity-50"
                 >
                   X
                 </button>

@@ -110,7 +110,7 @@ const QuizEdit = () => {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span className="text-slate-400 text-sm font-medium">Loading quiz data...</span>
+          <span className="text-slate-600 dark:text-slate-400 text-sm font-medium">Loading quiz data...</span>
         </div>
       </main>
     );
@@ -119,13 +119,13 @@ const QuizEdit = () => {
   if (fetchError) {
     return (
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in-up">
-        <div className="border-2 border-red-500/30 rounded-2xl p-16 text-center bg-red-950/10">
-          <h3 className="text-red-300 font-bold text-lg mb-1">Failed to Load Quiz</h3>
-          <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">{fetchError}</p>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="px-4 py-2 rounded-lg text-sm font-semibold border border-slate-700 text-slate-300 hover:text-white"
-          >
+          <div className="border-2 border-red-500/30 rounded-2xl p-16 text-center bg-red-50 dark:bg-red-950/10">
+            <h3 className="text-red-700 dark:text-red-300 font-bold text-lg mb-1">Failed to Load Quiz</h3>
+            <p className="text-slate-600 dark:text-slate-400 text-sm max-w-md mx-auto mb-6">{fetchError}</p>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="px-4 py-2 rounded-lg text-sm font-semibold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+            >
             Back to Dashboard
           </button>
         </div>
@@ -137,16 +137,16 @@ const QuizEdit = () => {
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 mb-8">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300 mb-2">
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-300 mb-2">
             Quiz Editing Workspace
           </p>
           <h1
-            className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-violet-300 via-cyan-300 to-green-300 bg-clip-text text-transparent"
+            className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-violet-600 via-cyan-600 to-green-600 dark:from-violet-300 dark:via-cyan-300 dark:to-green-300 bg-clip-text text-transparent"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             Edit Quiz
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
             Modify quiz title, description, and questions. All changes are saved atomically.
           </p>
         </div>
@@ -154,20 +154,20 @@ const QuizEdit = () => {
           type="button"
           onClick={() => navigate('/dashboard')}
           disabled={interactionLocked}
-          className="self-start lg:self-auto px-4 py-2 rounded-lg text-sm font-semibold border border-slate-700 text-slate-300 hover:text-white hover:border-cyan-400/50 disabled:opacity-50"
+          className="self-start lg:self-auto px-4 py-2 rounded-lg text-sm font-semibold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-cyan-400 disabled:opacity-50"
         >
           Back to Dashboard
         </button>
       </div>
 
       {error && (
-        <div role="alert" className="mb-6 rounded-xl border border-red-500/35 bg-red-950/25 px-4 py-3 text-sm font-medium text-red-200">
+        <div role="alert" className="mb-6 rounded-xl border border-red-500/35 bg-red-50 dark:bg-red-950/25 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-200">
           {error}
         </div>
       )}
 
       {statusMessage && (
-        <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-950/20 px-4 py-3 text-sm font-semibold text-emerald-200">
+        <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20 px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-200">
           {statusMessage}
         </div>
       )}
@@ -175,10 +175,10 @@ const QuizEdit = () => {
       <section className="mt-8">
         <div className="mb-4 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-extrabold text-white">
+            <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white">
               Edit Quiz Questions
             </h2>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
               Review existing questions, make changes, and save when ready.
             </p>
           </div>
@@ -187,7 +187,7 @@ const QuizEdit = () => {
               type="button"
               onClick={onAddQuestion}
               disabled={interactionLocked}
-              className="rounded-xl border border-cyan-400/40 px-5 py-3 text-sm font-bold text-cyan-100 hover:bg-cyan-950/30 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl border border-cyan-400/40 px-5 py-3 text-sm font-bold text-cyan-700 dark:text-cyan-100 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Add Question
             </button>
@@ -205,7 +205,7 @@ const QuizEdit = () => {
         <div className="glass-card p-6 mb-6">
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-4">
             <div>
-              <label htmlFor="editQuizTitle" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">
+              <label htmlFor="editQuizTitle" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Quiz Title
               </label>
               <input
@@ -213,12 +213,12 @@ const QuizEdit = () => {
                 value={quizTitle}
                 disabled={interactionLocked}
                 onChange={(event) => setQuizTitle(event.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
                 placeholder="e.g. Chapter 4 AI Review"
               />
             </div>
             <div>
-              <label htmlFor="editQuizDescription" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">
+              <label htmlFor="editQuizDescription" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Description
               </label>
               <input
@@ -226,7 +226,7 @@ const QuizEdit = () => {
                 value={description}
                 disabled={interactionLocked}
                 onChange={(event) => setDescription(event.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
                 placeholder="Optional student-facing context"
               />
             </div>

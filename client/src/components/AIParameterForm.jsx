@@ -5,16 +5,16 @@ const AIParameterForm = ({ numQuestions, difficulty, onNumQuestionsChange, onDif
 
   return (
     <section className="glass-card gradient-border p-6 shadow-xl">
-      <h2 className="text-xl font-bold text-white">AI Parameters</h2>
-      <p className="mt-1 text-sm text-slate-400">Control the generated assessment size and target complexity.</p>
+      <h2 className="text-xl font-bold text-slate-800 dark:text-white">AI Parameters</h2>
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Control the generated assessment size and target complexity.</p>
 
       <div className="mt-6 space-y-6">
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <label htmlFor="numQuestions" className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <label htmlFor="numQuestions" className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Number of Questions
             </label>
-            <span className="rounded-md border border-slate-700 bg-slate-950/45 px-2 py-1 text-xs font-bold text-white">
+            <span className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-2 py-1 text-xs font-bold text-slate-800 dark:text-white">
               {clampQuestionCount(numQuestions)}
             </span>
           </div>
@@ -36,13 +36,13 @@ const AIParameterForm = ({ numQuestions, difficulty, onNumQuestionsChange, onDif
             value={numQuestions}
             disabled={interactionLocked}
             onChange={(event) => onNumQuestionsChange(event.target.value)}
-            className="mt-3 w-28 rounded-lg border border-slate-700 bg-slate-950/45 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+            className="mt-3 w-28 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
           />
         </div>
 
         <div>
-          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Difficulty</span>
-          <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-800 bg-slate-950/35 p-1">
+          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Difficulty</span>
+          <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-950/35 p-1">
             {DIFFICULTIES.map((option) => (
               <button
                 key={option}
@@ -52,7 +52,7 @@ const AIParameterForm = ({ numQuestions, difficulty, onNumQuestionsChange, onDif
                 className={`rounded-lg px-3 py-2 text-sm font-bold capitalize transition-all disabled:opacity-50 ${
                   difficulty === option
                     ? 'bg-cyan-500 text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.25)]'
-                    : 'text-slate-400 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 {option}
@@ -71,12 +71,12 @@ const AIParameterForm = ({ numQuestions, difficulty, onNumQuestionsChange, onDif
         </button>
 
         {isGenerating && (
-          <div role="status" className="rounded-xl border border-cyan-400/25 bg-cyan-950/20 p-4 text-center">
-            <svg data-testid="ai-loading-spinner" className="mx-auto mb-3 h-8 w-8 animate-spin text-cyan-300" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+          <div role="status" className="rounded-xl border border-cyan-400/25 bg-cyan-50 dark:bg-cyan-950/20 p-4 text-center">
+            <svg data-testid="ai-loading-spinner" className="mx-auto mb-3 h-8 w-8 animate-spin text-cyan-700 dark:text-cyan-300" fill="none" viewBox="0 0 24 24" aria-hidden="true">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
             </svg>
-            <p className="text-sm font-bold text-cyan-100">AI is reading documents and drafting your exam questions...</p>
+            <p className="text-sm font-bold text-cyan-700 dark:text-cyan-100">AI is reading documents and drafting your exam questions...</p>
           </div>
         )}
       </div>
