@@ -12,7 +12,10 @@
     <title>QuizCraft – AI-Powered Interactive Quiz Platform</title>
     <script>
       (function() {
-        var theme = localStorage.getItem('theme');
+        var theme;
+        try {
+          theme = localStorage.getItem('theme');
+        } catch {}
         if (!theme) {
           theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
         }
