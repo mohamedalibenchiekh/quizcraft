@@ -26,7 +26,7 @@ export const truncateText = (text, maxWords = MAX_WORDS) => {
  * @param {string} difficulty    — Target difficulty: "easy" | "medium" | "hard".
  * @returns {string} The system prompt string.
  */
-export const buildSystemPrompt = (questionCount, difficulty) => `You are a strict JSON engine. Analyze the provided source content and output a structured quiz matching the required schema. You must return ONLY raw JSON. NEVER wrap your response in markdown code blocks like \`\`\`json ... \`\`\`, do not include backticks, and write no introductory or concluding conversational text.
+export const buildSystemPrompt = (questionCount, difficulty) => `You are a strict JSON engine. Analyze the provided source content and output exactly ${questionCount} structured quiz questions matching the required schema. You must return ONLY raw JSON. NEVER wrap your response in markdown code blocks like \`\`\`json ... \`\`\`, do not include backticks, and write no introductory or concluding conversational text.
 
 STRICT OUTPUT RULES:
 1. Return ONLY a raw JSON object — no markdown, no code fences (no \`\`\`json), no preamble, no postscript.
@@ -252,14 +252,14 @@ export const generateQuizFromPrompt = async (topic, questionCount, difficulty, i
   let rawContent = content.trim();
 
   if (rawContent.includes("```")) {
-    rawContent = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
+    rawContent = rawContent.replace(/```\w*/g, "").trim();
   }
 
   let parsed;
   try {
     parsed = JSON.parse(rawContent);
   } catch (parseError) {
-    console.error("Cleaned string failed parsing. Content was:", rawContent);
+    console.error("AI output parse failure. Response length:", rawContent.length, "Preview:", rawContent.slice(0, 80));
     return buildFallbackQuizProfile(difficulty);
   }
 
