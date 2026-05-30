@@ -68,7 +68,7 @@ const persistAttempts = async (pinStr) => {
     const userToPlayerIds = new Map();
     for (const [playerId, participant] of room.allPlayers.entries()) {
       if (participant.role === "host" || !participant.userId) continue;
-      
+
       const uId = participant.userId.toString();
       if (!userToPlayerIds.has(uId)) {
         userToPlayerIds.set(uId, []);
@@ -222,9 +222,14 @@ const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode, token } =
 };
 
 export const initSocket = (httpServer) => {
+  const allowedOrigins = [
+    process.env.CLIENT_URL, // Your live React production URL
+    'http://localhost:5173' // Retain for fallback local development testing
+  ].filter(Boolean);
+
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.CLIENT_URL || process.env.VITE_API_URL || "http://localhost:5173",
+      origin: allowedOrigins,
       credentials: true,
       methods: ["GET", "POST"],
     },
