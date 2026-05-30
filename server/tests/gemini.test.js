@@ -159,6 +159,27 @@ describe("Hugging Face Service & API Integration", () => {
             expect(res.body.questions[0].type).toBe("MCQ");
         });
 
+        it("should successfully generate questions and return 200 when topic is empty string but text is provided", async () => {
+            mockChatCompletion.mockResolvedValueOnce({
+                choices: [
+                    {
+                        message: {
+                            content: JSON.stringify(mockGeminiResponse),
+                        },
+                    },
+                ],
+            });
+
+            const res = await request(app)
+                .post("/api/quizzes/generate")
+                .set("Authorization", `Bearer ${professorToken}`)
+                .send({ topic: "", text: "Geography", questionCount: 3, difficulty: "easy" });
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.questions).toHaveLength(3);
+        });
+
         it("should return 400 if validation fails (missing topic)", async () => {
             const res = await request(app)
                 .post("/api/quizzes/generate")

@@ -59,7 +59,7 @@ router.post(
         });
       }
 
-      const rawTopic = topic !== undefined ? topic : text;
+      const rawTopic = (typeof topic === "string" && topic.trim() !== "") ? topic : text;
       const targetTopic = typeof rawTopic === "string" ? rawTopic.trim() : "";
 
       const rawCount = questionCount ?? numQuestions ?? 5;
