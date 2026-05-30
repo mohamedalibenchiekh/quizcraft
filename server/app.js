@@ -30,12 +30,15 @@ app.set("trust proxy", trustProxy !== undefined ? Number(trustProxy) : 1);
 //          are handled before helmet / morgan / body-parser run.
 const allowedOrigins = [
   process.env.CLIENT_URL,
-  'http://localhost:5173',
-].filter(Boolean);
+  'https://quizcraft-flame.vercel.app',  // production (fallback if env var unset)
+  'http://localhost:5173',               // local dev
+].map(s => s?.trim()).filter(Boolean);
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) return callback(null, true);
+    const normalized = origin.replace(/\/+$/, ""); // strip trailing slash
+    if (allowedOrigins.some(o => o.replace(/\/+$/, "") === normalized)) {
       callback(null, true);
     } else {
       callback(null, false);
