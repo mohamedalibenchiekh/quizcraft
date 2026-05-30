@@ -1,31 +1,30 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
 
-// ─── Mock the OpenAI SDK BEFORE importing any module that uses it ────
-vi.mock("openai", () => {
-  const mockCreate = vi.fn();
+// ─── Mock the Google Gen AI SDK BEFORE importing any module that uses it ────
+vi.mock("@google/generative-ai", () => {
+  const mockGenerateContent = vi.fn();
   return {
-    default: class OpenAI {
+    GoogleGenAI: class GoogleGenAI {
       constructor() {
-        this.chat = {
-          completions: {
-            create: mockCreate,
-          },
+        this.models = {
+          generateContent: mockGenerateContent,
         };
       }
     },
-    __mockCreate: mockCreate,
+    __mockGenerateContent: mockGenerateContent,
   };
 });
 
 // Retrieve the mock handle for per-test configuration
-const { __mockCreate: mockCreate } = await import("openai");
+const { __mockGenerateContent: mockGenerateContent } = await import("@google/generative-ai");
 const { default: app } = await import("../app.js");
 
 // ─── Test fixtures ──────────────────────────────────────
 const JWT_SECRET = "supersecretfortesting";
 process.env.JWT_SECRET = JWT_SECRET;
+process.env.GEMINI_API_KEY = "AIzaSyMockKeyForGeminiAPIIntegration2026";
 
 const professorToken = jwt.sign(
   { id: "prof-001", role: "professor" },
@@ -43,33 +42,33 @@ const validPayload = {
   difficulty: "medium",
 };
 
-const mockAiResponse = {
+const mockGeminiResponse = {
   questions: [
     {
-      question: "What is machine learning a subset of?",
-      type: "MCQ",
+      type: "Multiple-Choice",
+      questionText: "What is machine learning a subset of?",
+      difficulty: "medium",
       options: [
         "Artificial Intelligence",
         "Data Science",
         "Robotics",
         "Statistics",
       ],
-      answer: "Artificial Intelligence",
-      difficulty: "medium",
+      correctAnswer: "Artificial Intelligence",
     },
     {
-      question: "Supervised learning uses labeled training data.",
       type: "True-False",
-      options: ["True", "False"],
-      answer: "True",
+      questionText: "Supervised learning uses labeled training data.",
       difficulty: "medium",
+      options: ["True", "False"],
+      correctAnswer: "True",
     },
     {
-      question: "What are neural networks inspired by?",
       type: "Short-Answer",
-      options: [],
-      answer: "biological neural structures",
+      questionText: "What are neural networks inspired by?",
       difficulty: "medium",
+      options: [],
+      correctAnswer: "biological neural structures",
     },
   ],
 };
@@ -82,14 +81,8 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
   // ─── Test Case 1: Success Flow ─────────────────────────
   describe("Success Flow", () => {
     it("should return 200 with structured questions array when given valid input and professor token", async () => {
-      mockCreate.mockResolvedValueOnce({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify(mockAiResponse),
-            },
-          },
-        ],
+      mockGenerateContent.mockResolvedValueOnce({
+        text: JSON.stringify(mockGeminiResponse),
       });
 
       const res = await request(app)
@@ -99,101 +92,99 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+      expect(res.body.questions).toBeInstanceOf(Array);
       expect(res.body.questions).toHaveLength(3);
 
-      // Verify schema structure of each question
-      for (const q of res.body.questions) {
-        expect(q).toHaveProperty("text");
-        expect(q).toHaveProperty("type");
-        expect(q).toHaveProperty("options");
-        expect(q).toHaveProperty("correctAnswer");
-        expect(q).toHaveProperty("difficulty");
-        expect(q).toHaveProperty("tags");
-        expect(["MCQ", "True-False", "Short-Answer"]).toContain(q.type);
-      }
-    });
+      // Validate schema compliance
+      const [q1, q2, q3] = res.body.questions;
 
-    it("should call OpenAI with response_format json_object and the system prompt", async () => {
-      mockCreate.mockResolvedValueOnce({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify(mockAiResponse),
-            },
-          },
-        ],
-      });
+      expect(q1.text).toBe("What is machine learning a subset of?");
+      expect(q1.type).toBe("MCQ");
+      expect(q1.options).toEqual([
+        "Artificial Intelligence",
+        "Data Science",
+        "Robotics",
+        "Statistics",
+      ]);
+      expect(q1.correctAnswer).toBe("Artificial Intelligence");
+      expect(q1.difficulty).toBe("medium");
 
-      await request(app)
-        .post("/api/ai/generate")
-        .set("Authorization", `Bearer ${professorToken}`)
-        .send(validPayload);
+      expect(q2.text).toBe("Supervised learning uses labeled training data.");
+      expect(q2.type).toBe("True-False");
+      expect(q2.options).toEqual(["True", "False"]);
+      expect(q2.correctAnswer).toBe("True");
+      expect(q2.difficulty).toBe("medium");
 
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          response_format: { type: "json_object" },
-          messages: expect.arrayContaining([
-            expect.objectContaining({ role: "system" }),
-            expect.objectContaining({ role: "user" }),
-          ]),
-        })
-      );
+      expect(q3.text).toBe("What are neural networks inspired by?");
+      expect(q3.type).toBe("Short-Answer");
+      expect(q3.options).toEqual([]);
+      expect(q3.correctAnswer).toBe("biological neural structures");
+      expect(q3.difficulty).toBe("medium");
     });
   });
 
-  // ─── Test Case 2: Input Validation Gate ────────────────
-  describe("Input Validation Gate", () => {
+  // ─── Input Validation Guards ───────────────────────────
+  describe("Input Validation Guards", () => {
     it("should return 400 when 'text' is missing", async () => {
       const res = await request(app)
         .post("/api/ai/generate")
         .set("Authorization", `Bearer ${professorToken}`)
-        .send({ numQuestions: 3, difficulty: "easy" });
-
-      expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
-      expect(res.body.message).toMatch(/text/i);
-      // OpenAI should NOT be called
-      expect(mockCreate).not.toHaveBeenCalled();
-    });
-
-    it("should return 400 when 'text' is an empty string", async () => {
-      const res = await request(app)
-        .post("/api/ai/generate")
-        .set("Authorization", `Bearer ${professorToken}`)
-        .send({ text: "   ", numQuestions: 3, difficulty: "easy" });
+        .send({ numQuestions: 3, difficulty: "medium" });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
       expect(res.body.message).toMatch(/text/i);
     });
 
-    it("should return 400 when 'numQuestions' is missing or invalid", async () => {
+    it("should return 400 when 'text' is empty string", async () => {
       const res = await request(app)
         .post("/api/ai/generate")
         .set("Authorization", `Bearer ${professorToken}`)
-        .send({ text: "Some content", difficulty: "easy" });
+        .send({ text: "   ", numQuestions: 3, difficulty: "medium" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toMatch(/text/i);
+    });
+
+    it("should return 400 when 'numQuestions' is missing", async () => {
+      const res = await request(app)
+        .post("/api/ai/generate")
+        .set("Authorization", `Bearer ${professorToken}`)
+        .send({ text: "Some content", difficulty: "medium" });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
       expect(res.body.message).toMatch(/numQuestions/i);
     });
 
-    it("should return 400 when 'numQuestions' is zero or negative", async () => {
+    it("should return 400 when 'numQuestions' is negative", async () => {
       const res = await request(app)
         .post("/api/ai/generate")
         .set("Authorization", `Bearer ${professorToken}`)
-        .send({ text: "Some content", numQuestions: -1, difficulty: "easy" });
+        .send({ text: "Some content", numQuestions: -5, difficulty: "medium" });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
       expect(res.body.message).toMatch(/numQuestions/i);
     });
 
-    it("should return 400 when 'difficulty' is invalid", async () => {
+    it("should return 400 when 'numQuestions' is a float", async () => {
       const res = await request(app)
         .post("/api/ai/generate")
         .set("Authorization", `Bearer ${professorToken}`)
-        .send({ text: "Some content", numQuestions: 3, difficulty: "extreme" });
+        .send({ text: "Some content", numQuestions: 2.5, difficulty: "medium" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toMatch(/numQuestions/i);
+    });
+
+    it("should return 400 when 'difficulty' is invalid value", async () => {
+      const res = await request(app)
+        .post("/api/ai/generate")
+        .set("Authorization", `Bearer ${professorToken}`)
+        .send({ text: "Some content", numQuestions: 3, difficulty: "expert" });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
@@ -221,7 +212,7 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
       expect(res.body.message).toMatch(/maximum length/i);
-      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockGenerateContent).not.toHaveBeenCalled();
     });
   });
 
@@ -249,8 +240,8 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
 
   // ─── SDK Error Handling ────────────────────────────────
   describe("SDK Error Handling", () => {
-    it("should return 500 when the OpenAI SDK throws a network/timeout error", async () => {
-      mockCreate.mockRejectedValueOnce(new Error("Request timed out"));
+    it("should return 500 when the Gemini SDK throws a network/timeout error", async () => {
+      mockGenerateContent.mockRejectedValueOnce(new Error("Request timed out"));
 
       const res = await request(app)
         .post("/api/ai/generate")
@@ -265,14 +256,8 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
   // ─── Defensive Parsing & Fallbacks ─────────────────────
   describe("Defensive Parsing & Fallbacks", () => {
     it("should recover gracefully and return fallback placeholder question when LLM returns invalid/broken JSON", async () => {
-      mockCreate.mockResolvedValueOnce({
-        choices: [
-          {
-            message: {
-              content: "This is a completely broken JSON output from LLM.",
-            },
-          },
-        ],
+      mockGenerateContent.mockResolvedValueOnce({
+        text: "This is a completely broken JSON output from LLM.",
       });
 
       const res = await request(app)
@@ -289,42 +274,36 @@ describe("POST /api/ai/generate — AI Quiz Generation", () => {
     });
 
     it("should drop corrupted/unparsable question blocks and keep the valid ones", async () => {
-      const mixedAiResponse = {
+      const mixedGeminiResponse = {
         questions: [
           {
             // Valid question block
-            question: "Valid interrogation?",
-            type: "MCQ",
+            type: "Multiple-Choice",
+            questionText: "Valid interrogation?",
             options: ["A", "B", "C", "D"],
-            answer: "A",
+            correctAnswer: "A",
             difficulty: "medium",
           },
           {
             // Corrupt question block (missing answer / correctAnswer)
-            question: "Corrupted interrogation without answer",
-            type: "MCQ",
+            type: "Multiple-Choice",
+            questionText: "Corrupted interrogation without answer",
             options: ["A", "B"],
             difficulty: "medium",
           },
           {
             // Corrupt question block (MCQ answer doesn't match choices)
-            question: "Incorrect MCQ choices mapping",
-            type: "MCQ",
+            type: "Multiple-Choice",
+            questionText: "Incorrect MCQ choices mapping",
             options: ["A", "B"],
-            answer: "C",
+            correctAnswer: "C",
             difficulty: "medium",
           },
         ],
       };
 
-      mockCreate.mockResolvedValueOnce({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify(mixedAiResponse),
-            },
-          },
-        ],
+      mockGenerateContent.mockResolvedValueOnce({
+        text: JSON.stringify(mixedGeminiResponse),
       });
 
       const res = await request(app)

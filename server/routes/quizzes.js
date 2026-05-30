@@ -12,11 +12,62 @@ import {
   toggleQuizApproval,
 } from "../controllers/quizController.js";
 import { authenticateToken, requireRole } from "../middleware/auth.js";
+import { generateQuizFromPrompt } from "../services/geminiService.js";
 
 const router = Router();
 
 // POST /api/quizzes -> Create a new Quiz and its nested Question documents simultaneously.
 router.post("/", authenticateToken, requireRole("professor"), createQuiz);
+
+// POST /api/quizzes/generate -> Programmatically generate a quiz using Google AI Studio Gemini API.
+router.post(
+  "/generate",
+  authenticateToken,
+  requireRole("professor"),
+  async (req, res) => {
+    try {
+      const { topic, text, questionCount, numQuestions, difficulty } = req.body;
+
+      const targetTopic = (topic || text || "").trim();
+      const targetCount = Number(questionCount || numQuestions || 5);
+      const targetDifficulty = (difficulty || "medium").trim().toLowerCase();
+
+      if (!targetTopic) {
+        return res.status(400).json({
+          success: false,
+          message: "Validation failed — 'topic' or 'text' is required and must be a non-empty string.",
+        });
+      }
+
+      if (!Number.isInteger(targetCount) || targetCount < 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Validation failed — question count must be a positive integer.",
+        });
+      }
+
+      if (!["easy", "medium", "hard"].includes(targetDifficulty)) {
+        return res.status(400).json({
+          success: false,
+          message: "Validation failed — 'difficulty' must be one of: easy, medium, hard.",
+        });
+      }
+
+      const questions = await generateQuizFromPrompt(targetTopic, targetCount, targetDifficulty);
+
+      res.status(200).json({
+        success: true,
+        questions,
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        message: "Failed to generate quiz due to an AI service error.",
+        error: err.message,
+      });
+    }
+  }
+);
 
 // GET /api/quizzes -> Fetch a list of all quizzes created by the logged-in professor.
 router.get("/", authenticateToken, requireRole("professor"), getMyQuizzes);
