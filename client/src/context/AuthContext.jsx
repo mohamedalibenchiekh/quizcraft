@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 
 /**
  * SECURITY NOTE: Role claims decoded here are for UI cosmetic purposes only
@@ -10,17 +10,29 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+function decodeToken(token) {
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      localStorage.removeItem('token');
+      return null;
+    }
+    return { name: payload.name, email: payload.email, role: payload.role };
+  } catch {
+    return null;
+  }
+}
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+  const [user, setUser] = useState(() => decodeToken(localStorage.getItem('token')));
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUser({ name: payload.name, email: payload.email, role: payload.role });
-        localStorage.setItem('token', token);
-      } catch (e) {
+      const decoded = decodeToken(token);
+      if (!decoded) {
         localStorage.removeItem('token');
         setToken(null);
         setUser(null);
@@ -29,20 +41,23 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('token');
       setUser(null);
     }
+    setLoading(false);
   }, [token]);
 
-  const login = (newToken, userData) => {
+  const login = useCallback((newToken, userData) => {
+    localStorage.setItem('token', newToken);
     setToken(newToken);
     setUser(userData);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-  };
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

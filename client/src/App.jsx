@@ -18,8 +18,18 @@ import QuizAnalytics from './pages/QuizAnalytics';
 
 import './App.css';
 
+const Spinner = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2" style={{ borderColor: '#8b5cf6' }} />
+  </div>
+);
+
 const ProtectedRoute = ({ children, allowedRole }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <Spinner />;
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -39,9 +49,13 @@ const ProtectedRoute = ({ children, allowedRole }) => {
  * Otherwise redirects to the landing page.
  */
 const SessionGuard = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
   const hasRoomCode = Boolean(location.state?.roomCode);
+
+  if (loading) {
+    return <Spinner />;
+  }
 
   if (!user && !hasRoomCode) {
     return <Navigate to="/" replace />;
