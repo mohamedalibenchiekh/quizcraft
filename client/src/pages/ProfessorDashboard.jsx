@@ -66,17 +66,17 @@ const ProfessorDashboard = () => {
   const draftCount = quizzes.filter(q => !q.isApproved).length;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in-up">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in-up text-slate-900 dark:text-white">
       {/* Header section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1
-            className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 via-cyan-400 to-green-400 bg-clip-text text-transparent"
+            className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             Professor Dashboard
           </h1>
-          <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             Manage your quizzes, configure drafts, publish to classrooms, and trigger live sessions.
           </p>
         </div>
@@ -96,14 +96,14 @@ const ProfessorDashboard = () => {
 
       {/* Error block */}
       {error && (
-        <div className="mb-8 p-4 border border-red-500/30 bg-red-950/20 text-red-300 rounded-xl">
+        <div className="mb-8 p-4 border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300 rounded-xl">
           <p className="text-sm font-medium">{error}</p>
         </div>
       )}
 
       {/* Filter Tabs & Stats Panel */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-800">
-        <div className="inline-flex p-1 rounded-lg bg-slate-950/45 border border-slate-800/85">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="inline-flex p-1 rounded-lg bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
           {[
             { id: 'all', label: 'All Quizzes', count: totalCount },
             { id: 'published', label: 'Published Only', count: publishedCount },
@@ -114,11 +114,11 @@ const ProfessorDashboard = () => {
               onClick={() => setFilter(tab.id)}
               className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 flex items-center space-x-1.5 ${filter === tab.id
                   ? 'bg-indigo-600/90 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
               <span>{tab.label}</span>
-              <span className={`px-1.5 py-0.5 rounded text-[10px] ${filter === tab.id ? 'bg-indigo-500 text-white' : 'bg-slate-900 text-slate-500'
+              <span className={`px-1.5 py-0.5 rounded text-[10px] ${filter === tab.id ? 'bg-indigo-500 text-white' : 'bg-slate-300 dark:bg-slate-900 text-slate-600 dark:text-slate-500'
                 }`}>
                 {tab.count}
               </span>
@@ -134,15 +134,15 @@ const ProfessorDashboard = () => {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span className="text-slate-400 text-sm font-medium">Loading quizzes...</span>
+          <span className="text-slate-600 dark:text-slate-400 text-sm font-medium">Loading quizzes...</span>
         </div>
       ) : filteredQuizzes.length === 0 ? (
-        <div className="border-2 border-dashed border-slate-800 rounded-2xl p-16 text-center bg-slate-950/10">
-          <svg className="mx-auto h-12 w-12 text-slate-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-16 text-center bg-white dark:bg-slate-900">
+          <svg className="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
-          <h3 className="text-slate-300 font-bold text-lg mb-1">No quizzes found</h3>
-          <p className="text-slate-500 text-sm max-w-md mx-auto">
+          <h3 className="text-slate-800 dark:text-white font-bold text-lg mb-1">No quizzes found</h3>
+          <p className="text-slate-600 dark:text-slate-400 text-sm max-w-md mx-auto">
             {filter === 'all'
               ? "You haven't created any quizzes yet. Click 'Create New Quiz' to get started."
               : `No quizzes match the filter "${filter === 'published' ? 'Published' : 'Drafts'}".`}
@@ -153,7 +153,7 @@ const ProfessorDashboard = () => {
           {filteredQuizzes.map((quiz) => (
             <div
               key={quiz._id}
-              className="glass-card hover:translate-y-[-2px] transition-all duration-300 hover:border-indigo-500/25 flex flex-col justify-between overflow-hidden relative shadow-lg"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:translate-y-[-2px] transition-all duration-300 hover:border-indigo-500/25 flex flex-col justify-between overflow-hidden relative shadow-lg"
             >
               {/* Card top gradient bar */}
               <div className={`h-1.5 w-full ${quiz.isApproved ? 'bg-gradient-to-r from-emerald-500 to-green-400' : 'bg-gradient-to-r from-slate-600 to-slate-500'}`} />
@@ -163,38 +163,38 @@ const ProfessorDashboard = () => {
                   {/* Status Badge & Question Count */}
                   <div className="flex justify-between items-center mb-4">
                     {quiz.isApproved ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950/65 text-emerald-400 border border-emerald-500/20">
-                        <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/65 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                        <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
                         Published
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-950/65 text-slate-400 border border-slate-500/20">
-                        <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-slate-400"></span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-950/65 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-500/20">
+                        <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-slate-500 dark:bg-slate-400"></span>
                         Draft
                       </span>
                     )}
-                    <span className="text-xs text-slate-500 font-medium">
+                    <span className="text-slate-500 dark:text-slate-500 text-xs font-medium">
                       {quiz.questions?.length || 0} Questions
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-white mb-2 line-clamp-1" title={quiz.title}>
+                  <h3 className="text-slate-800 dark:text-white font-bold text-xl mb-2 line-clamp-1" title={quiz.title}>
                     {quiz.title}
                   </h3>
-                  <p className="text-sm text-slate-400 mb-6 line-clamp-2 h-10">
+                  <p className="text-slate-600 dark:text-slate-400 text-sm mb-6 line-clamp-2 h-10">
                     {quiz.description || "No description provided."}
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   {/* Interactive toggles */}
-                  <div className="flex justify-between items-center pt-4 border-t border-slate-800/70">
+                  <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-800">
                     <button
                       onClick={() => handleToggleApprove(quiz._id)}
                       disabled={toggleLoading[quiz._id]}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 flex items-center space-x-1.5 hover:translate-y-[-1px] disabled:opacity-50 ${quiz.isApproved
-                          ? 'bg-amber-950/20 text-amber-300 border-amber-500/30 hover:bg-amber-950/40'
-                          : 'bg-emerald-950/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-950/40'
+                          ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border-amber-200 dark:border-amber-900/50 hover:bg-amber-200 dark:hover:bg-amber-950/60'
+                          : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-200 dark:hover:bg-emerald-950/60'
                         }`}
                     >
                       {toggleLoading[quiz._id] ? (
@@ -222,7 +222,7 @@ const ProfessorDashboard = () => {
                       )}
                     </button>
 
-                    <span className="text-[10px] text-slate-500">
+                    <span className="text-slate-500 dark:text-slate-500 text-xs">
                       Created {new Date(quiz.createdAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -232,9 +232,9 @@ const ProfessorDashboard = () => {
                     <button
                       onClick={() => navigate('/host-session', { state: { quizId: quiz._id } })}
                       disabled={!quiz.isApproved}
-                      className={`flex-1 px-3 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center space-x-1 text-white ${quiz.isApproved
-                          ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-md cursor-pointer hover:translate-y-[-1px]'
-                          : 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-50'
+                      className={`flex-1 px-3 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center space-x-1 ${quiz.isApproved
+                          ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-md cursor-pointer hover:translate-y-[-1px]'
+                          : 'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-70'
                         }`}
                       title={quiz.isApproved ? "Start a live game session" : "Publish the quiz to activate live sessions"}
                     >
@@ -246,14 +246,14 @@ const ProfessorDashboard = () => {
                     </button>
 
                     <button
-                      className="px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all duration-200 cursor-pointer text-slate-300 border-slate-800 hover:bg-slate-950 hover:text-white"
+                      className="px-3 py-2.5 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-all duration-200 cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                       onClick={() => navigate(`/quizzes/edit/${quiz._id}`)}
                     >
                       Edit
                     </button>
 
                     <button
-                      className="px-3 py-2.5 rounded-lg text-xs font-bold border transition-all duration-200 cursor-pointer text-cyan-400 border-cyan-950/50 bg-cyan-950/10 hover:bg-cyan-950/30 hover:text-cyan-300"
+                      className="px-3 py-2.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 transition-all duration-200 cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                       onClick={() => navigate(`/quizzes/analytics/${quiz._id}`)}
                     >
                       Analytics

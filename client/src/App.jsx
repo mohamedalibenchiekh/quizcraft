@@ -98,7 +98,7 @@ const AppRoutes = () => {
         path="/dashboard"
         element={
           <ProtectedRoute allowedRole="professor">
-            <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white">
               <Navbar />
               <ProfessorDashboard />
             </div>
