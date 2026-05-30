@@ -141,6 +141,7 @@ export const generateQuizFromPrompt = async (topic, questionCount, difficulty, i
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
+        abortSignal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
         responseMimeType: "application/json",
         responseSchema: {
           type: "OBJECT",
