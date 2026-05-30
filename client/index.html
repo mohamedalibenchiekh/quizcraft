@@ -10,6 +10,21 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <title>QuizCraft – AI-Powered Interactive Quiz Platform</title>
+    <script>
+      (function() {
+        var theme;
+        try {
+          theme = localStorage.getItem('theme');
+        } catch {}
+        if (!theme) {
+          theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        if (theme === 'light') {
+          document.documentElement.classList.add('light');
+        }
+        document.documentElement.style.setProperty('color-scheme', theme);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
