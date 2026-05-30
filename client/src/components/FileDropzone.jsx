@@ -39,10 +39,10 @@ const FileDropzone = ({ files, onAddFiles, onRemoveFile, disabled }) => {
     <section className="glass-card p-6 shadow-xl">
       <div className="flex items-start justify-between gap-4 mb-5">
         <div>
-          <h2 className="text-xl font-bold text-white">Source Documents</h2>
-          <p className="mt-1 text-sm text-slate-400">Attach up to five lecture files for text extraction.</p>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white">Source Documents</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Attach up to five lecture files for text extraction.</p>
         </div>
-        <span className="rounded-full border border-cyan-400/25 bg-cyan-950/25 px-3 py-1 text-xs font-bold text-cyan-200">
+        <span className="rounded-full border border-cyan-400/25 bg-cyan-50 dark:bg-cyan-950/25 px-3 py-1 text-xs font-bold text-cyan-700 dark:text-cyan-200">
           PDF / DOCX
         </span>
       </div>
@@ -64,8 +64,8 @@ const FileDropzone = ({ files, onAddFiles, onRemoveFile, disabled }) => {
         aria-disabled={disabled}
         className={`rounded-2xl border-2 border-dashed p-8 text-center transition-all ${
           isDragging
-            ? 'border-cyan-300 bg-cyan-950/25'
-            : 'border-slate-700 bg-slate-950/20 hover:border-cyan-400/70 hover:bg-slate-950/35'
+            ? 'border-cyan-300 bg-cyan-50 dark:bg-cyan-950/25'
+            : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/20 hover:border-cyan-400/70 hover:bg-slate-100 dark:hover:bg-slate-950/35'
         } ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
       >
         <input
@@ -81,13 +81,13 @@ const FileDropzone = ({ files, onAddFiles, onRemoveFile, disabled }) => {
           }}
           className="sr-only"
         />
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-950/30 text-cyan-200">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-200">
           <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 16V4m0 0L7 9m5-5 5 5M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5" />
           </svg>
         </div>
-        <p className="text-base font-bold text-white">Drop files here or click to browse</p>
-        <p className="mt-2 text-sm text-slate-400">Only `.pdf` and `.docx` documents are accepted.</p>
+        <p className="text-base font-bold text-slate-800 dark:text-white">Drop files here or click to browse</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Only `.pdf` and `.docx` documents are accepted.</p>
       </div>
 
       <div className="mt-5 flex items-center justify-between text-xs text-slate-500">
@@ -100,7 +100,7 @@ const FileDropzone = ({ files, onAddFiles, onRemoveFile, disabled }) => {
           {files.map((file, index) => (
             <span
               key={`${file.name}-${file.size}-${file.lastModified}`}
-              className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-700 bg-slate-950/45 px-3 py-1.5 text-xs font-semibold text-slate-200"
+              className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
             >
               <span className="truncate">{file.name}</span>
               <button

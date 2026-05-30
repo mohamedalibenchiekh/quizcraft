@@ -78,12 +78,12 @@ const StudentDashboard = () => {
       </div>
 
       {fetchError && (
-        <div className="mb-8 p-4 border border-red-500/30 bg-red-950/20 text-red-300 rounded-xl">
+        <div className="mb-8 p-4 border border-red-500/30 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300 rounded-xl">
           <p className="text-sm font-medium">{fetchError}</p>
         </div>
       )}
       {pinError && (
-        <div className="mb-4 p-3 border border-red-500/30 bg-red-950/20 text-red-300 rounded-xl">
+        <div className="mb-4 p-3 border border-red-500/30 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300 rounded-xl">
           <p className="text-sm font-medium">{pinError}</p>
         </div>
       )}
@@ -159,7 +159,7 @@ const StudentDashboard = () => {
 
           <div className="glass-card p-5 flex flex-col items-center justify-center text-center">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: 'rgba(34, 197, 94, 0.12)' }}>
-              <svg className="w-5 h-5" style={{ color: '#4ade80' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5" style={{ color: 'var(--color-accent-green-500)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
@@ -173,7 +173,7 @@ const StudentDashboard = () => {
 
           <div className="glass-card p-5 flex flex-col items-center justify-center text-center">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: 'rgba(234, 179, 8, 0.12)' }}>
-              <svg className="w-5 h-5" style={{ color: '#fbbf24' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5" style={{ color: 'var(--color-accent-400)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
             </div>
@@ -188,7 +188,7 @@ const StudentDashboard = () => {
       </div>
 
       <div className="glass-card overflow-hidden">
-        <div className="p-6 border-b border-slate-800/70">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800/70">
           <h2 className="text-lg font-extrabold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
             Historical Review
           </h2>
@@ -199,19 +199,19 @@ const StudentDashboard = () => {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <svg className="w-10 h-10 animate-spin text-indigo-500 mb-3" fill="none" viewBox="0 0 24 24">
+            <svg className="w-10 h-10 animate-spin text-indigo-500 dark:text-indigo-400 mb-3" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            <span className="text-slate-400 text-sm font-medium">Loading attempts…</span>
+            <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">Loading attempts…</span>
           </div>
         ) : attempts.length === 0 ? (
-          <div className="border-2 border-dashed border-slate-800 rounded-2xl p-16 text-center bg-slate-950/10 m-6">
-            <svg className="mx-auto h-12 w-12 text-slate-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-16 text-center bg-slate-50 dark:bg-slate-950/10 m-6">
+            <svg className="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-            <h3 className="text-slate-300 font-bold text-lg mb-1">No attempts yet</h3>
-            <p className="text-slate-500 text-sm max-w-md mx-auto">
+            <h3 className="text-slate-700 dark:text-slate-300 font-bold text-lg mb-1">No attempts yet</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md mx-auto">
               Complete a quiz or join a live session to see your results here.
             </p>
           </div>
@@ -219,7 +219,7 @@ const StudentDashboard = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-800/70">
+                <tr className="border-b border-slate-200 dark:border-slate-800/70">
                   <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
                     Quiz Title
                   </th>
@@ -237,9 +237,9 @@ const StudentDashboard = () => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/50">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800/50">
                 {attempts.map((attempt) => (
-                  <tr key={attempt._id} className="hover:bg-slate-950/30 transition-colors">
+                  <tr key={attempt._id} className="hover:bg-slate-100 dark:hover:bg-slate-950/30 transition-colors">
                     <td className="px-6 py-4">
                       <span className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                         {attempt.quizId?.title || 'Unknown Quiz'}
@@ -256,36 +256,28 @@ const StudentDashboard = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"
-                        style={{
-                          background:
-                            attempt.scoreRatio >= 0.85
-                              ? 'rgba(34, 197, 94, 0.12)'
-                              : attempt.scoreRatio >= 0.5
-                                ? 'rgba(234, 179, 8, 0.12)'
-                                : 'rgba(239, 68, 68, 0.12)',
-                          color:
-                            attempt.scoreRatio >= 0.85
-                              ? '#4ade80'
-                              : attempt.scoreRatio >= 0.5
-                                ? '#fbbf24'
-                                : '#f87171',
-                        }}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          attempt.scoreRatio >= 0.85
+                            ? 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400'
+                            : attempt.scoreRatio >= 0.5
+                              ? 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
+                              : 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400'
+                        }`}
                       >
                         {Math.round(attempt.scoreRatio * 100)}%
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       {attempt.adaptiveType === 'enrichment' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-500/10 text-green-400 border border-green-500/20">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-500/20">
                           <span>🏆</span> Enrichment
                         </span>
                       ) : attempt.adaptiveType === 'remediation' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-500/20">
                           <span>📚</span> Remediation
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-500/10 text-slate-400 border border-slate-500/10">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-500/10">
                           Standard
                         </span>
                       )}
