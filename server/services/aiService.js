@@ -160,7 +160,7 @@ export const generateQuizFromPrompt = async (topic, questionCount, difficulty, i
                   difficulty: { type: "STRING" },
                   options: { type: "ARRAY", items: { type: "STRING" } },
                   correctAnswer: { type: "STRING" },
-                  tags: { type: "ARRAY", items: { type: "STRING" } },
+                  tags: { type: "ARRAY", items: { type: "STRING" }, minItems: 2, maxItems: 3 },
                 },
                 required: ["type", "questionText", "options", "correctAnswer", "difficulty", "tags"],
               },
