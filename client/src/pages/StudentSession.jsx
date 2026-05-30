@@ -314,7 +314,7 @@ const StudentSession = () => {
             </div>
 
             {error && (
-              <div className="mb-4 p-3 rounded-lg border border-red-500/30 bg-red-950/20 text-red-300 text-sm text-center">
+              <div className="mb-4 p-3 rounded-lg border border-red-500/30 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300 text-sm text-center">
                 {error}
               </div>
             )}
@@ -386,8 +386,8 @@ const StudentSession = () => {
       <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center px-4" style={{ background: 'var(--color-surface-base)' }}>
         <div className="w-full max-w-lg text-center animate-fade-in-up">
           <div className="glass-card p-8">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mb-6" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80' }}>
-              <span className="w-2 h-2 mr-2 rounded-full animate-pulse" style={{ background: '#4ade80' }} />
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mb-6 bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400">
+              <span className="w-2 h-2 mr-2 rounded-full animate-pulse bg-green-500" />
               Connected
             </span>
 
@@ -486,7 +486,7 @@ const StudentSession = () => {
             <div className="w-full max-w-xl mx-auto space-y-4">
               <textarea
                 data-testid="short-answer-input"
-                className="w-full p-4 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-colors"
+                className="w-full p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-purple-500 transition-colors"
                 placeholder="Type your answer clearly here..."
                 value={shortAnswerText}
                 onChange={(e) => setShortAnswerText(e.target.value)}
@@ -495,7 +495,7 @@ const StudentSession = () => {
               />
               <button
                 data-testid="short-answer-submit"
-                className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all dark:border dark:border-purple-500/20"
                 onClick={handleShortAnswerSubmit}
                 disabled={frozen || !shortAnswerText.trim()}
               >
@@ -533,7 +533,7 @@ const StudentSession = () => {
             <div className="mt-6 relative">
               <div className="absolute inset-0 flex items-center justify-center z-10">
                 <div className="w-full max-w-md mx-auto text-center px-6 py-4 rounded-2xl backdrop-blur-sm" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                  <p className="text-sm font-semibold text-red-300">
+                  <p className="text-sm font-semibold text-red-700 dark:text-red-300">
                     Time's up! Waiting for results…
                   </p>
                 </div>
@@ -544,7 +544,7 @@ const StudentSession = () => {
             <div className="mt-6 relative">
               <div className="absolute inset-0 flex items-center justify-center z-10">
                 <div className="w-full max-w-md mx-auto text-center px-6 py-4 rounded-2xl backdrop-blur-sm" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                  <p className="text-sm font-semibold text-red-300">
+                  <p className="text-sm font-semibold text-red-700 dark:text-red-300">
                     Answer rejected — submitted too late!
                   </p>
                 </div>
@@ -578,10 +578,9 @@ const StudentSession = () => {
               <span className="text-5xl">{isCorrect ? '🎉' : isLate ? '⏰' : '😔'}</span>
             </div>
 
-            <h3 className="text-2xl font-extrabold mb-2" style={{
-              fontFamily: 'var(--font-display)',
-              color: isCorrect ? '#4ade80' : isLate ? '#fbbf24' : '#f87171',
-            }}>
+            <h3 className={`text-2xl font-extrabold mb-2 ${
+              isCorrect ? 'text-green-500 dark:text-green-400' : isLate ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400'
+            }`} style={{ fontFamily: 'var(--font-display)' }}>
               {isCorrect ? 'Correct!' : isLate ? "Time's Up!" : 'Incorrect'}
             </h3>
 
@@ -606,7 +605,7 @@ const StudentSession = () => {
                   <p className="text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>
                     Speed bonus: +{yourQuestionResult.speedPoints}
                     {yourQuestionResult.streakBonus > 0 && (
-                      <span className="ml-3" style={{ color: '#f59e0b' }}>🔥 Streak bonus: +{yourQuestionResult.streakBonus}</span>
+                      <span className="ml-3 text-amber-500 dark:text-amber-400">🔥 Streak bonus: +{yourQuestionResult.streakBonus}</span>
                     )}
                   </p>
                 )}
@@ -651,7 +650,7 @@ const StudentSession = () => {
                   <span className="flex-1 font-bold text-sm truncate" style={{ color: 'var(--color-text-primary)' }}>{entry.username}</span>
                   <span className="text-sm font-semibold" style={{ color: 'var(--color-brand-300)' }}>{entry.score.toLocaleString()}</span>
                   {entry.positionChange !== 0 && (
-                    <span className="text-xs font-semibold" style={{ color: entry.positionChange > 0 ? '#4ade80' : '#f87171' }}>
+                    <span className={`text-xs font-semibold ${entry.positionChange > 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                       {entry.positionChange > 0 ? `▲${entry.positionChange}` : `▼${Math.abs(entry.positionChange)}`}
                     </span>
                   )}

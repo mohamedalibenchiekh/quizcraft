@@ -194,8 +194,8 @@ const HostSession = () => {
               <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'rgba(239, 68, 68, 0.15)' }}>
                 <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </div>
-              <p className="text-red-300 font-semibold text-lg mb-2">Session Error</p>
-              <p className="text-slate-400 text-sm mb-6">{error}</p>
+              <p className="text-red-700 dark:text-red-300 font-semibold text-lg mb-2">Session Error</p>
+              <p className="text-slate-600 dark:text-slate-400 text-sm mb-6">{error}</p>
               <button onClick={() => navigate('/dashboard')} className="px-6 py-2.5 rounded-lg text-sm font-bold text-white" style={{ background: 'linear-gradient(135deg, var(--color-brand-500), #6d28d9)' }}>
                 Back to Dashboard
               </button>
@@ -203,7 +203,7 @@ const HostSession = () => {
           ) : (
             <>
               <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--color-brand-400)', borderTopColor: 'transparent' }} />
-              <p className="text-slate-400 text-sm font-medium">Creating live session…</p>
+              <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">Creating live session…</p>
             </>
           )}
         </div>
@@ -231,7 +231,7 @@ const HostSession = () => {
 
           {/* Error */}
           {error && (
-            <div className="mb-6 p-3 rounded-lg border border-red-500/30 bg-red-950/20 text-red-300 text-sm text-center">
+            <div className="mb-6 p-3 rounded-lg border border-red-500/30 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300 text-sm text-center">
               {error}
             </div>
           )}
@@ -311,7 +311,7 @@ const HostSession = () => {
               </p>
             )}
             {totalQuestions === 0 && (
-              <p className="text-xs mt-3 text-red-400 font-semibold">
+              <p className="text-xs mt-3 text-red-600 dark:text-red-400 font-semibold">
                 This quiz has 0 questions. Please add questions before starting.
               </p>
             )}
@@ -329,8 +329,8 @@ const HostSession = () => {
           {/* Header Bar */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>
-                <span className="w-2 h-2 mr-2 rounded-full animate-pulse" style={{ background: '#f87171' }} />
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-400">
+                <span className="w-2 h-2 mr-2 rounded-full animate-pulse bg-red-500" />
                 LIVE
               </span>
               <span className="text-sm font-mono font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
@@ -353,7 +353,7 @@ const HostSession = () => {
 
           {/* Error */}
           {error && (
-            <div className="mb-6 p-3 rounded-lg border border-red-500/30 bg-red-950/20 text-red-300 text-sm text-center">{error}</div>
+            <div className="mb-6 p-3 rounded-lg border border-red-500/30 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300 text-sm text-center">{error}</div>
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -451,7 +451,7 @@ const HostSession = () => {
 
                       {/* Position Change */}
                       {entry.positionChange !== 0 && (
-                        <span className="text-xs font-semibold" style={{ color: entry.positionChange > 0 ? '#4ade80' : '#f87171' }}>
+                        <span className={`text-xs font-semibold ${entry.positionChange > 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                           {entry.positionChange > 0 ? `▲${entry.positionChange}` : `▼${Math.abs(entry.positionChange)}`}
                         </span>
                       )}
@@ -498,7 +498,7 @@ const HostSession = () => {
                     <span className="text-lg mr-1">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${entry.placement}`}</span>
                     <span className="flex-1 font-bold text-sm" style={{ color: 'var(--color-text-primary)' }}>{entry.username}</span>
                     <span className="text-sm font-semibold" style={{ color: 'var(--color-brand-300)' }}>{entry.score.toLocaleString()} pts</span>
-                    {entry.currentStreak >= 2 && <span className="text-xs" style={{ color: '#f59e0b' }}>🔥{entry.currentStreak}</span>}
+                    {entry.currentStreak >= 2 && <span className="text-xs text-amber-500 dark:text-amber-400">🔥{entry.currentStreak}</span>}
                   </div>
                 ))}
               </div>

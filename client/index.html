@@ -21,6 +21,8 @@
         }
         if (theme === 'light') {
           document.documentElement.classList.add('light');
+        } else {
+          document.documentElement.classList.add('dark');
         }
         document.documentElement.style.setProperty('color-scheme', theme);
       })();

@@ -7,7 +7,7 @@ export const ThemeProvider = ({ children }) => {
     try {
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
-    } catch {}
+    } catch { /* ignore */ }
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
@@ -23,7 +23,7 @@ export const ThemeProvider = ({ children }) => {
     root.style.setProperty('color-scheme', theme);
     try {
       localStorage.setItem('theme', theme);
-    } catch {}
+    } catch { /* ignore */ }
   }, [theme]);
 
   const toggleTheme = useCallback(() => {

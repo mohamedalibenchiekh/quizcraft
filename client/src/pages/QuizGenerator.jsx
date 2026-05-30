@@ -159,16 +159,16 @@ const QuizGenerator = () => {
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 mb-8">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300 mb-2">
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-300 mb-2">
             Quiz Creation Workspace
           </p>
           <h1
-            className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-violet-300 via-cyan-300 to-green-300 bg-clip-text text-transparent"
+            className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-violet-600 via-cyan-600 to-green-600 dark:from-violet-300 dark:via-cyan-300 dark:to-green-300 bg-clip-text text-transparent"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             Quiz Generator
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
             Create quizzes from source documents with AI, or build a quiz manually with full control over every question.
           </p>
         </div>
@@ -176,13 +176,13 @@ const QuizGenerator = () => {
           type="button"
           onClick={() => navigate('/dashboard')}
           disabled={interactionLocked}
-          className="self-start lg:self-auto px-4 py-2 rounded-lg text-sm font-semibold border border-slate-700 text-slate-300 hover:text-white hover:border-cyan-400/50 disabled:opacity-50"
+          className="self-start lg:self-auto px-4 py-2 rounded-lg text-sm font-semibold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-cyan-400 disabled:opacity-50"
         >
           Back to Dashboard
         </button>
       </div>
 
-      <div className="mb-6 inline-flex w-full max-w-md rounded-xl border border-slate-800 bg-slate-950/40 p-1">
+      <div className="mb-6 inline-flex w-full max-w-md rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-950/40 p-1">
         {[
           { id: 'ai', label: 'AI Generator' },
           { id: 'manual', label: 'Manual Builder' },
@@ -199,7 +199,7 @@ const QuizGenerator = () => {
             className={`flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-all disabled:opacity-50 ${
               creationMode === mode.id
                 ? 'bg-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.2)]'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             {mode.label}
@@ -208,13 +208,13 @@ const QuizGenerator = () => {
       </div>
 
       {error && (
-        <div role="alert" className="mb-6 rounded-xl border border-red-500/35 bg-red-950/25 px-4 py-3 text-sm font-medium text-red-200">
+        <div role="alert" className="mb-6 rounded-xl border border-red-500/35 bg-red-50 dark:bg-red-950/25 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-200">
           {error}
         </div>
       )}
 
       {statusMessage && (
-        <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-950/20 px-4 py-3 text-sm font-semibold text-emerald-200">
+        <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20 px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-200">
           {statusMessage}
         </div>
       )}
@@ -240,17 +240,17 @@ const QuizGenerator = () => {
         <section className="glass-card gradient-border p-6 shadow-xl">
           <div>
             <div>
-              <h2 className="text-xl font-bold text-white">Manual Builder</h2>
-              <p className="mt-1 text-sm text-slate-400">
+              <h2 className="text-xl font-bold text-slate-800 dark:text-white">Manual Builder</h2>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                 Build questions one by one without using AI.
               </p>
             </div>
           </div>
 
           {!hasDraftQuestions && (
-            <div className="mt-6 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-950/20 p-10 text-center">
-              <p className="text-sm font-bold text-slate-300">No manual questions yet.</p>
-              <p className="mt-1 text-xs text-slate-500">Use Add Question below to start a draft without AI.</p>
+            <div className="mt-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/20 p-10 text-center">
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No manual questions yet.</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Use Add Question below to start a draft without AI.</p>
             </div>
           )}
         </section>
@@ -260,10 +260,10 @@ const QuizGenerator = () => {
         <section className="mt-8">
           <div className="mb-4 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-extrabold text-white">
+              <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white">
                 {creationMode === 'ai' ? 'Generated Quiz Preview' : 'Manual Quiz Draft'}
               </h2>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                 {creationMode === 'ai'
                   ? 'Review AI output, correct answers, and save when it is classroom-ready.'
                   : 'Add questions, fill the required fields, and save the finished draft.'}
@@ -275,7 +275,7 @@ const QuizGenerator = () => {
                   type="button"
                   onClick={onAddQuestion}
                   disabled={interactionLocked}
-                  className="rounded-xl border border-cyan-400/40 px-5 py-3 text-sm font-bold text-cyan-100 hover:bg-cyan-950/30 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl border border-cyan-400/40 px-5 py-3 text-sm font-bold text-cyan-700 dark:text-cyan-100 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Add Question
                 </button>
@@ -294,7 +294,7 @@ const QuizGenerator = () => {
           <div className="glass-card p-6 mb-6">
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-4">
               <div>
-                <label htmlFor="quizTitle" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">
+                <label htmlFor="quizTitle" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Quiz Title
                 </label>
                 <input
@@ -302,12 +302,12 @@ const QuizGenerator = () => {
                   value={quizTitle}
                   disabled={interactionLocked}
                   onChange={(event) => setQuizTitle(event.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
                   placeholder="e.g. Chapter 4 AI Review"
                 />
               </div>
               <div>
-                <label htmlFor="quizDescription" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">
+                <label htmlFor="quizDescription" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Description
                 </label>
                 <input
@@ -315,7 +315,7 @@ const QuizGenerator = () => {
                   value={description}
                   disabled={interactionLocked}
                   onChange={(event) => setDescription(event.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
                   placeholder="Optional student-facing context"
                 />
               </div>

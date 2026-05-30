@@ -45,7 +45,7 @@ const StudentReview = () => {
     return (
       <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4" style={{ background: 'var(--color-surface-base)' }}>
         <div className="glass-card p-8 text-center max-w-md">
-          <p className="text-red-300 mb-4">{error}</p>
+          <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
           <button
             onClick={() => navigate('/student/dashboard')}
             className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all cursor-pointer hover:translate-y-[-1px]"
@@ -104,11 +104,10 @@ const StudentReview = () => {
             </div>
             <div className="text-center">
               <span
-                className="block text-3xl font-extrabold"
-                style={{
-                  color: isHigh ? '#4ade80' : isMid ? '#fbbf24' : '#f87171',
-                  fontFamily: 'var(--font-display)',
-                }}
+                className={`block text-3xl font-extrabold ${
+                  isHigh ? 'text-green-500 dark:text-green-400' : isMid ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400'
+                }`}
+                style={{ fontFamily: 'var(--font-display)' }}
               >
                 {scorePct}%
               </span>
@@ -119,12 +118,11 @@ const StudentReview = () => {
 
         {attempt.adaptiveTriggered && (
           <div
-            className="mt-4 p-3 rounded-xl text-sm font-medium"
-            style={{
-              background: attempt.adaptiveType === 'enrichment' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
-              border: `1px solid ${attempt.adaptiveType === 'enrichment' ? 'rgba(34, 197, 94, 0.25)' : 'rgba(234, 179, 8, 0.25)'}`,
-              color: attempt.adaptiveType === 'enrichment' ? '#4ade80' : '#fbbf24',
-            }}
+            className={`mt-4 p-3 rounded-xl text-sm font-medium ${
+              attempt.adaptiveType === 'enrichment'
+                ? 'bg-green-100 dark:bg-green-500/10 border border-green-300 dark:border-green-500/25 text-green-700 dark:text-green-400'
+                : 'bg-yellow-100 dark:bg-yellow-500/10 border border-yellow-300 dark:border-yellow-500/25 text-yellow-700 dark:text-yellow-400'
+            }`}
           >
             {attempt.adaptiveType === 'enrichment'
               ? 'Advanced challenge unlocked — concept mastery confirmed!'
@@ -140,11 +138,11 @@ const StudentReview = () => {
             <div key={answer.questionId || idx} className="glass-card p-5">
               <div className="flex items-start gap-3 mb-3">
                 <span
-                  className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-extrabold"
-                  style={{
-                    background: isCorrect ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                    color: isCorrect ? '#4ade80' : '#f87171',
-                  }}
+                  className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-extrabold ${
+                    isCorrect
+                      ? 'bg-green-100 dark:bg-green-500/15 text-green-600 dark:text-green-400'
+                      : 'bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400'
+                  }`}
                 >
                   {idx + 1}
                 </span>
@@ -153,19 +151,20 @@ const StudentReview = () => {
                     {answer.questionText}
                   </p>
                   <div className="flex flex-wrap items-center gap-2 mt-1">
-                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(139, 92, 246, 0.08)', color: 'var(--color-text-muted)' }}>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-brand-500/8 text-slate-600 dark:text-slate-400">
                       {answer.questionType || 'Unknown'}
                     </span>
                     {answer.difficulty && (
-                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(139, 92, 246, 0.08)', color: 'var(--color-text-muted)' }}>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-brand-500/8 text-slate-600 dark:text-slate-400">
                         {answer.difficulty}
                       </span>
                     )}
                   </div>
                 </div>
                 <span
-                  className="flex-shrink-0 text-lg"
-                  style={{ color: isCorrect ? '#4ade80' : '#f87171' }}
+                  className={`flex-shrink-0 text-lg ${
+                    isCorrect ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'
+                  }`}
                 >
                   {isCorrect ? '✓' : '✗'}
                 </span>
@@ -174,7 +173,7 @@ const StudentReview = () => {
               <div className="ml-11 space-y-1.5">
                 <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                   Your answer:{' '}
-                  <span className="font-semibold" style={{ color: isCorrect ? '#4ade80' : '#f87171' }}>
+                  <span className={`font-semibold ${isCorrect ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {answer.selectedAnswer || '(No answer provided)'}
                   </span>
                 </p>
@@ -188,26 +187,13 @@ const StudentReview = () => {
                     return (
                       <span
                         key={oi}
-                        className="px-2.5 py-1 rounded-lg text-xs font-medium"
-                        style={{
-                          background: isOptionSelected
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${
+                          isOptionSelected
                             ? isCorrect
-                              ? 'rgba(34, 197, 94, 0.12)'
-                              : 'rgba(239, 68, 68, 0.12)'
-                            : 'rgba(139, 92, 246, 0.06)',
-                          border: `1px solid ${
-                            isOptionSelected
-                              ? isCorrect
-                                ? 'rgba(34, 197, 94, 0.3)'
-                                : 'rgba(239, 68, 68, 0.3)'
-                              : 'rgba(139, 92, 246, 0.1)'
-                          }`,
-                          color: isOptionSelected
-                            ? isCorrect
-                              ? '#4ade80'
-                              : '#f87171'
-                            : 'var(--color-text-muted)',
-                        }}
+                              ? 'bg-green-100 dark:bg-green-500/12 text-green-600 dark:text-green-400 border-green-300 dark:border-green-500/30'
+                              : 'bg-red-100 dark:bg-red-500/12 text-red-600 dark:text-red-400 border-red-300 dark:border-red-500/30'
+                            : 'bg-slate-50 dark:bg-brand-500/6 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-brand-500/10'
+                        }`}
                       >
                         {opt}
                       </span>
