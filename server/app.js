@@ -19,30 +19,48 @@ import analyticsRoutes from "./routes/analytics.js";
 // ─── Initialise app ─────────────────────────────────────
 const app = express();
 
-// ─── Global middleware ───────────────────────────────────
+// ─── Trust proxy ────────────────────────────────────────
 // Number of trusted reverse-proxy hops so express-rate-limit identifies real client IPs.
 // Set TRUST_PROXY=0 for direct-facing deployments, or higher values for multi-hop
 // topologies (e.g. Cloudflare → Nginx → app requires 2).
 const trustProxy = process.env.TRUST_PROXY;
 app.set("trust proxy", trustProxy !== undefined ? Number(trustProxy) : 1);
-app.use(express.json()); // parse JSON bodies
-app.use(
-  helmet({
-    contentSecurityPolicy: false, // Disabled since this is a pure JSON API and doesn't serve HTML
-  })
-); // secure HTTP headers
-app.use(morgan("dev")); // request logging
+
+// ─── CORS — must be among the FIRST middleware so preflight OPTIONS requests
+//          are handled before helmet / morgan / body-parser run.
 const allowedOrigins = [
-  process.env.CLIENT_URL, // Your live React production URL
-  'http://localhost:5173' // Retain for fallback local development testing
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
 ].filter(Boolean);
 
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
+  credentials: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+
+// Explicitly handle preflight for all routes (belt-and-suspenders)
+app.options("*", cors(corsOptions));
+
+// ─── Secure headers & logging ───────────────────────────
 app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
+  helmet({
+    contentSecurityPolicy: false,
   })
 );
+app.use(morgan("dev"));
+
+// ─── Body parser ────────────────────────────────────────
+app.use(express.json());
 
 // ─── API routes ──────────────────────────────────────────
 app.use("/api/auth", authRoutes);
