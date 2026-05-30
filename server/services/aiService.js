@@ -41,7 +41,8 @@ Requirements:
 - Exactly ${questionCount} questions at "${difficulty}" difficulty level.
 - A descriptive title specific to the content.
 - A 2-sentence description of what the quiz assesses.
-- 3+ relevant tags drawn from the content domain.
+- 3+ relevant tags drawn from the content domain for the overall quiz.
+- 2-3 specific tags for each individual question.
 - Each question must be grounded in the provided content.
 
 Output must match the provided JSON schema exactly.`;
@@ -159,8 +160,9 @@ export const generateQuizFromPrompt = async (topic, questionCount, difficulty, i
                   difficulty: { type: "STRING" },
                   options: { type: "ARRAY", items: { type: "STRING" } },
                   correctAnswer: { type: "STRING" },
+                  tags: { type: "ARRAY", items: { type: "STRING" } },
                 },
-                required: ["type", "questionText", "options", "correctAnswer", "difficulty"],
+                required: ["type", "questionText", "options", "correctAnswer", "difficulty", "tags"],
               },
             },
           },
