@@ -6,6 +6,10 @@ import Quiz from "../models/Quiz.js";
 import Question from "../models/Question.js";
 import Attempt from "../models/Attempt.js";
 import {
+  buildAdaptiveVariant,
+  REMEDIATION_LIMIT_MESSAGE,
+} from "../services/adaptiveEngine.js";
+import {
   startQuestion,
   recordAnswer,
   compileLeaderboard,
@@ -21,6 +25,13 @@ const NETWORK_BUFFER_MS = 500;
 const DEFAULT_QUESTION_DURATION_MS = 30000;
 
 const rooms = new Map();
+
+const sanitizeVariantMetadata = (variant) => ({
+  _id: variant._id,
+  baselineQuizId: variant.baselineQuizId,
+  type: variant.type,
+  attemptDepth: variant.attemptDepth,
+});
 
 const getRoom = (pin) => {
   if (!rooms.has(pin)) {
@@ -47,7 +58,7 @@ const getRoom = (pin) => {
  * Called when the host closes the quiz so that student dashboards
  * display historical results.
  */
-const persistAttempts = async (pinStr) => {
+const persistAttempts = async (io, pinStr) => {
   const room = rooms.get(pinStr);
   if (!room || !room.quizId) return;
 
@@ -111,6 +122,7 @@ const persistAttempts = async (pinStr) => {
       await Attempt.create({
         userId: uId,
         quizId: room.quizId,
+        baselineQuizId: room.quizId,
         answers: gradedAnswers,
         score: correctCount,
         totalQuestions,
@@ -118,6 +130,49 @@ const persistAttempts = async (pinStr) => {
         adaptiveTriggered,
         adaptiveType,
       });
+
+      if (adaptiveTriggered) {
+        const variantResult = await buildAdaptiveVariant({
+          baselineQuiz: quiz,
+          studentId: uId,
+          type: adaptiveType,
+          sourceQuestions: quiz.questions,
+          gradedAnswers,
+        });
+
+        const payload = {
+          success: true,
+          status: adaptiveType,
+          message:
+            variantResult.limitReached
+              ? REMEDIATION_LIMIT_MESSAGE
+              : adaptiveType === "remediation"
+                ? "Remediation block unlocked."
+                : "Advanced variant block triggered!",
+          data: {
+            score: correctCount,
+            totalQuestions,
+            scoreRatio,
+            correctCount,
+            adaptiveTriggered: Boolean(variantResult.variant),
+            adaptiveType,
+            baselineQuizId: room.quizId,
+          },
+        };
+
+        if (variantResult.variant && variantResult.questions.length > 0) {
+          payload.adaptiveVariantId = variantResult.variant._id;
+          payload.adaptiveVariant = sanitizeVariantMetadata(variantResult.variant);
+          payload.adaptiveDeck = variantResult.questions;
+          payload.adaptiveQuestions = variantResult.questions;
+        }
+
+        for (const [socketId, participant] of room.participants.entries()) {
+          if (participant.userId?.toString() === uId) {
+            io.to(socketId).emit("adaptive-session-result", payload);
+          }
+        }
+      }
 
       console.log(
         `[Socket] Persisted Attempt for user ${uId} – score ${correctCount}/${totalQuestions}`
@@ -519,7 +574,7 @@ export const initSocket = (httpServer) => {
       }
 
       // Persist attempts even on cancel so students don't lose progress
-      await persistAttempts(pinStr);
+      await persistAttempts(io, pinStr);
 
       io.to(pinStr).emit("room-terminated", { message: "The host has cancelled this session." });
 
@@ -556,7 +611,7 @@ export const initSocket = (httpServer) => {
       }
 
       // Persist attempts for all authenticated students before cleanup
-      await persistAttempts(pinStr);
+      await persistAttempts(io, pinStr);
 
       const finalLb = compileLeaderboard(pinStr);
       if (finalLb.length > 0) {
