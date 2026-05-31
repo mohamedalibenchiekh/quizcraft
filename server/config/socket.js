@@ -234,6 +234,10 @@ export const initSocket = (httpServer) => {
       credentials: true,
       methods: ["GET", "POST"],
     },
+    transports: ["polling", "websocket"],
+    allowUpgrades: true,
+    pingTimeout: 60000,
+    pingInterval: 25000,
   });
 
   io.on("connection", (socket) => {

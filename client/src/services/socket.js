@@ -18,6 +18,8 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || apiUrl.replace(/\/api$/, '
  */
 export const socket = io(SOCKET_URL, {
   autoConnect: false,
+  transports: ['polling', 'websocket'],  // start with polling, then upgrade
+  withCredentials: true,
 });
 
 /* ---------------------------------------------
