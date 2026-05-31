@@ -1,6 +1,23 @@
-import { DIFFICULTIES, clampQuestionCount } from '../utils/quizConstants';
+import { DIFFICULTIES, clampQuestionCount, QUESTION_TYPES } from '../utils/quizConstants';
 
-const AIParameterForm = ({ numQuestions, difficulty, onNumQuestionsChange, onDifficultyChange, isGenerating, isSaving, onSubmit }) => {
+const TOTAL_LABEL = { "MCQ": "MCQ", "True-False": "True/False", "Short-Answer": "Short Answer" };
+
+const matrixTotal = (matrix) =>
+  Object.values(matrix).reduce((s, d) => s + d.easy + d.medium + d.hard, 0);
+
+const AIParameterForm = ({
+  numQuestions,
+  difficulty,
+  onNumQuestionsChange,
+  onDifficultyChange,
+  isGenerating,
+  isSaving,
+  onSubmit,
+  isAdvanced,
+  matrix,
+  onToggleAdvanced,
+  onMatrixCellChange,
+}) => {
   const interactionLocked = isGenerating || isSaving;
 
   return (
@@ -15,7 +32,7 @@ const AIParameterForm = ({ numQuestions, difficulty, onNumQuestionsChange, onDif
               Number of Questions
             </label>
             <span className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-2 py-1 text-xs font-bold text-slate-800 dark:text-white">
-              {clampQuestionCount(numQuestions)}
+              {isAdvanced ? matrixTotal(matrix) : clampQuestionCount(numQuestions)}
             </span>
           </div>
           <input
@@ -24,7 +41,7 @@ const AIParameterForm = ({ numQuestions, difficulty, onNumQuestionsChange, onDif
             min="1"
             max="20"
             value={numQuestions}
-            disabled={interactionLocked}
+            disabled={interactionLocked || isAdvanced}
             onChange={(event) => onNumQuestionsChange(event.target.value)}
             className="w-full accent-cyan-400"
           />
@@ -34,7 +51,7 @@ const AIParameterForm = ({ numQuestions, difficulty, onNumQuestionsChange, onDif
             min="1"
             max="20"
             value={numQuestions}
-            disabled={interactionLocked}
+            disabled={interactionLocked || isAdvanced}
             onChange={(event) => onNumQuestionsChange(event.target.value)}
             className="mt-3 w-28 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
           />
@@ -47,7 +64,7 @@ const AIParameterForm = ({ numQuestions, difficulty, onNumQuestionsChange, onDif
               <button
                 key={option}
                 type="button"
-                disabled={interactionLocked}
+                disabled={interactionLocked || isAdvanced}
                 onClick={() => onDifficultyChange(option)}
                 className={`rounded-lg px-3 py-2 text-sm font-bold capitalize transition-all disabled:opacity-50 ${
                   difficulty === option
@@ -60,6 +77,72 @@ const AIParameterForm = ({ numQuestions, difficulty, onNumQuestionsChange, onDif
             ))}
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={onToggleAdvanced}
+          disabled={interactionLocked}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:border-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-all disabled:opacity-50"
+        >
+          <span className={`inline-block transition-transform duration-200 ${isAdvanced ? 'rotate-90' : ''}`}>
+            ▸
+          </span>
+          {isAdvanced ? 'Hide' : 'Show'} Advanced Parameters
+        </button>
+
+        {isAdvanced && (
+          <div className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Questions per Type × Difficulty
+            </p>
+            <div className="grid grid-cols-4 gap-x-2 gap-y-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <div className="text-left pl-1" />
+              <div>Easy</div>
+              <div>Medium</div>
+              <div>Hard</div>
+
+              {QUESTION_TYPES.map((type) => (
+                <div key={type} className="contents">
+                  <div className="flex items-center text-left text-sm font-semibold text-slate-700 dark:text-slate-300 pl-1">
+                    {TOTAL_LABEL[type]}
+                  </div>
+                  {["easy", "medium", "hard"].map((diff) => (
+                    <input
+                      key={diff}
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={matrix[type][diff]}
+                      disabled={interactionLocked}
+                      onChange={(e) => onMatrixCellChange(type, diff, e.target.value)}
+                      className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/60 px-1 py-1.5 text-sm font-semibold text-center text-slate-800 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-50"
+                    />
+                  ))}
+                </div>
+              ))}
+
+              <div className="flex items-center text-left text-xs font-bold text-slate-700 dark:text-slate-300 pl-1">
+                Totals
+              </div>
+              {["easy", "medium", "hard"].map((diff) => (
+                <div
+                  key={diff}
+                  className="rounded-md bg-cyan-50 dark:bg-cyan-950/30 px-1 py-1.5 text-sm font-bold text-cyan-700 dark:text-cyan-300"
+                >
+                  {QUESTION_TYPES.reduce((s, t) => s + (matrix[t][diff] || 0), 0)}
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-center">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Total Questions:{' '}
+              </span>
+              <span className="text-lg font-extrabold text-cyan-700 dark:text-cyan-300">
+                {matrixTotal(matrix)}
+              </span>
+            </div>
+          </div>
+        )}
 
         <button
           type="submit"

@@ -6,7 +6,6 @@ import AIParameterForm from '../components/AIParameterForm';
 import QuestionPreviewCard from '../components/QuestionPreviewCard';
 import useQuizForm from '../hooks/useQuizForm';
 import {
-  DIFFICULTIES,
   MAX_FILES,
   clampQuestionCount,
   normalizeQuestion,
@@ -37,6 +36,12 @@ const QuizGenerator = () => {
   const [quizTitle, setQuizTitle] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState([]);
+  const [isAdvanced, setIsAdvanced] = useState(false);
+  const [matrix, setMatrix] = useState({
+    "MCQ": { easy: 0, medium: 0, hard: 0 },
+    "True-False": { easy: 0, medium: 0, hard: 0 },
+    "Short-Answer": { easy: 0, medium: 0, hard: 0 },
+  });
   const [error, setError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -74,6 +79,20 @@ const QuizGenerator = () => {
     setFiles((currentFiles) => currentFiles.filter((_, index) => index !== fileIndex));
   };
 
+  const handleToggleAdvanced = () => {
+    setIsAdvanced((prev) => !prev);
+    setError('');
+    setStatusMessage('');
+  };
+
+  const handleMatrixCellChange = (type, difficulty, value) => {
+    const clamped = Math.min(20, Math.max(0, Number(value) || 0));
+    setMatrix((prev) => ({
+      ...prev,
+      [type]: { ...prev[type], [difficulty]: clamped },
+    }));
+  };
+
   const handleGenerate = async (event) => {
     event.preventDefault();
 
@@ -89,7 +108,22 @@ const QuizGenerator = () => {
 
     const formData = new FormData();
     files.forEach((file) => formData.append('documents', file));
-    formData.append('numQuestions', String(clampQuestionCount(numQuestions)));
+
+    if (isAdvanced) {
+      const total = Object.values(matrix).reduce(
+        (s, d) => s + d.easy + d.medium + d.hard, 0
+      );
+      if (total === 0) {
+        setError('Set at least one question in the advanced parameters matrix.');
+        setIsGenerating(false);
+        return;
+      }
+      formData.append('isAdvanced', 'true');
+      formData.append('matrix', JSON.stringify(matrix));
+      formData.append('numQuestions', String(total));
+    } else {
+      formData.append('numQuestions', String(clampQuestionCount(numQuestions)));
+    }
     formData.append('difficulty', difficulty);
 
     try {
@@ -238,6 +272,10 @@ const QuizGenerator = () => {
           onDifficultyChange={setDifficulty}
           isGenerating={isGenerating}
           isSaving={isSaving}
+          isAdvanced={isAdvanced}
+          matrix={matrix}
+          onToggleAdvanced={handleToggleAdvanced}
+          onMatrixCellChange={handleMatrixCellChange}
         />
       </form>
       ) : (

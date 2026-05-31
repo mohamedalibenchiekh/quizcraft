@@ -20,32 +20,61 @@ export const truncateText = (text, maxWords = MAX_WORDS) => {
 };
 
 /**
+ * Unpacks an advanced matrix into explicit natural-language instructions
+ * for the LLM, enumerating the exact count per type-and-difficulty cell.
+ *
+ * @param {object} matrix — e.g. { "MCQ": { easy: 2, medium: 3, hard: 1 }, ... }
+ * @returns {string} A multi-line instruction block (empty if nothing is requested).
+ */
+const buildDistributionInstructions = (matrix) => {
+  return Object.entries(matrix)
+    .flatMap(([type, difficulties]) =>
+      Object.entries(difficulties)
+        .filter(([_, count]) => count > 0)
+        .map(([diff, count]) => `- Generate exactly ${count} ${diff}-level ${type} questions.`)
+    )
+    .join("\n");
+};
+
+/**
  * Builds the full prompt for Gemini, combining instruction, question count,
- * difficulty, and source text/topic into a single content block.
+ * difficulty, optional distribution matrix, and source text/topic into a single
+ * content block.
  *
  * @param {string} topic         — The topic or document text.
  * @param {number} questionCount — Number of questions to generate.
  * @param {string} difficulty    — Target difficulty: "easy" | "medium" | "hard".
  * @param {boolean} isDocumentText — Whether topic is a grounded course document.
+ * @param {string} distributionInstructions — Optional per-type × per-difficulty breakdown.
  * @returns {string} The combined prompt string.
  */
-const buildPrompt = (topic, questionCount, difficulty, isDocumentText) => {
+const buildPrompt = (topic, questionCount, difficulty, isDocumentText, distributionInstructions = "") => {
   const sourceLabel = isDocumentText ? "document text" : "topic";
   const sourceText = isDocumentText ? truncateText(topic) : topic;
+
+  const requirements = [
+    "Requirements:",
+    distributionInstructions
+      ? `- Exactly ${questionCount} questions total.`
+      : `- Exactly ${questionCount} questions at "${difficulty}" difficulty level.`,
+    "- A descriptive title specific to the content.",
+    "- A 2-sentence description of what the quiz assesses.",
+    "- 3+ relevant tags drawn from the content domain for the overall quiz.",
+    "- 2-3 specific tags for each individual question.",
+    "- Each question must be grounded in the provided content.",
+    "",
+    "Output must match the provided JSON schema exactly.",
+  ];
+
+  if (distributionInstructions) {
+    requirements.splice(2, 0, "", distributionInstructions);
+  }
 
   return `Generate a complete quiz based on the following ${sourceLabel}.
 
 ${sourceLabel === "document text" ? `Document:\n${sourceText}\n` : `Topic: ${topic}`}
 
-Requirements:
-- Exactly ${questionCount} questions at "${difficulty}" difficulty level.
-- A descriptive title specific to the content.
-- A 2-sentence description of what the quiz assesses.
-- 3+ relevant tags drawn from the content domain for the overall quiz.
-- 2-3 specific tags for each individual question.
-- Each question must be grounded in the provided content.
-
-Output must match the provided JSON schema exactly.`;
+${requirements.join("\n")}`;
 };
 
 /**
@@ -125,16 +154,17 @@ export const transformAndValidateHFQuestions = (questions, requestedDifficulty) 
  * @param {number} questionCount — Number of questions to generate.
  * @param {string} difficulty    — Target difficulty: "easy" | "medium" | "hard".
  * @param {boolean} isDocumentText — Whether the topic is actually a grounded course text.
+ * @param {string} distributionInstructions — Optional per-type × per-difficulty breakdown.
  * @returns {Promise<{ title: string, description: string, tags: string[], questions: object[] }>}
  */
-export const generateQuizFromPrompt = async (topic, questionCount, difficulty, isDocumentText = false) => {
+export const generateQuizFromPrompt = async (topic, questionCount, difficulty, isDocumentText = false, distributionInstructions = "") => {
   if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "your_gemini_api_key_here") {
     throw new Error(
       "GEMINI_API_KEY is not configured. Set a valid Gemini API key in your environment.",
     );
   }
 
-  const prompt = buildPrompt(topic, questionCount, difficulty, isDocumentText);
+  const prompt = buildPrompt(topic, questionCount, difficulty, isDocumentText, distributionInstructions);
 
   let response;
   try {
@@ -155,11 +185,15 @@ export const generateQuizFromPrompt = async (topic, questionCount, difficulty, i
               items: {
                 type: "OBJECT",
                 properties: {
-                  type: { type: "STRING" },
-                  questionText: { type: "STRING" },
-                  difficulty: { type: "STRING" },
-                  options: { type: "ARRAY", items: { type: "STRING" } },
-                  correctAnswer: { type: "STRING" },
+                  type: { type: "STRING", description: "Must be one of: MCQ, True-False, Short-Answer" },
+                  questionText: { type: "STRING", description: "The question body text" },
+                  difficulty: { type: "STRING", description: "One of: easy, medium, hard" },
+                  options: {
+                    type: "ARRAY",
+                    items: { type: "STRING" },
+                    description: "For MCQ: array of 4 answer choices. For True-False: ['True', 'False']. For Short-Answer: empty array [].",
+                  },
+                  correctAnswer: { type: "STRING", description: "The correct answer text matching one of the options" },
                   tags: { type: "ARRAY", items: { type: "STRING" }, minItems: 2, maxItems: 3 },
                 },
                 required: ["type", "questionText", "options", "correctAnswer", "difficulty", "tags"],
@@ -232,8 +266,11 @@ export const generateQuizFromPrompt = async (topic, questionCount, difficulty, i
  * @param {string} params.difficulty   — Target difficulty: "easy" | "medium" | "hard".
  * @returns {Promise<{ title: string, description: string, tags: string[], questions: object[] }>}
  */
-export const generateQuestions = async ({ text, numQuestions, difficulty }) => {
-  return generateQuizFromPrompt(text, numQuestions, difficulty, true);
+export const generateQuestions = async ({ text, numQuestions, difficulty, isAdvanced, matrix }) => {
+  const distributionInstructions = isAdvanced && matrix
+    ? buildDistributionInstructions(matrix)
+    : "";
+  return generateQuizFromPrompt(text, numQuestions, difficulty, true, distributionInstructions);
 };
 
 // Dummy exports for backward compatibility and testing
