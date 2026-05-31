@@ -32,6 +32,7 @@ const QuizEdit = () => {
   const [fetchError, setFetchError] = useState('');
 
   const interactionLocked = saving;
+  const [isAllCollapsed, setIsAllCollapsed] = useState(false);
 
   useEffect(() => {
     const fetchQuiz = async () => {
@@ -135,6 +136,37 @@ const QuizEdit = () => {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in-up">
+      <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 py-4 px-6 mb-6 flex items-center justify-between shadow-lg rounded-xl">
+        <div className="flex items-center gap-4">
+          <h1 className="text-lg font-bold text-white max-w-xs truncate">{quizTitle || 'Edit Quiz'}</h1>
+          {questions.length > 0 && (
+            <span className="bg-slate-800 text-cyan-400 text-xs px-2.5 py-1 rounded-full border border-slate-700/60 font-medium">
+              {questions.length} Questions
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            disabled={interactionLocked}
+            className="px-4 py-2 rounded-lg text-sm font-semibold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-cyan-400 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          {questions.length > 0 && (
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={interactionLocked}
+              className="rounded-xl bg-emerald-400 px-5 py-2 text-sm font-black text-slate-950 shadow-[0_10px_24px_rgba(52,211,153,0.2)] hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 mb-8">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-300 mb-2">
@@ -150,14 +182,6 @@ const QuizEdit = () => {
             Modify quiz title, description, and questions. All changes are saved atomically.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard')}
-          disabled={interactionLocked}
-          className="self-start lg:self-auto px-4 py-2 rounded-lg text-sm font-semibold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-cyan-400 disabled:opacity-50"
-        >
-          Back to Dashboard
-        </button>
       </div>
 
       {error && (
@@ -183,6 +207,18 @@ const QuizEdit = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            {questions.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsAllCollapsed((prev) => !prev)}
+                className="rounded-xl border border-slate-600/40 px-4 py-2 text-sm font-bold text-slate-300 hover:bg-slate-800/50 transition-colors"
+              >
+                <svg className="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d={isAllCollapsed ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} />
+                </svg>
+                {isAllCollapsed ? 'Expand All' : 'Collapse All Details'}
+              </button>
+            )}
             <button
               type="button"
               onClick={onAddQuestion}
@@ -190,14 +226,6 @@ const QuizEdit = () => {
               className="rounded-xl border border-cyan-400/40 px-5 py-3 text-sm font-bold text-cyan-700 dark:text-cyan-100 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Add Question
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={interactionLocked}
-              className="rounded-xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 shadow-[0_10px_24px_rgba(52,211,153,0.2)] hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>
@@ -237,6 +265,8 @@ const QuizEdit = () => {
           {questions.map((question, questionIndex) => (
             <QuestionPreviewCard
               key={question.id}
+              elementId={`question-card-${question.id || questionIndex}`}
+              isCollapsed={isAllCollapsed}
               question={question}
               questionIndex={questionIndex}
               onUpdate={updateQuestion}
@@ -250,6 +280,25 @@ const QuizEdit = () => {
           ))}
         </div>
       </section>
+      {questions.length > 3 && (
+        <nav className="fixed right-6 top-32 hidden xl:flex flex-col gap-2 bg-slate-900/60 backdrop-blur border border-slate-800 p-3 rounded-2xl shadow-xl max-h-[60vh] overflow-y-auto custom-scrollbar">
+          {questions.map((question, i) => (
+            <button
+              key={question.id || i}
+              type="button"
+              onClick={() => {
+                document.getElementById(`question-card-${question.id || i}`)?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center',
+                });
+              }}
+              className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-cyan-600 text-xs font-bold text-slate-300 hover:text-white transition-colors"
+            >
+              {i + 1}
+            </button>
+          ))}
+        </nav>
+      )}
     </main>
   );
 };

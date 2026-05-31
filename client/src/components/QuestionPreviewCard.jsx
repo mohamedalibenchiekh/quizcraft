@@ -11,6 +11,8 @@ const QuestionPreviewCard = ({
   onRemoveChoice,
   onRemove,
   disabled,
+  elementId,
+  isCollapsed,
 }) => {
   const [tagInput, setTagInput] = useState('');
 
@@ -39,7 +41,7 @@ const QuestionPreviewCard = ({
   const tags = Array.isArray(question.tags) ? question.tags : [];
 
   return (
-    <article key={question.id} className="glass-card p-5 shadow-lg">
+    <article id={elementId} key={question.id} className="glass-card p-5 shadow-lg">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400 text-sm font-black text-slate-950">
@@ -93,6 +95,8 @@ const QuestionPreviewCard = ({
         className="w-full resize-none rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-4 py-3 text-sm text-slate-800 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60"
       />
 
+      {!isCollapsed && (
+        <>
       {question.type === 'MCQ' && (
         <div className="mt-4 space-y-3">
           <div className="flex items-center justify-between gap-3">
@@ -237,6 +241,8 @@ const QuestionPreviewCard = ({
           </div>
         )}
       </div>
+        </>
+      )}
     </article>
   );
 };

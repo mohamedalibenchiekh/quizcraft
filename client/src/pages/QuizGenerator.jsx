@@ -46,6 +46,7 @@ const QuizGenerator = () => {
   const [statusMessage, setStatusMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAllCollapsed, setIsAllCollapsed] = useState(false);
 
   const interactionLocked = isGenerating || isSaving;
   const hasDraftQuestions = generatedQuestions.length > 0;
@@ -195,6 +196,37 @@ const QuizGenerator = () => {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in-up">
+      <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 py-4 px-6 mb-6 flex items-center justify-between shadow-lg rounded-xl">
+        <div className="flex items-center gap-4">
+          <h1 className="text-lg font-bold text-white max-w-xs truncate">{quizTitle || 'New AI Quiz'}</h1>
+          {hasDraftQuestions && (
+            <span className="bg-slate-800 text-cyan-400 text-xs px-2.5 py-1 rounded-full border border-slate-700/60 font-medium">
+              {generatedQuestions.length} Questions
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            disabled={interactionLocked}
+            className="px-4 py-2 rounded-lg text-sm font-semibold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-cyan-400 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          {hasDraftQuestions && (
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={interactionLocked}
+              className="rounded-xl bg-emerald-400 px-5 py-2 text-sm font-black text-slate-950 shadow-[0_10px_24px_rgba(52,211,153,0.2)] hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSaving ? 'Saving...' : 'Save Quiz'}
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 mb-8">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-300 mb-2">
@@ -210,14 +242,6 @@ const QuizGenerator = () => {
             Create quizzes from source documents with AI, or build a quiz manually with full control over every question.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard')}
-          disabled={interactionLocked}
-          className="self-start lg:self-auto px-4 py-2 rounded-lg text-sm font-semibold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-cyan-400 disabled:opacity-50"
-        >
-          Back to Dashboard
-        </button>
       </div>
 
       <div className="mb-6 inline-flex w-full max-w-md rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-950/40 p-1">
@@ -312,6 +336,18 @@ const QuizGenerator = () => {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
+              {hasDraftQuestions && (
+                <button
+                  type="button"
+                  onClick={() => setIsAllCollapsed((prev) => !prev)}
+                  className="rounded-xl border border-slate-600/40 px-4 py-2 text-sm font-bold text-slate-300 hover:bg-slate-800/50 transition-colors"
+                >
+                  <svg className="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d={isAllCollapsed ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} />
+                  </svg>
+                  {isAllCollapsed ? 'Expand All' : 'Collapse All Details'}
+                </button>
+              )}
               {creationMode === 'manual' && (
                 <button
                   type="button"
@@ -322,14 +358,6 @@ const QuizGenerator = () => {
                   Add Question
                 </button>
               )}
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={interactionLocked}
-                className="rounded-xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 shadow-[0_10px_24px_rgba(52,211,153,0.2)] hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSaving ? 'Saving...' : 'Save to My Quizzes'}
-              </button>
             </div>
           </div>
 
@@ -368,6 +396,8 @@ const QuizGenerator = () => {
             {generatedQuestions.map((question, questionIndex) => (
               <QuestionPreviewCard
                 key={question.id}
+                elementId={`question-card-${question.id || questionIndex}`}
+                isCollapsed={isAllCollapsed}
                 question={question}
                 questionIndex={questionIndex}
                 onUpdate={updateQuestion}
@@ -381,6 +411,25 @@ const QuizGenerator = () => {
             ))}
           </div>
         </section>
+      )}
+      {hasDraftQuestions && generatedQuestions.length > 3 && (
+        <nav className="fixed right-6 top-32 hidden xl:flex flex-col gap-2 bg-slate-900/60 backdrop-blur border border-slate-800 p-3 rounded-2xl shadow-xl max-h-[60vh] overflow-y-auto custom-scrollbar">
+          {generatedQuestions.map((question, i) => (
+            <button
+              key={question.id || i}
+              type="button"
+              onClick={() => {
+                document.getElementById(`question-card-${question.id || i}`)?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center',
+                });
+              }}
+              className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-cyan-600 text-xs font-bold text-slate-300 hover:text-white transition-colors"
+            >
+              {i + 1}
+            </button>
+          ))}
+        </nav>
       )}
     </main>
   );
