@@ -1,20 +1,16 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
+import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.js";
+import { sendVerificationEmail, sendResetEmail } from "../utils/sendEmail.js";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/**
- * @desc    Register a new user (professor or student)
- * @route   POST /api/auth/register
- */
 export const register = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
 
-    // Validate presence and types of input
     if (!name || typeof name !== "string" || !name.trim()) {
       return res.status(400).json({ success: false, message: "Please provide a valid name" });
     }
@@ -35,42 +31,34 @@ export const register = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Role must be either 'professor' or 'student'" });
     }
 
-    // Check for existing user (prevents redundant hashing for known duplicate cases)
     const exists = await User.findOne({ email });
     if (exists) {
       return res.status(409).json({ success: false, message: "Email already registered" });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
     const user = await User.create({
       name: name.trim(),
       email: email.trim(),
       password: hashedPassword,
       role: role || "student",
+      isVerified: false,
+      verificationToken: tokenHash,
+      verificationTokenExpires: Date.now() + 86400000,
     });
 
-    // Generate token — payload carries the three claims needed by middleware
-    const token = jwt.sign(
-      { id: user._id, name: user.name, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
-    );
+    await sendVerificationEmail(user.email, rawToken);
 
     res.status(201).json({
       success: true,
-      token,
-      user: {
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      message: "Registration successful! Please check your email to verify your account.",
     });
   } catch (error) {
-    // Handle concurrent/race-condition duplicate email registration safely
     if (error.code === 11000) {
       return res.status(409).json({ success: false, message: "Email already registered" });
     }
@@ -78,10 +66,6 @@ export const register = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Authenticate user & return token
- * @route   POST /api/auth/login
- */
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -90,10 +74,16 @@ export const login = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Please provide email and password" });
     }
 
-    // Explicitly select password (excluded by default in schema)
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+
+    if (!user.isVerified) {
+      return res.status(401).json({
+        success: false,
+        message: "Your email has not been verified yet. Please check your inbox.",
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -121,10 +111,93 @@ export const login = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Change the authenticated user's password
- * @route   PUT /api/auth/password
- */
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      verificationToken: tokenHash,
+      verificationTokenExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Verification link is invalid or has expired.",
+      });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Email verified successfully. You can now log in.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const googleAuth = async (req, res, next) => {
+  try {
+    const { credential, role } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ success: false, message: "Google credential is required" });
+    }
+
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const { email, name, sub: googleId } = ticket.getPayload();
+
+    let user = await User.findOne({ email });
+
+    if (user) {
+      user.googleId = user.googleId || googleId;
+      user.isVerified = true;
+      await user.save();
+    } else {
+      user = await User.create({
+        name,
+        email,
+        password: "GOOGLE_OAUTH",
+        role: role || "student",
+        googleId,
+        isVerified: true,
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, name: user.name, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+    );
+
+    res.status(200).json({
+      success: true,
+      token,
+      user: {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    if (error.message?.includes("Token used too late") || error.message?.includes("Invalid token")) {
+      return res.status(401).json({ success: false, message: "Invalid or expired Google credential" });
+    }
+    next(error);
+  }
+};
+
 export const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -157,38 +230,6 @@ export const changePassword = async (req, res, next) => {
   }
 };
 
-function createTransporter() {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
-  if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
-    return nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: Number(SMTP_PORT) || 587,
-      secure: Number(SMTP_PORT) === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-    });
-  }
-  return null;
-}
-
-async function sendResetEmail(email, token) {
-  const clientUrl = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/+$/, "");
-  const resetUrl = `${clientUrl}/reset-password/${token}`;
-  const transporter = createTransporter();
-  if (transporter) {
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || "noreply@quizcraft.app",
-      to: email,
-      subject: "QuizCraft — Password Reset Request",
-      html: `<p>You requested a password reset.</p><p>Click <a href="${resetUrl}">here</a> to reset your password.</p><p>This link expires in 1 hour.</p>`,
-    });
-  }
-  console.log(`[RESET LINK] ${email} -> password reset link dispatched`);
-}
-
-/**
- * @desc    Send password reset email with expiring token
- * @route   POST /api/auth/forgot-password
- */
 export const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
@@ -211,10 +252,6 @@ export const forgotPassword = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Reset password using expiring token
- * @route   POST /api/auth/reset-password/:token
- */
 export const resetPassword = async (req, res, next) => {
   try {
     const { token } = req.params;

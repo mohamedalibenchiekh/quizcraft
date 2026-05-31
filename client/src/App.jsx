@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
 import ProfessorDashboard from './pages/ProfessorDashboard';
 import QuizGenerator from './pages/QuizGenerator';
 import QuizEdit from './pages/QuizEdit';
@@ -110,6 +111,15 @@ const AppRoutes = () => {
           <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
             <Navbar />
             <ResetPassword />
+          </div>
+        }
+      />
+      <Route
+        path="/verify-email/:token"
+        element={
+          <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+            <Navbar />
+            <VerifyEmail />
           </div>
         }
       />
