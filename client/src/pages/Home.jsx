@@ -148,6 +148,24 @@ const Home = () => {
     }
   };
 
+  // Demo modal: close on Escape and lock body scroll while open
+  useEffect(() => {
+    if (!isDemoOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setIsDemoOpen(false);
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isDemoOpen]);
+
   return (
     <div className="relative min-h-screen text-slate-100 overflow-x-hidden font-sans" style={{ background: '#090514' }}>
       <ParticleField />
@@ -173,6 +191,7 @@ const Home = () => {
             {/* Brand Logo Integration */}
             <Link
               to="/"
+              aria-label="QuizCraft home"
               className="flex items-center gap-2.5 group transition-all duration-300 hover:opacity-95"
             >
               <div
@@ -256,7 +275,7 @@ const Home = () => {
 
             {/* Headline */}
             <h1
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight mb-8 animate-fade-in-up"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-[5rem] font-black leading-[1.1] tracking-tight mb-8 animate-fade-in-up"
               style={{
                 fontFamily: 'var(--font-display)',
                 animationDelay: '100ms',
@@ -595,12 +614,22 @@ const Home = () => {
            Interactive Demo Video Modal
          ───────────────────────────────────── */}
       {isDemoOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md transition-all">
-          <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl animate-fade-in-up">
-            
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md transition-all"
+          onClick={() => setIsDemoOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="demo-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl animate-fade-in-up"
+          >
+
             {/* Close Button */}
-            <button 
+            <button
               onClick={() => setIsDemoOpen(false)}
+              aria-label="Close demo"
               className="absolute top-4 right-4 text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 p-2.5 rounded-full transition-all cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -608,7 +637,7 @@ const Home = () => {
 
             {/* Modal Title */}
             <div className="mb-4 pr-12">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
+              <h3 id="demo-modal-title" className="text-lg font-bold text-white flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
                 <Sparkles className="w-5 h-5 text-cyan-400" />
                 QuizCraft Interactive Walkthrough
               </h3>
