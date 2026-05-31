@@ -1,19 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  Sparkles, 
-  Activity, 
-  CheckCircle, 
-  ArrowRight, 
-  Play, 
-  X, 
-  BrainCircuit, 
-  User, 
-  ShieldAlert, 
+import {
+  Sparkles,
+  Activity,
+  CheckCircle,
+  ArrowRight,
+  Play,
+  X,
+  BrainCircuit,
   Trophy,
   GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import Navbar from '../components/Navbar';
 
 /* ─────────────────────────────────────────────
    Animated Background Particles
@@ -114,6 +113,110 @@ const ParticleField = () => {
 };
 
 /* ─────────────────────────────────────────────
+   Capability Feature Card
+   ───────────────────────────────────────────── */
+// Per-accent class sets are written out in full so Tailwind can detect them
+// (no string interpolation of color names). Tints use /10–/30 alphas so they
+// read correctly on both the light and dark themes.
+const ACCENTS = {
+  cyan: {
+    iconWrap: 'bg-cyan-500/10 border-cyan-500/20',
+    icon: 'text-cyan-400',
+    hoverBorder: 'hover:border-cyan-500/30',
+    tag: 'text-cyan-500 group-hover:text-cyan-400',
+    glow: 'from-cyan-500/5',
+  },
+  purple: {
+    iconWrap: 'bg-purple-500/10 border-purple-500/20',
+    icon: 'text-purple-400',
+    hoverBorder: 'hover:border-purple-500/30',
+    tag: 'text-purple-500 group-hover:text-purple-400',
+    glow: 'from-purple-500/5',
+  },
+  emerald: {
+    iconWrap: 'bg-emerald-500/10 border-emerald-500/20',
+    icon: 'text-emerald-400',
+    hoverBorder: 'hover:border-emerald-500/30',
+    tag: 'text-emerald-500 group-hover:text-emerald-400',
+    glow: 'from-emerald-500/5',
+  },
+};
+
+const FEATURES = [
+  {
+    accent: 'cyan',
+    icon: Sparkles,
+    title: 'Instant Document Ingestion',
+    body: 'Turn raw course PDFs, presentation decks, or unformatted text files into highly granular, multi-format question pools in seconds. Our engine maps directly to target course syllabi with exact context alignment.',
+    tag: 'Powered by LLM Context Mining',
+  },
+  {
+    accent: 'purple',
+    icon: Activity,
+    title: 'Automated Remediation Decks',
+    body: 'Say goodbye to standard uniform tests. The adaptive system catches specific user concept gaps and generates personalized recovery quiz decks to build student competence and target knowledge blockages.',
+    tag: 'Cognitive Mastery Engine',
+  },
+  {
+    accent: 'emerald',
+    icon: CheckCircle,
+    title: 'AI Short-Answer Evaluation',
+    body: 'Completely bypass exact keyword matches. The platform evaluates semantic conceptual validity of student text submissions, offering fair partial-point scoring, clear logic rationales, and robust feedback.',
+    tag: 'Semantic Embeddings Matcher',
+  },
+];
+
+const FeatureCard = ({ accent, icon: Icon, title, body, tag }) => {
+  const a = ACCENTS[accent];
+  return (
+    <div
+      className={`group relative backdrop-blur-md border border-[var(--color-nav-border)] p-8 rounded-2xl transition-all duration-500 hover:translate-y-[-6px] ${a.hoverBorder} flex flex-col justify-between`}
+      style={{ background: 'var(--color-surface-glass)' }}
+    >
+      <div>
+        <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 ${a.iconWrap}`}>
+          <Icon className={`w-6 h-6 ${a.icon}`} />
+        </div>
+        <h3 className="text-xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
+          {title}
+        </h3>
+        <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--color-text-secondary)' }}>
+          {body}
+        </p>
+      </div>
+      <span className={`text-xs font-bold flex items-center gap-1 transition-colors ${a.tag}`}>
+        {tag} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+      </span>
+      {/* Outer hover gradient light glow */}
+      <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${a.glow} to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   Social-Proof Metric
+   ───────────────────────────────────────────── */
+const METRICS = [
+  { icon: Trophy, iconColor: 'text-yellow-400', value: '15k+', label: 'Quizzes Generated' },
+  { icon: CheckCircle, iconColor: 'text-emerald-400', value: '98%', label: 'Grading Evaluation Accuracy' },
+  { icon: GraduationCap, iconColor: 'text-cyan-400', value: '3.5x', label: 'Student Mastery Speed' },
+];
+
+const MetricItem = ({ icon: Icon, iconColor, value, label }) => (
+  <div className="flex flex-col justify-center items-center p-4 hover:scale-105 transition-transform duration-300">
+    <div className="flex items-center gap-2 mb-2">
+      <Icon className={`w-5 h-5 ${iconColor}`} />
+      <span className="text-4xl md:text-5xl font-black tracking-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
+        {value}
+      </span>
+    </div>
+    <span className="text-xs md:text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>
+      {label}
+    </span>
+  </div>
+);
+
+/* ─────────────────────────────────────────────
    Home Page Component
    ───────────────────────────────────────────── */
 const Home = () => {
@@ -124,7 +227,11 @@ const Home = () => {
   const [isDemoOpen, setIsDemoOpen] = useState(false);
 
   const handleProfessorPortal = () => {
-    navigate('/login');
+    if (user) {
+      navigate(user.role === 'professor' ? '/dashboard' : '/student/dashboard');
+    } else {
+      navigate('/login');
+    }
   };
 
   const handleSignup = () => {
@@ -167,7 +274,10 @@ const Home = () => {
   }, [isDemoOpen]);
 
   return (
-    <div className="relative min-h-screen text-slate-100 overflow-x-hidden font-sans" style={{ background: '#090514' }}>
+    <div
+      className="relative min-h-screen overflow-x-hidden font-sans"
+      style={{ background: 'var(--color-surface-base)', color: 'var(--color-text-primary)' }}
+    >
       <ParticleField />
 
       {/* Radial Glow Accents */}
@@ -184,74 +294,10 @@ const Home = () => {
         style={{ background: 'radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 80%)' }}
       />
 
-      {/* ─── Premium Landing Page Custom Navbar ─── */}
-      <nav className="relative z-20 border-b border-purple-500/10 backdrop-blur-md bg-[#090514]/60">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            {/* Brand Logo Integration */}
-            <Link
-              to="/"
-              aria-label="QuizCraft home"
-              className="flex items-center gap-2.5 group transition-all duration-300 hover:opacity-95"
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-[0_2px_12px_rgba(139,92,246,0.2)] group-hover:shadow-[0_4px_18px_rgba(139,92,246,0.35)]"
-                style={{
-                  background: 'linear-gradient(135deg, #8b5cf6, #06b6d4)',
-                }}
-              >
-                <BrainCircuit className="w-5.5 h-5.5 text-white" />
-              </div>
-              <span
-                className="text-2xl font-black tracking-tight"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
-              >
-                Quiz<span style={{ color: '#8b5cf6' }}>Craft</span>
-              </span>
-            </Link>
-
-            {/* Nav Menu Links */}
-            <div className="flex items-center gap-4 sm:gap-6">
-              <a
-                href="#features"
-                className="text-sm font-medium hover:text-cyan-400 transition-colors duration-200 hidden sm:inline-block"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Features
-              </a>
-              {user ? (
-                <Link
-                  to={user.role === 'professor' ? '/dashboard' : '/student/dashboard'}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer bg-white/5 border border-white/10 hover:bg-white/10"
-                >
-                  <User className="w-4 h-4 text-purple-400" />
-                  Dashboard
-                </Link>
-              ) : (
-                <>
-                  <button
-                    onClick={handleProfessorPortal}
-                    className="text-sm font-semibold transition-colors duration-200 cursor-pointer hover:text-white"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    Login
-                  </button>
-                  <button
-                    onClick={handleSignup}
-                    className="px-5 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:shadow-lg shadow-[0_4px_14px_rgba(124,58,237,0.3)] hover:shadow-purple-500/20"
-                    style={{
-                      background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                      color: '#fff',
-                    }}
-                  >
-                    Sign Up
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* Shared, theme-aware navbar (brings ThemeToggle + auth states) */}
+      <div className="relative z-20">
+        <Navbar />
+      </div>
 
       {/* ─────────────────────────────────────
            SECTION A: THE MODERN SAAS HERO LAYER
@@ -260,7 +306,7 @@ const Home = () => {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             {/* Elite Badge */}
-            <div 
+            <div
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 animate-fade-in-up"
               style={{
                 background: 'rgba(139, 92, 246, 0.08)',
@@ -268,7 +314,7 @@ const Home = () => {
               }}
             >
               <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-              <span className="text-[10px] sm:text-xs font-bold tracking-widest uppercase text-cyan-300">
+              <span className="text-[10px] sm:text-xs font-bold tracking-widest uppercase text-cyan-500">
                 AI-Powered Adaptive Assessment Ecosystem
               </span>
             </div>
@@ -289,8 +335,9 @@ const Home = () => {
 
             {/* Subheadline (Double Persona Context) */}
             <p
-              className="text-base sm:text-lg md:text-xl max-w-3xl mx-auto mb-10 leading-relaxed text-slate-300 animate-fade-in-up"
+              className="text-base sm:text-lg md:text-xl max-w-3xl mx-auto mb-10 leading-relaxed animate-fade-in-up"
               style={{
+                color: 'var(--color-text-secondary)',
                 animationDelay: '200ms',
               }}
             >
@@ -304,10 +351,10 @@ const Home = () => {
             >
               <button
                 id="hero-professor-portal"
-                onClick={user ? () => navigate(user.role === 'professor' ? '/dashboard' : '/student/dashboard') : handleProfessorPortal}
+                onClick={handleProfessorPortal}
                 className="group relative px-8 py-4 rounded-xl text-base font-bold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:shadow-2xl w-full sm:w-auto flex items-center justify-center gap-2"
                 style={{
-                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                  background: 'linear-gradient(135deg, var(--color-brand-400), var(--color-brand-500))',
                   color: '#fff',
                   boxShadow: '0 8px 30px rgba(139, 92, 246, 0.4)',
                 }}
@@ -322,7 +369,7 @@ const Home = () => {
                 className="group px-8 py-4 rounded-xl text-base font-bold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] w-full sm:w-auto flex items-center justify-center gap-2"
                 style={{
                   background: 'rgba(139, 92, 246, 0.1)',
-                  color: 'var(--color-brand-300)',
+                  color: 'var(--color-brand-400)',
                   border: '1px solid rgba(139, 92, 246, 0.3)',
                 }}
               >
@@ -331,14 +378,14 @@ const Home = () => {
 
               <button
                 onClick={() => setIsDemoOpen(true)}
-                className="group px-8 py-4 rounded-xl text-base font-bold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:bg-white/10 w-full sm:w-auto flex items-center justify-center gap-2"
+                className="group px-8 py-4 rounded-xl text-base font-bold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] w-full sm:w-auto flex items-center justify-center gap-2"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  color: '#fff',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'var(--color-surface-glass)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-nav-border)',
                 }}
               >
-                <Play className="w-4 h-4 fill-white text-white group-hover:scale-110 transition-transform" />
+                <Play className="w-4 h-4 group-hover:scale-110 transition-transform" style={{ fill: 'currentColor' }} />
                 Watch Demo
               </button>
             </div>
@@ -349,22 +396,23 @@ const Home = () => {
               style={{ animationDelay: '400ms' }}
             >
               <div
-                className="bg-slate-950/60 backdrop-blur-xl border border-purple-500/20 p-6 sm:p-8 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+                className="backdrop-blur-xl border border-purple-500/20 p-6 sm:p-8 rounded-2xl"
                 style={{
+                  background: 'var(--color-surface-glass)',
                   boxShadow: isCodeFocused
-                    ? '0 0 45px rgba(139, 92, 246, 0.25), 0 8px 32px rgba(0,0,0,0.6)'
-                    : '0 8px 32px rgba(0,0,0,0.4)',
+                    ? '0 0 45px rgba(139, 92, 246, 0.25), 0 8px 32px rgba(0,0,0,0.25)'
+                    : '0 8px 32px rgba(0,0,0,0.18)',
                   transition: 'all 0.4s ease',
                 }}
               >
                 <div className="flex items-center justify-center gap-2 mb-4">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                  <span className="text-xs font-black uppercase tracking-wider text-emerald-500">
                     Live Session quick join
                   </span>
                 </div>
 
-                <p className="text-sm mb-5 text-slate-400">
+                <p className="text-sm mb-5" style={{ color: 'var(--color-text-secondary)' }}>
                   Enter a 6-character room code from your professor to instantly join a real-time live session.
                 </p>
 
@@ -384,17 +432,17 @@ const Home = () => {
                       placeholder="ABC123"
                       className="w-full px-4 py-3.5 rounded-xl text-center text-xl font-mono font-bold tracking-[0.25em] outline-none transition-all duration-300"
                       style={{
-                        background: 'rgba(9, 5, 20, 0.7)',
-                        color: '#f8f7ff',
+                        background: 'var(--color-surface-input)',
+                        color: 'var(--color-text-primary)',
                         border: isCodeFocused
                           ? '2px solid rgba(139, 92, 246, 0.7)'
                           : '2px solid rgba(139, 92, 246, 0.2)',
-                        caretColor: '#8b5cf6',
+                        caretColor: 'var(--color-brand-400)',
                       }}
                     />
                     <div
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-bold"
-                      style={{ color: roomCode.length === 6 ? '#34d399' : '#6b6480' }}
+                      style={{ color: roomCode.length === 6 ? '#34d399' : 'var(--color-text-muted)' }}
                     >
                       {roomCode.length}/6
                     </div>
@@ -428,83 +476,27 @@ const Home = () => {
       {/* ─────────────────────────────────────
            SECTION B: COMPREHENSIVE CAPABILITIES GRID (3 Columns)
          ───────────────────────────────────── */}
-      <section id="features" className="relative z-10 py-24 md:py-36 bg-[#090514]/40 border-t border-b border-purple-500/5">
+      <section id="features" className="relative z-10 py-24 md:py-36 border-t border-b border-purple-500/5">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          
+
           {/* Section Title Header */}
           <div className="text-center mb-20">
-            <span className="inline-block text-xs font-bold uppercase tracking-widest mb-3 text-cyan-400">
+            <span className="inline-block text-xs font-bold uppercase tracking-widest mb-3 text-cyan-500">
               State-of-the-Art Architecture
             </span>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
               Engineered for Deep Learning.
             </h2>
-            <p className="max-w-2xl mx-auto text-slate-400 text-base sm:text-lg">
+            <p className="max-w-2xl mx-auto text-base sm:text-lg" style={{ color: 'var(--color-text-secondary)' }}>
               QuizCraft leverages high-fidelity AI models to fully synthesize core syllabus structures, drive automated memory retention, and handle open grading pipelines.
             </p>
           </div>
 
           {/* 3-Column Capabilities Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
-            {/* Card 1 (AI Context Processing) */}
-            <div className="group relative bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-8 rounded-2xl transition-all duration-500 hover:translate-y-[-6px] hover:border-cyan-500/30 flex flex-col justify-between">
-              <div>
-                <div className="w-14 h-14 rounded-2xl bg-cyan-950/60 border border-cyan-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <Sparkles className="w-6 h-6 text-cyan-400" />
-                </div>
-                <h3 className="text-xl font-bold mb-4 tracking-tight text-white" style={{ fontFamily: 'var(--font-display)' }}>
-                  Instant Document Ingestion
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  Turn raw course PDFs, presentation decks, or unformatted text files into highly granular, multi-format question pools in seconds. Our engine maps directly to target course syllabi with exact context alignment.
-                </p>
-              </div>
-              <span className="text-xs font-bold text-cyan-400/80 flex items-center gap-1 group-hover:text-cyan-300">
-                Powered by LLM Context Mining <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </span>
-              {/* Outer hover gradient light glow */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            </div>
-
-            {/* Card 2 (Adaptive Learning Matrix) */}
-            <div className="group relative bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-8 rounded-2xl transition-all duration-500 hover:translate-y-[-6px] hover:border-purple-500/30 flex flex-col justify-between">
-              <div>
-                <div className="w-14 h-14 rounded-2xl bg-purple-950/60 border border-purple-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <Activity className="w-6 h-6 text-purple-400" />
-                </div>
-                <h3 className="text-xl font-bold mb-4 tracking-tight text-white" style={{ fontFamily: 'var(--font-display)' }}>
-                  Automated Remediation Decks
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  Say goodbye to standard uniform tests. The adaptive system catches specific user concept gaps and generates personalized recovery quiz decks to build student competence and target knowledge blockages.
-                </p>
-              </div>
-              <span className="text-xs font-bold text-purple-400/80 flex items-center gap-1 group-hover:text-purple-300">
-                Cognitive Mastery Engine <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </span>
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            </div>
-
-            {/* Card 3 (Semantic Smart Grading) */}
-            <div className="group relative bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-8 rounded-2xl transition-all duration-500 hover:translate-y-[-6px] hover:border-emerald-500/30 flex flex-col justify-between">
-              <div>
-                <div className="w-14 h-14 rounded-2xl bg-emerald-950/60 border border-emerald-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <CheckCircle className="w-6 h-6 text-emerald-400" />
-                </div>
-                <h3 className="text-xl font-bold mb-4 tracking-tight text-white" style={{ fontFamily: 'var(--font-display)' }}>
-                  AI Short-Answer Evaluation
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  Completely bypass exact keyword matches. The platform evaluates semantic conceptual validity of student text submissions, offering fair partial-point scoring, clear logic rationales, and robust feedback.
-                </p>
-              </div>
-              <span className="text-xs font-bold text-emerald-400/80 flex items-center gap-1 group-hover:text-emerald-300">
-                Semantic Embeddings Matcher <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </span>
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            </div>
-
+            {FEATURES.map((feature) => (
+              <FeatureCard key={feature.title} {...feature} />
+            ))}
           </div>
         </div>
       </section>
@@ -512,53 +504,19 @@ const Home = () => {
       {/* ─────────────────────────────────────
            SECTION C: SOCIAL PROOF & METRIC METADATA STRIP
          ───────────────────────────────────── */}
-      <section className="relative z-10 py-16 bg-[#070310] border-b border-purple-500/5">
+      <section className="relative z-10 py-16 border-b border-purple-500/5">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="bg-[#0e071e]/40 border border-purple-500/10 rounded-3xl p-8 md:p-12 relative overflow-hidden shadow-2xl">
+          <div
+            className="border border-purple-500/10 rounded-3xl p-8 md:p-12 relative overflow-hidden shadow-2xl"
+            style={{ background: 'var(--color-surface-glass)' }}
+          >
             {/* Interactive Glow Behind Metrics */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 h-[80px] bg-purple-500/5 rounded-full blur-[40px]" />
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4 divide-y md:divide-y-0 md:divide-x divide-purple-500/15 text-center relative z-10">
-              
-              {/* Metric 1 */}
-              <div className="flex flex-col justify-center items-center p-4 hover:scale-105 transition-transform duration-300">
-                <div className="flex items-center gap-2 mb-2">
-                  <Trophy className="w-5 h-5 text-yellow-400" />
-                  <span className="text-4xl md:text-5xl font-black text-white tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-                    15k+
-                  </span>
-                </div>
-                <span className="text-xs md:text-sm font-bold uppercase tracking-wider text-slate-400">
-                  Quizzes Generated
-                </span>
-              </div>
-
-              {/* Metric 2 */}
-              <div className="flex flex-col justify-center items-center p-4 hover:scale-105 transition-transform duration-300">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="w-5 h-5 text-emerald-400" />
-                  <span className="text-4xl md:text-5xl font-black text-white tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-                    98%
-                  </span>
-                </div>
-                <span className="text-xs md:text-sm font-bold uppercase tracking-wider text-slate-400">
-                  Grading Evaluation Accuracy
-                </span>
-              </div>
-
-              {/* Metric 3 */}
-              <div className="flex flex-col justify-center items-center p-4 hover:scale-105 transition-transform duration-300">
-                <div className="flex items-center gap-2 mb-2">
-                  <GraduationCap className="w-5 h-5 text-cyan-400" />
-                  <span className="text-4xl md:text-5xl font-black text-white tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-                    3.5x
-                  </span>
-                </div>
-                <span className="text-xs md:text-sm font-bold uppercase tracking-wider text-slate-400">
-                  Student Mastery Speed
-                </span>
-              </div>
-
+              {METRICS.map((metric) => (
+                <MetricItem key={metric.label} {...metric} />
+              ))}
             </div>
           </div>
         </div>
@@ -567,17 +525,17 @@ const Home = () => {
       {/* ─── Premium Call-To-Action Banner Section ─── */}
       <section className="relative z-10 py-24 md:py-36">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-6 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
             Empower Your Classroom Learning Ecosystem.
           </h2>
-          <p className="text-slate-300 text-base md:text-lg mb-10 max-w-xl mx-auto leading-relaxed">
+          <p className="text-base md:text-lg mb-10 max-w-xl mx-auto leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
             Join thousands of modern universities and premium educators leveraging intelligent adaptive grading engines to supercharge user success metrics.
           </p>
           <button
             onClick={handleSignup}
             className="group px-10 py-5 rounded-xl text-base font-bold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:shadow-2xl inline-flex items-center gap-2.5"
             style={{
-              background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+              background: 'linear-gradient(135deg, var(--color-brand-400), var(--color-brand-500))',
               color: '#fff',
               boxShadow: '0 8px 32px rgba(124, 58, 237, 0.4)',
             }}
@@ -589,20 +547,20 @@ const Home = () => {
       </section>
 
       {/* ─── Footer Section ─── */}
-      <footer className="relative z-10 border-t border-purple-500/10 py-12 bg-[#06030d]">
+      <footer className="relative z-10 border-t border-purple-500/10 py-12">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <span className="text-sm text-slate-500">
+            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
               © {new Date().getFullYear()} QuizCraft Inc. Engineered for next-gen academic institutions.
             </span>
             <div className="flex gap-6 text-sm">
-              <a href="#features" className="text-slate-400 hover:text-cyan-400 transition-colors">
+              <a href="#features" className="hover:text-cyan-400 transition-colors" style={{ color: 'var(--color-text-secondary)' }}>
                 Features
               </a>
-              <Link to="/login" className="text-slate-400 hover:text-cyan-400 transition-colors">
+              <Link to="/login" className="hover:text-cyan-400 transition-colors" style={{ color: 'var(--color-text-secondary)' }}>
                 Sign In
               </Link>
-              <Link to="/signup" className="text-slate-400 hover:text-cyan-400 transition-colors">
+              <Link to="/signup" className="hover:text-cyan-400 transition-colors" style={{ color: 'var(--color-text-secondary)' }}>
                 Sign Up
               </Link>
             </div>
@@ -623,42 +581,47 @@ const Home = () => {
             aria-modal="true"
             aria-labelledby="demo-modal-title"
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl animate-fade-in-up"
+            className="relative w-full max-w-4xl border border-[var(--color-nav-border)] rounded-3xl p-4 sm:p-6 shadow-2xl animate-fade-in-up"
+            style={{ background: 'var(--color-surface-card)' }}
           >
 
             {/* Close Button */}
             <button
               onClick={() => setIsDemoOpen(false)}
               aria-label="Close demo"
-              className="absolute top-4 right-4 text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 p-2.5 rounded-full transition-all cursor-pointer"
+              className="absolute top-4 right-4 hover:opacity-80 bg-black/5 dark:bg-white/5 p-2.5 rounded-full transition-all cursor-pointer"
+              style={{ color: 'var(--color-text-secondary)' }}
             >
               <X className="w-5 h-5" />
             </button>
 
             {/* Modal Title */}
             <div className="mb-4 pr-12">
-              <h3 id="demo-modal-title" className="text-lg font-bold text-white flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
+              <h3 id="demo-modal-title" className="text-lg font-bold flex items-center gap-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
                 <Sparkles className="w-5 h-5 text-cyan-400" />
                 QuizCraft Interactive Walkthrough
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
                 See how easy it is to automatically generate deep adaptive quizzes and grade them semantically.
               </p>
             </div>
 
             {/* Video Mockup Interface */}
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 flex flex-col items-center justify-center p-8 text-center">
+            <div
+              className="relative w-full aspect-video rounded-2xl overflow-hidden border border-[var(--color-nav-border)] flex flex-col items-center justify-center p-8 text-center"
+              style={{ background: 'var(--color-surface-base)' }}
+            >
               {/* SVG Mockup UI Elements */}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.15),transparent_70%)] pointer-events-none" />
-              
+
               <div className="w-20 h-20 rounded-full bg-purple-500/10 border border-purple-500/40 flex items-center justify-center mb-6 shadow-2xl">
                 <BrainCircuit className="w-10 h-10 text-purple-400 animate-pulse" />
               </div>
 
-              <h4 className="text-xl font-bold text-white mb-2" style={{ fontFamily: 'var(--font-display)' }}>
+              <h4 className="text-xl font-bold mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
                 QuizCraft System Simulation
               </h4>
-              <p className="text-sm text-slate-400 max-w-md mx-auto mb-6">
+              <p className="text-sm max-w-md mx-auto mb-6" style={{ color: 'var(--color-text-secondary)' }}>
                 Our team is currently finalizing our video recording. In the meantime, launch a free account to test all features live immediately!
               </p>
 

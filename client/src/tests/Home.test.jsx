@@ -7,6 +7,16 @@ import Home from "../pages/Home.jsx";
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
     user: null,
+    logout: vi.fn(),
+  }),
+}));
+
+// Home now renders the shared <Navbar />, which pulls in ThemeToggle/useTheme.
+// Mock the theme context so the component tree renders without a ThemeProvider.
+vi.mock('../context/ThemeContext', () => ({
+  useTheme: () => ({
+    theme: 'dark',
+    toggleTheme: vi.fn(),
   }),
 }));
 
