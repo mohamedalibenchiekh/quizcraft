@@ -1,48 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-
-/* ─────────────────────────────────────────────
-   Inline SVG Icon Components
-   ───────────────────────────────────────────── */
-
-const SparklesIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z" />
-    <path d="M5 3v4M3 5h4M19 17v4M17 19h4" />
-  </svg>
-);
-
-const BoltIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-  </svg>
-);
-
-const BrainIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z" />
-    <path d="M9 21h6M10 17v4M14 17v4" />
-    <path d="M12 2v4M8 5l2 2M16 5l-2 2" />
-  </svg>
-);
-
-const ArrowRightIcon = ({ className = 'w-5 h-5' }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12h14M12 5l7 7-7 7" />
-  </svg>
-);
-
-const GamepadIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="6" width="20" height="12" rx="2" />
-    <path d="M6 12h4M8 10v4M15 11h.01M18 13h.01" />
-  </svg>
-);
+import { useNavigate, Link } from 'react-router-dom';
+import { 
+  Sparkles, 
+  Activity, 
+  CheckCircle, 
+  ArrowRight, 
+  Play, 
+  X, 
+  BrainCircuit, 
+  User, 
+  ShieldAlert, 
+  Trophy,
+  GraduationCap
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 /* ─────────────────────────────────────────────
    Animated Background Particles
    ───────────────────────────────────────────── */
-
 const ParticleField = () => {
   const canvasRef = useRef(null);
 
@@ -61,15 +36,15 @@ const ParticleField = () => {
 
     const createParticles = () => {
       particles = [];
-      const count = Math.floor((canvas.width * canvas.height) / 15000);
+      const count = Math.floor((canvas.width * canvas.height) / 12000);
       for (let i = 0; i < count; i++) {
         particles.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          radius: Math.random() * 1.5 + 0.5,
-          vx: (Math.random() - 0.5) * 0.3,
-          vy: (Math.random() - 0.5) * 0.3,
-          opacity: Math.random() * 0.5 + 0.1,
+          radius: Math.random() * 2 + 0.5,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          opacity: Math.random() * 0.6 + 0.15,
         });
       }
     };
@@ -92,19 +67,18 @@ const ParticleField = () => {
         ctx.fill();
       });
 
-      // Draw connections between close particles
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
 
-          if (dist < 100) {
+          if (dist < 110) {
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(139, 92, 246, ${0.08 * (1 - dist / 100)})`;
-            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = `rgba(34, 211, 238, ${0.08 * (1 - dist / 110)})`;
+            ctx.lineWidth = 0.6;
             ctx.stroke();
           }
         }
@@ -134,79 +108,20 @@ const ParticleField = () => {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0"
-      style={{ opacity: 0.6 }}
+      style={{ opacity: 0.7 }}
     />
   );
 };
 
 /* ─────────────────────────────────────────────
-   Feature Card Component
+   Home Page Component
    ───────────────────────────────────────────── */
-
-const FeatureCard = ({ icon, title, description, gradient, delay }) => (
-  <div
-    className="group relative p-px rounded-2xl animate-fade-in-up"
-    style={{ animationDelay: `${delay}ms` }}
-  >
-    {/* Gradient border on hover */}
-    <div
-      className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-      style={{
-        background: gradient,
-        padding: '1px',
-        mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-        WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-        maskComposite: 'exclude',
-        WebkitMaskComposite: 'xor',
-      }}
-    />
-
-    <div
-      className="relative rounded-2xl p-8 h-full transition-all duration-500 group-hover:translate-y-[-4px]"
-      style={{
-        background: 'var(--color-surface-card)',
-        border: '1px solid rgba(139, 92, 246, 0.12)',
-      }}
-    >
-      {/* Icon container */}
-      <div
-        className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 transition-all duration-500 group-hover:scale-110"
-        style={{ background: gradient }}
-      >
-        <span className="text-white">{icon}</span>
-      </div>
-
-      <h3
-        className="text-xl font-semibold mb-3"
-        style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
-      >
-        {title}
-      </h3>
-
-      <p
-        className="leading-relaxed text-sm"
-        style={{ color: 'var(--color-text-secondary)' }}
-      >
-        {description}
-      </p>
-
-      {/* Hover glow */}
-      <div
-        className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3/4 h-16 opacity-0 group-hover:opacity-30 transition-opacity duration-500 blur-2xl"
-        style={{ background: gradient }}
-      />
-    </div>
-  </div>
-);
-
-/* ─────────────────────────────────────────────
-   Main Home Page Component
-   ───────────────────────────────────────────── */
-
 const Home = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [roomCode, setRoomCode] = useState('');
   const [isCodeFocused, setIsCodeFocused] = useState(false);
+  const [isDemoOpen, setIsDemoOpen] = useState(false);
 
   const handleProfessorPortal = () => {
     navigate('/login');
@@ -233,220 +148,191 @@ const Home = () => {
     }
   };
 
-  const features = [
-    {
-      icon: <SparklesIcon />,
-      title: 'AI Auto-Generation',
-      description:
-        'Upload your PDFs, DOCX, or presentation files and let our AI engine instantly extract and craft high-quality quiz questions — complete with difficulty labels, categories, and answer explanations.',
-      gradient: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-    },
-    {
-      icon: <BoltIcon />,
-      title: 'Real-Time Sessions',
-      description:
-        'Launch live Kahoot-style quiz sessions with real-time WebSocket tracking. Watch student responses stream in live, see instant leaderboards, and keep the energy high with timed question rounds.',
-      gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)',
-    },
-    {
-      icon: <BrainIcon />,
-      title: 'Adaptive Learning Engine',
-      description:
-        'Our intelligent engine analyzes student scoring profiles in real-time and automatically adjusts question difficulty — surfacing harder questions for top performers and reinforcing fundamentals for those who need support.',
-      gradient: 'linear-gradient(135deg, #22c55e, #16a34a)',
-    },
-  ];
-
   return (
-    <div className="relative min-h-screen overflow-hidden" style={{ background: 'var(--color-surface-base)' }}>
+    <div className="relative min-h-screen text-slate-100 overflow-x-hidden font-sans" style={{ background: '#090514' }}>
       <ParticleField />
 
-      {/* ─── Radial Glow Accents ─── */}
+      {/* Radial Glow Accents */}
       <div
-        className="absolute top-[-300px] left-[-200px] w-[700px] h-[700px] rounded-full pointer-events-none z-0"
-        style={{ background: 'radial-gradient(circle, rgba(124, 58, 237, 0.15) 0%, transparent 70%)' }}
+        className="absolute top-[-250px] left-[-150px] w-[600px] h-[600px] rounded-full pointer-events-none z-0 filter blur-[120px]"
+        style={{ background: 'radial-gradient(circle, rgba(139, 92, 246, 0.18) 0%, transparent 80%)' }}
       />
       <div
-        className="absolute bottom-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none z-0"
-        style={{ background: 'radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 70%)' }}
+        className="absolute top-[20%] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none z-0 filter blur-[100px]"
+        style={{ background: 'radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 80%)' }}
+      />
+      <div
+        className="absolute bottom-[-150px] left-[15%] w-[600px] h-[600px] rounded-full pointer-events-none z-0 filter blur-[140px]"
+        style={{ background: 'radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 80%)' }}
       />
 
-      {/* ─────────────────────────────────────
-           Navigation Bar
-         ───────────────────────────────────── */}
-      <nav className="relative z-20">
+      {/* ─── Premium Landing Page Custom Navbar ─── */}
+      <nav className="relative z-20 border-b border-purple-500/10 backdrop-blur-md bg-[#090514]/60">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            {/* Brand */}
-            <div className="flex items-center gap-3">
+            {/* Brand Logo Integration */}
+            <Link
+              to="/"
+              className="flex items-center gap-2.5 group transition-all duration-300 hover:opacity-95"
+            >
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #8b5cf6, #06b6d4)' }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-[0_2px_12px_rgba(139,92,246,0.2)] group-hover:shadow-[0_4px_18px_rgba(139,92,246,0.35)]"
+                style={{
+                  background: 'linear-gradient(135deg, #8b5cf6, #06b6d4)',
+                }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
+                <BrainCircuit className="w-5.5 h-5.5 text-white" />
               </div>
               <span
-                className="text-2xl font-bold tracking-tight"
+                className="text-2xl font-black tracking-tight"
                 style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
               >
                 Quiz<span style={{ color: '#8b5cf6' }}>Craft</span>
               </span>
-            </div>
+            </Link>
 
-            {/* Desktop Nav Links */}
-            <div className="hidden md:flex items-center gap-6">
+            {/* Nav Menu Links */}
+            <div className="flex items-center gap-4 sm:gap-6">
               <a
                 href="#features"
-                className="text-sm font-medium transition-colors duration-200"
+                className="text-sm font-medium hover:text-cyan-400 transition-colors duration-200 hidden sm:inline-block"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
                 Features
               </a>
-              <button
-                id="nav-login"
-                onClick={handleProfessorPortal}
-                className="text-sm font-medium transition-colors duration-200 cursor-pointer bg-transparent border-none"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Login
-              </button>
-              <button
-                id="nav-signup"
-                onClick={handleSignup}
-                className="px-5 py-2.5 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer hover:translate-y-[-1px] hover:shadow-lg"
-                style={{
-                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                  color: '#fff',
-                  boxShadow: '0 4px 14px rgba(124, 58, 237, 0.3)',
-                }}
-              >
-                Sign Up
-              </button>
+              {user ? (
+                <Link
+                  to={user.role === 'professor' ? '/dashboard' : '/student/dashboard'}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer bg-white/5 border border-white/10 hover:bg-white/10"
+                >
+                  <User className="w-4 h-4 text-purple-400" />
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <button
+                    onClick={handleProfessorPortal}
+                    className="text-sm font-semibold transition-colors duration-200 cursor-pointer hover:text-white"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Login
+                  </button>
+                  <button
+                    onClick={handleSignup}
+                    className="px-5 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:shadow-lg shadow-[0_4px_14px_rgba(124,58,237,0.3)] hover:shadow-purple-500/20"
+                    style={{
+                      background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                      color: '#fff',
+                    }}
+                  >
+                    Sign Up
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </nav>
 
       {/* ─────────────────────────────────────
-           Hero Section
+           SECTION A: THE MODERN SAAS HERO LAYER
          ───────────────────────────────────── */}
-      <section className="relative z-10 pt-12 pb-8 md:pt-20 md:pb-16">
+      <section className="relative z-10 pt-16 pb-12 md:pt-28 md:pb-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 animate-fade-in-up"
+            {/* Elite Badge */}
+            <div 
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 animate-fade-in-up"
               style={{
-                background: 'rgba(139, 92, 246, 0.12)',
-                border: '1px solid rgba(139, 92, 246, 0.25)',
+                background: 'rgba(139, 92, 246, 0.08)',
+                border: '1px solid rgba(139, 92, 246, 0.2)',
               }}
             >
-              <span className="w-2 h-2 rounded-full bg-accent-green-400 animate-pulse" />
-              <span className="text-xs font-medium tracking-wide uppercase" style={{ color: 'var(--color-brand-300)' }}>
-                AI-Powered Education Platform
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+              <span className="text-[10px] sm:text-xs font-bold tracking-widest uppercase text-cyan-300">
+                AI-Powered Adaptive Assessment Ecosystem
               </span>
             </div>
 
             {/* Headline */}
             <h1
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight tracking-tight mb-6 animate-fade-in-up"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7.5xl font-black leading-[1.1] tracking-tight mb-8 animate-fade-in-up"
               style={{
                 fontFamily: 'var(--font-display)',
                 animationDelay: '100ms',
               }}
             >
-              <span style={{ color: 'var(--color-text-primary)' }}>Transform Course{' '}</span>
-              <br className="hidden sm:block" />
-              <span style={{ color: 'var(--color-text-primary)' }}>Materials into </span>
-              <span
-                className="bg-clip-text text-transparent"
-                style={{
-                  backgroundImage: 'linear-gradient(135deg, #8b5cf6, #22d3ee, #4ade80)',
-                  backgroundSize: '200% 200%',
-                  animation: 'gradient-shift 4s ease infinite',
-                }}
-              >
-                Interactive Quizzes
+              Elevate Assessments with{' '}
+              <span className="bg-gradient-to-r from-cyan-400 via-teal-400 to-purple-500 bg-clip-text text-transparent">
+                Adaptive AI Intelligence.
               </span>
-              <br />
-              <span style={{ color: 'var(--color-text-primary)' }}>in Seconds</span>
             </h1>
 
-            {/* Subheadline */}
+            {/* Subheadline (Double Persona Context) */}
             <p
-              className="text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up"
+              className="text-base sm:text-lg md:text-xl max-w-3xl mx-auto mb-10 leading-relaxed text-slate-300 animate-fade-in-up"
               style={{
-                color: 'var(--color-text-secondary)',
                 animationDelay: '200ms',
               }}
             >
-              Harness the power of AI to automatically generate quizzes from your lecture notes, PDFs, and documents.
-              Engage students with real-time interactive sessions and adaptive learning paths.
+              Empowering professors to instantly auto-generate deep multi-format quizzes, while matching student struggles in real-time with automatic AI adaptive remediation tracks.
             </p>
 
-            {/* CTA Buttons */}
+            {/* Grid Split CTA Row */}
             <div
-              className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14 animate-fade-in-up"
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in-up"
               style={{ animationDelay: '300ms' }}
             >
               <button
-                id="hero-professor-portal"
-                onClick={handleProfessorPortal}
-                className="group relative px-8 py-4 rounded-xl text-base font-semibold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:shadow-2xl w-full sm:w-auto flex items-center justify-center gap-2"
+                onClick={user ? () => navigate(user.role === 'professor' ? '/dashboard' : '/student/dashboard') : handleSignup}
+                className="group relative px-8 py-4 rounded-xl text-base font-bold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:shadow-2xl w-full sm:w-auto flex items-center justify-center gap-2"
                 style={{
                   background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
                   color: '#fff',
-                  boxShadow: '0 8px 32px rgba(124, 58, 237, 0.35)',
+                  boxShadow: '0 8px 30px rgba(139, 92, 246, 0.4)',
                 }}
               >
-                Professor Portal
-                <ArrowRightIcon className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+                {user ? 'Go to Dashboard' : 'Get Started Free'}
+                <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
               </button>
 
               <button
-                id="hero-join-session"
-                onClick={() => document.getElementById('room-code-input')?.focus()}
-                className="group px-8 py-4 rounded-xl text-base font-semibold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] w-full sm:w-auto flex items-center justify-center gap-2"
+                onClick={() => setIsDemoOpen(true)}
+                className="group px-8 py-4 rounded-xl text-base font-bold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:bg-white/10 w-full sm:w-auto flex items-center justify-center gap-2"
                 style={{
-                  background: 'rgba(139, 92, 246, 0.1)',
-                  color: 'var(--color-brand-300)',
-                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  color: '#fff',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                 }}
               >
-                <GamepadIcon />
-                Join Live Session
+                <Play className="w-4 h-4 fill-white text-white group-hover:scale-110 transition-transform" />
+                Watch Demo
               </button>
             </div>
 
-            {/* ─── Student Live Room Interceptor ─── */}
+            {/* ─── Student Live Room Quick Join Interceptor ─── */}
             <div
               className="relative max-w-lg mx-auto animate-fade-in-up"
               style={{ animationDelay: '400ms' }}
             >
               <div
-                className="glass-card p-6 sm:p-8"
+                className="bg-slate-950/60 backdrop-blur-xl border border-purple-500/20 p-6 sm:p-8 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
                 style={{
                   boxShadow: isCodeFocused
-                    ? '0 0 40px rgba(124, 58, 237, 0.25), 0 8px 32px rgba(0,0,0,0.3)'
-                    : '0 8px 32px rgba(0,0,0,0.2)',
-                  transition: 'box-shadow 0.4s ease',
+                    ? '0 0 45px rgba(139, 92, 246, 0.25), 0 8px 32px rgba(0,0,0,0.6)'
+                    : '0 8px 32px rgba(0,0,0,0.4)',
+                  transition: 'all 0.4s ease',
                 }}
               >
-                <div className="flex items-center gap-2 mb-4">
-                  <GamepadIcon />
-                  <span
-                    className="text-sm font-semibold uppercase tracking-wider"
-                    style={{ color: 'var(--color-accent-400)' }}
-                  >
-                    Quick Join
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                    Live Session quick join
                   </span>
                 </div>
 
-                <p className="text-sm mb-5" style={{ color: 'var(--color-text-secondary)' }}>
-                  Got a room code from your professor? Jump straight into the live session — no account needed.
+                <p className="text-sm mb-5 text-slate-400">
+                  Enter a 6-character room code from your professor to instantly join a real-time live session.
                 </p>
 
                 <div className="flex gap-3">
@@ -462,40 +348,38 @@ const Home = () => {
                       onKeyDown={handleCodeKeyDown}
                       onFocus={() => setIsCodeFocused(true)}
                       onBlur={() => setIsCodeFocused(false)}
-                      placeholder="ABC123"
-                      className="w-full px-4 py-3.5 rounded-xl text-center text-xl font-mono font-bold tracking-[0.3em] outline-none transition-all duration-300 placeholder:text-text-muted"
+                      placeholder="CODE24"
+                      className="w-full px-4 py-3.5 rounded-xl text-center text-xl font-mono font-bold tracking-[0.25em] outline-none transition-all duration-300"
                       style={{
-                        background: 'var(--color-surface-input)',
-                        color: 'var(--color-text-primary)',
+                        background: 'rgba(9, 5, 20, 0.7)',
+                        color: '#f8f7ff',
                         border: isCodeFocused
-                          ? '2px solid rgba(139, 92, 246, 0.6)'
-                          : '2px solid rgba(139, 92, 246, 0.15)',
+                          ? '2px solid rgba(139, 92, 246, 0.7)'
+                          : '2px solid rgba(139, 92, 246, 0.2)',
                         caretColor: '#8b5cf6',
                       }}
                     />
-                    {/* Character count indicator */}
                     <div
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium"
-                      style={{ color: roomCode.length === 6 ? '#4ade80' : 'var(--color-text-muted)' }}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-bold"
+                      style={{ color: roomCode.length === 6 ? '#34d399' : '#6b6480' }}
                     >
                       {roomCode.length}/6
                     </div>
                   </div>
 
                   <button
-                    id="join-game-button"
                     onClick={handleJoinSession}
                     disabled={roomCode.length !== 6}
-                    className="px-6 py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:translate-y-[-2px] hover:shadow-lg"
+                    className="px-6 py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:translate-y-[-2px]"
                     style={{
                       background: roomCode.length === 6
-                        ? 'linear-gradient(135deg, #22c55e, #16a34a)'
-                        : 'rgba(34, 197, 94, 0.15)',
-                      color: roomCode.length === 6 ? '#fff' : 'var(--color-accent-green-400)',
+                        ? 'linear-gradient(135deg, #10b981, #059669)'
+                        : 'rgba(16, 185, 129, 0.15)',
+                      color: roomCode.length === 6 ? '#fff' : '#10b981',
                       border: roomCode.length === 6
                         ? 'none'
-                        : '1px solid rgba(34, 197, 94, 0.2)',
-                      boxShadow: roomCode.length === 6 ? '0 8px 24px rgba(34, 197, 94, 0.3)' : 'none',
+                        : '1px solid rgba(16, 185, 129, 0.25)',
+                      boxShadow: roomCode.length === 6 ? '0 6px 20px rgba(16, 185, 129, 0.3)' : 'none',
                     }}
                   >
                     Join
@@ -503,137 +387,252 @@ const Home = () => {
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </section>
 
       {/* ─────────────────────────────────────
-           Features Grid
+           SECTION B: COMPREHENSIVE CAPABILITIES GRID (3 Columns)
          ───────────────────────────────────── */}
-      <section id="features" className="relative z-10 py-20 md:py-32">
+      <section id="features" className="relative z-10 py-24 md:py-36 bg-[#090514]/40 border-t border-b border-purple-500/5">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          {/* Section Header */}
-          <div className="text-center mb-16">
-            <span
-              className="inline-block text-xs font-semibold uppercase tracking-widest mb-3"
-              style={{ color: 'var(--color-brand-400)' }}
-            >
-              Why QuizCraft?
+          
+          {/* Section Title Header */}
+          <div className="text-center mb-20">
+            <span className="inline-block text-xs font-bold uppercase tracking-widest mb-3 text-cyan-400">
+              State-of-the-Art Architecture
             </span>
-            <h2
-              className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4"
-              style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
-            >
-              Everything You Need to{' '}
-              <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(135deg, #8b5cf6, #22d3ee)' }}>
-                Engage
-              </span>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+              Engineered for Deep Learning.
             </h2>
-            <p
-              className="max-w-xl mx-auto text-base"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              From AI-powered quiz creation to real-time student engagement — QuizCraft empowers educators with cutting-edge tools.
+            <p className="max-w-2xl mx-auto text-slate-400 text-base sm:text-lg">
+              QuizCraft leverages high-fidelity AI models to fully synthesize core syllabus structures, drive automated memory retention, and handle open grading pipelines.
             </p>
           </div>
 
-          {/* Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-            {features.map((feature, index) => (
-              <FeatureCard
-                key={feature.title}
-                icon={feature.icon}
-                title={feature.title}
-                description={feature.description}
-                gradient={feature.gradient}
-                delay={500 + index * 150}
-              />
-            ))}
+          {/* 3-Column Capabilities Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            {/* Card 1 (AI Context Processing) */}
+            <div className="group relative bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-8 rounded-2xl transition-all duration-500 hover:translate-y-[-6px] hover:border-cyan-500/30 flex flex-col justify-between">
+              <div>
+                <div className="w-14 h-14 rounded-2xl bg-cyan-950/60 border border-cyan-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <Sparkles className="w-6 h-6 text-cyan-400" />
+                </div>
+                <h3 className="text-xl font-bold mb-4 tracking-tight text-white" style={{ fontFamily: 'var(--font-display)' }}>
+                  Instant Document Ingestion
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                  Turn raw course PDFs, presentation decks, or unformatted text files into highly granular, multi-format question pools in seconds. Our engine maps directly to target course syllabi with exact context alignment.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-cyan-400/80 flex items-center gap-1 group-hover:text-cyan-300">
+                Powered by LLM Context Mining <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </span>
+              {/* Outer hover gradient light glow */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            </div>
+
+            {/* Card 2 (Adaptive Learning Matrix) */}
+            <div className="group relative bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-8 rounded-2xl transition-all duration-500 hover:translate-y-[-6px] hover:border-purple-500/30 flex flex-col justify-between">
+              <div>
+                <div className="w-14 h-14 rounded-2xl bg-purple-950/60 border border-purple-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <Activity className="w-6 h-6 text-purple-400" />
+                </div>
+                <h3 className="text-xl font-bold mb-4 tracking-tight text-white" style={{ fontFamily: 'var(--font-display)' }}>
+                  Automated Remediation Decks
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                  Say goodbye to standard uniform tests. The adaptive system catches specific user concept gaps and generates personalized recovery quiz decks to build student competence and target knowledge blockages.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-purple-400/80 flex items-center gap-1 group-hover:text-purple-300">
+                Cognitive Mastery Engine <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </span>
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            </div>
+
+            {/* Card 3 (Semantic Smart Grading) */}
+            <div className="group relative bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-8 rounded-2xl transition-all duration-500 hover:translate-y-[-6px] hover:border-emerald-500/30 flex flex-col justify-between">
+              <div>
+                <div className="w-14 h-14 rounded-2xl bg-emerald-950/60 border border-emerald-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <CheckCircle className="w-6 h-6 text-emerald-400" />
+                </div>
+                <h3 className="text-xl font-bold mb-4 tracking-tight text-white" style={{ fontFamily: 'var(--font-display)' }}>
+                  AI Short-Answer Evaluation
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                  Completely bypass exact keyword matches. The platform evaluates semantic conceptual validity of student text submissions, offering fair partial-point scoring, clear logic rationales, and robust feedback.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-emerald-400/80 flex items-center gap-1 group-hover:text-emerald-300">
+                Semantic Embeddings Matcher <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </span>
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            </div>
+
           </div>
         </div>
       </section>
 
       {/* ─────────────────────────────────────
-           Bottom CTA Banner
+           SECTION C: SOCIAL PROOF & METRIC METADATA STRIP
          ───────────────────────────────────── */}
-      <section className="relative z-10 pb-20 md:pb-32">
-        <div className="max-w-4xl mx-auto px-6 lg:px-8">
-          <div
-            className="relative rounded-3xl p-10 md:p-14 text-center overflow-hidden"
+      <section className="relative z-10 py-16 bg-[#070310] border-b border-purple-500/5">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="bg-[#0e071e]/40 border border-purple-500/10 rounded-3xl p-8 md:p-12 relative overflow-hidden shadow-2xl">
+            {/* Interactive Glow Behind Metrics */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 h-[80px] bg-purple-500/5 rounded-full blur-[40px]" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4 divide-y md:divide-y-0 md:divide-x divide-purple-500/15 text-center relative z-10">
+              
+              {/* Metric 1 */}
+              <div className="flex flex-col justify-center items-center p-4 hover:scale-105 transition-transform duration-300">
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="w-5 h-5 text-yellow-400" />
+                  <span className="text-4xl md:text-5xl font-black text-white tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+                    15k+
+                  </span>
+                </div>
+                <span className="text-xs md:text-sm font-bold uppercase tracking-wider text-slate-400">
+                  Quizzes Generated
+                </span>
+              </div>
+
+              {/* Metric 2 */}
+              <div className="flex flex-col justify-center items-center p-4 hover:scale-105 transition-transform duration-300">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  <span className="text-4xl md:text-5xl font-black text-white tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+                    98%
+                  </span>
+                </div>
+                <span className="text-xs md:text-sm font-bold uppercase tracking-wider text-slate-400">
+                  Grading Evaluation Accuracy
+                </span>
+              </div>
+
+              {/* Metric 3 */}
+              <div className="flex flex-col justify-center items-center p-4 hover:scale-105 transition-transform duration-300">
+                <div className="flex items-center gap-2 mb-2">
+                  <GraduationCap className="w-5 h-5 text-cyan-400" />
+                  <span className="text-4xl md:text-5xl font-black text-white tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+                    3.5x
+                  </span>
+                </div>
+                <span className="text-xs md:text-sm font-bold uppercase tracking-wider text-slate-400">
+                  Student Mastery Speed
+                </span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Premium Call-To-Action Banner Section ─── */}
+      <section className="relative z-10 py-24 md:py-36">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+            Empower Your Classroom Learning Ecosystem.
+          </h2>
+          <p className="text-slate-300 text-base md:text-lg mb-10 max-w-xl mx-auto leading-relaxed">
+            Join thousands of modern universities and premium educators leveraging intelligent adaptive grading engines to supercharge user success metrics.
+          </p>
+          <button
+            onClick={handleSignup}
+            className="group px-10 py-5 rounded-xl text-base font-bold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:shadow-2xl inline-flex items-center gap-2.5"
             style={{
-              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(6, 182, 212, 0.08))',
-              border: '1px solid rgba(139, 92, 246, 0.2)',
+              background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+              color: '#fff',
+              boxShadow: '0 8px 32px rgba(124, 58, 237, 0.4)',
             }}
           >
-            {/* Decorative glow */}
-            <div
-              className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 h-1 rounded-full"
-              style={{ background: 'linear-gradient(90deg, transparent, #8b5cf6, #22d3ee, transparent)' }}
-            />
-
-            <h2
-              className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4"
-              style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
-            >
-              Ready to Revolutionize Your Classroom?
-            </h2>
-            <p
-              className="text-base md:text-lg max-w-xl mx-auto mb-8"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Join thousands of educators transforming their teaching with AI-powered quizzes and real-time student engagement.
-            </p>
-            <button
-              id="cta-get-started"
-              onClick={handleSignup}
-              className="group px-8 py-4 rounded-xl text-base font-semibold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:shadow-2xl inline-flex items-center gap-2"
-              style={{
-                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                color: '#fff',
-                boxShadow: '0 8px 32px rgba(124, 58, 237, 0.35)',
-              }}
-            >
-              Get Started Free
-              <ArrowRightIcon className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
-            </button>
-          </div>
+            Create Your Instructor Account
+            <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+          </button>
         </div>
       </section>
 
-      {/* ─────────────────────────────────────
-           Footer
-         ───────────────────────────────────── */}
-      <footer className="relative z-10 py-8">
+      {/* ─── Footer Section ─── */}
+      <footer className="relative z-10 border-t border-purple-500/10 py-12 bg-[#06030d]">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div
-            className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8"
-            style={{ borderTop: '1px solid rgba(139, 92, 246, 0.1)' }}
-          >
-            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-              © {new Date().getFullYear()} QuizCraft. Crafted for modern education.
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <span className="text-sm text-slate-500">
+              © {new Date().getFullYear()} QuizCraft Inc. Engineered for next-gen academic institutions.
             </span>
-            <div className="flex gap-6">
-              <a href="#features" className="text-sm transition-colors duration-200" style={{ color: 'var(--color-text-muted)' }}>
+            <div className="flex gap-6 text-sm">
+              <a href="#features" className="text-slate-400 hover:text-cyan-400 transition-colors">
                 Features
               </a>
-              <button
-                onClick={handleProfessorPortal}
-                className="text-sm transition-colors duration-200 cursor-pointer bg-transparent border-none"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
+              <Link to="/login" className="text-slate-400 hover:text-cyan-400 transition-colors">
                 Sign In
-              </button>
-              <button
-                onClick={handleSignup}
-                className="text-sm transition-colors duration-200 cursor-pointer bg-transparent border-none"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
+              </Link>
+              <Link to="/signup" className="text-slate-400 hover:text-cyan-400 transition-colors">
                 Sign Up
-              </button>
+              </Link>
             </div>
           </div>
         </div>
       </footer>
+
+      {/* ─────────────────────────────────────
+           Interactive Demo Video Modal
+         ───────────────────────────────────── */}
+      {isDemoOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md transition-all">
+          <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl animate-fade-in-up">
+            
+            {/* Close Button */}
+            <button 
+              onClick={() => setIsDemoOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 p-2.5 rounded-full transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Modal Title */}
+            <div className="mb-4 pr-12">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
+                <Sparkles className="w-5 h-5 text-cyan-400" />
+                QuizCraft Interactive Walkthrough
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                See how easy it is to automatically generate deep adaptive quizzes and grade them semantically.
+              </p>
+            </div>
+
+            {/* Video Mockup Interface */}
+            <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 flex flex-col items-center justify-center p-8 text-center">
+              {/* SVG Mockup UI Elements */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.15),transparent_70%)] pointer-events-none" />
+              
+              <div className="w-20 h-20 rounded-full bg-purple-500/10 border border-purple-500/40 flex items-center justify-center mb-6 shadow-2xl">
+                <BrainCircuit className="w-10 h-10 text-purple-400 animate-pulse" />
+              </div>
+
+              <h4 className="text-xl font-bold text-white mb-2" style={{ fontFamily: 'var(--font-display)' }}>
+                QuizCraft System Simulation
+              </h4>
+              <p className="text-sm text-slate-400 max-w-md mx-auto mb-6">
+                Our team is currently finalizing our video recording. In the meantime, launch a free account to test all features live immediately!
+              </p>
+
+              <button
+                onClick={() => {
+                  setIsDemoOpen(false);
+                  handleSignup();
+                }}
+                className="px-6 py-3 rounded-xl text-sm font-bold text-white transition-all bg-gradient-to-r from-cyan-500 to-purple-500 hover:shadow-lg hover:shadow-cyan-500/10"
+              >
+                Launch Live Playground
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };

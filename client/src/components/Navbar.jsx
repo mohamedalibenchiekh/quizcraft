@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
+import { BrainCircuit } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -27,10 +28,22 @@ const Navbar = () => {
             <div className="flex-shrink-0 flex items-center">
               <Link
                 to="/"
-                className="text-2xl font-extrabold tracking-tight"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
+                className="flex items-center gap-2.5 group transition-all duration-300 hover:opacity-95"
               >
-                Quiz<span style={{ color: '#8b5cf6' }}>Craft</span>
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-[0_2px_10px_rgba(139,92,246,0.15)] group-hover:shadow-[0_4px_15px_rgba(139,92,246,0.3)]"
+                  style={{
+                    background: 'linear-gradient(135deg, #8b5cf6, #06b6d4)',
+                  }}
+                >
+                  <BrainCircuit className="w-5 h-5 text-white" />
+                </div>
+                <span
+                  className="text-2xl font-extrabold tracking-tight"
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
+                >
+                  Quiz<span style={{ color: '#8b5cf6' }}>Craft</span>
+                </span>
               </Link>
             </div>
           </div>
