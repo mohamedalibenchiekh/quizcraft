@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -64,6 +65,19 @@ const Login = () => {
       setError(err?.response?.data?.message || 'Unable to sign in. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      setError('');
+      const { data } = await api.post('/auth/google', {
+        credential: credentialResponse.credential,
+      });
+      login(data.token, data.user);
+      navigate(data.user.role === 'professor' ? '/dashboard' : '/student/dashboard', { replace: true });
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Google sign-in failed. Please try again.');
     }
   };
 
@@ -176,6 +190,23 @@ const Login = () => {
             {!submitting && <ArrowRightIcon />}
           </button>
         </form>
+
+        <div className="relative flex items-center">
+          <div className="flex-grow border-t" style={{ borderColor: 'rgba(139, 92, 246, 0.15)' }} />
+          <span className="flex-shrink mx-4 text-xs font-semibold uppercase" style={{ color: 'var(--color-text-muted)' }}>or</span>
+          <div className="flex-grow border-t" style={{ borderColor: 'rgba(139, 92, 246, 0.15)' }} />
+        </div>
+
+        <div className="flex justify-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Google sign-in was unsuccessful. Please try again.')}
+            size="large"
+            shape="rectangular"
+            theme="outline"
+            text="signin_with"
+          />
+        </div>
 
         <p className="text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           Don&apos;t have an account?{' '}

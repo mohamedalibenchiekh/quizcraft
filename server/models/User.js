@@ -16,7 +16,6 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
       minlength: 6,
       select: false, // never returned by default in queries
     },
@@ -24,6 +23,22 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["professor", "student"],
       default: "student",
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationToken: {
+      type: String,
+      default: null,
+    },
+    verificationTokenExpires: {
+      type: Date,
+      default: null,
+    },
+    googleId: {
+      type: String,
+      default: null,
     },
     resetPasswordToken: {
       type: String,
@@ -35,6 +50,14 @@ const userSchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
+);
+
+userSchema.index(
+  { googleId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { googleId: { $type: "string" } },
+  }
 );
 
 const User = mongoose.model("User", userSchema);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -50,6 +51,7 @@ const Signup = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [registered, setRegistered] = useState(false);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -70,21 +72,76 @@ const Signup = () => {
 
     setSubmitting(true);
     try {
-      const { data } = await api.post('/auth/register', {
+      await api.post('/auth/register', {
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password,
         role: form.role,
       });
 
-      login(data.token, data.user);
-      navigate(data.user.role === 'professor' ? '/dashboard' : '/student/dashboard', { replace: true });
+      setRegistered(true);
     } catch (err) {
       setError(err?.response?.data?.message || 'Unable to create account. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      setError('');
+      const { data } = await api.post('/auth/google', {
+        credential: credentialResponse.credential,
+        role: form.role,
+      });
+      login(data.token, data.user);
+      navigate(data.user.role === 'professor' ? '/dashboard' : '/student/dashboard', { replace: true });
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Google sign-up failed. Please try again.');
+    }
+  };
+
+  if (registered) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] px-4 py-12">
+        <div
+          className="w-full max-w-md p-8 space-y-6 rounded-2xl text-center"
+          style={{
+            background: 'var(--color-surface-card)',
+            border: '1px solid rgba(139, 92, 246, 0.15)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          }}
+        >
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 mb-4">
+            <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2
+            className="text-2xl font-extrabold tracking-tight"
+            style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
+          >
+            Account Created!
+          </h2>
+          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+            We&apos;ve sent a verification link to <strong>{form.email}</strong>.
+            Please check your inbox and verify your email to log in.
+          </p>
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-2 py-3 px-6 text-sm font-semibold rounded-xl transition-all duration-300"
+            style={{
+              background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+              color: '#fff',
+            }}
+          >
+            Go to Login
+            <ArrowRightIcon />
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-64px)] px-4 py-12">
@@ -254,6 +311,23 @@ const Signup = () => {
             {!submitting && <ArrowRightIcon />}
           </button>
         </form>
+
+        <div className="relative flex items-center">
+          <div className="flex-grow border-t" style={{ borderColor: 'rgba(139, 92, 246, 0.15)' }} />
+          <span className="flex-shrink mx-4 text-xs font-semibold uppercase" style={{ color: 'var(--color-text-muted)' }}>or</span>
+          <div className="flex-grow border-t" style={{ borderColor: 'rgba(139, 92, 246, 0.15)' }} />
+        </div>
+
+        <div className="flex justify-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Google sign-up was unsuccessful. Please try again.')}
+            size="large"
+            shape="rectangular"
+            theme="outline"
+            text="signup_with"
+          />
+        </div>
 
         <p className="text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           Already have an account?{' '}
