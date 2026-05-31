@@ -102,7 +102,7 @@ const ForgotPassword = () => {
 
           <button
             type="submit"
-            disabled={submitting || !!success}
+            disabled={submitting}
             className="group relative w-full flex justify-center items-center gap-2 py-3.5 px-4 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer hover:translate-y-[-1px] hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
             style={{
               background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',

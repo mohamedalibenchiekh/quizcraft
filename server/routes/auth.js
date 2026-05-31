@@ -32,6 +32,15 @@ const forgotPasswordLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limit: max 10 reset-password attempts per 15 minutes per IP
+const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: "Too many reset attempts. Please try again after 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // POST /api/auth/register
 router.post("/register", registerLimiter, register);
 
@@ -45,6 +54,6 @@ router.put("/password", authenticateToken, changePassword);
 router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);
 
 // POST /api/auth/reset-password/:token -> Verify token & update password
-router.post("/reset-password/:token", resetPassword);
+router.post("/reset-password/:token", resetPasswordLimiter, resetPassword);
 
 export default router;

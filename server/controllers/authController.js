@@ -171,7 +171,8 @@ function createTransporter() {
 }
 
 async function sendResetEmail(email, token) {
-  const resetUrl = `http://localhost:5173/reset-password/${token}`;
+  const clientUrl = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/+$/, "");
+  const resetUrl = `${clientUrl}/reset-password/${token}`;
   const transporter = createTransporter();
   if (transporter) {
     await transporter.sendMail({
@@ -181,7 +182,7 @@ async function sendResetEmail(email, token) {
       html: `<p>You requested a password reset.</p><p>Click <a href="${resetUrl}">here</a> to reset your password.</p><p>This link expires in 1 hour.</p>`,
     });
   }
-  console.log(`[RESET LINK] ${email} -> ${resetUrl}`);
+  console.log(`[RESET LINK] ${email} -> password reset link dispatched`);
 }
 
 /**
@@ -199,7 +200,8 @@ export const forgotPassword = async (req, res, next) => {
       return res.json({ success: true, message: "If an account exists, a reset link has been dispatched" });
     }
     const token = crypto.randomBytes(20).toString("hex");
-    user.resetPasswordToken = token;
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    user.resetPasswordToken = tokenHash;
     user.resetPasswordExpires = Date.now() + 3600000;
     await user.save();
     await sendResetEmail(user.email, token);
@@ -220,8 +222,9 @@ export const resetPassword = async (req, res, next) => {
     if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
       return res.status(400).json({ success: false, message: "Password must be at least 6 characters long" });
     }
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const user = await User.findOne({
-      resetPasswordToken: token,
+      resetPasswordToken: tokenHash,
       resetPasswordExpires: { $gt: Date.now() },
     });
     if (!user) {
