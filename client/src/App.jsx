@@ -6,6 +6,8 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import ProfessorDashboard from './pages/ProfessorDashboard';
 import QuizGenerator from './pages/QuizGenerator';
 import QuizEdit from './pages/QuizEdit';
@@ -90,6 +92,24 @@ const AppRoutes = () => {
           <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
             <Navbar />
             <Signup />
+          </div>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+            <Navbar />
+            <ForgotPassword />
+          </div>
+        }
+      />
+      <Route
+        path="/reset-password/:token"
+        element={
+          <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+            <Navbar />
+            <ResetPassword />
           </div>
         }
       />

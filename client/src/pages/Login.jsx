@@ -121,9 +121,9 @@ const Login = () => {
               <label htmlFor="password" className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                 Password
               </label>
-              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              <Link to="/forgot-password" className="text-xs font-semibold transition-colors duration-200" style={{ color: 'var(--color-brand-300)' }}>
                 Forgot password?
-              </span>
+              </Link>
             </div>
             <div className="relative">
               <input
