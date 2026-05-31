@@ -39,13 +39,20 @@ const Navbar = () => {
             {user ? (
               <div className="flex items-center space-x-4">
                 <Link
+                  to={user.role === 'professor' ? '/dashboard' : '/student/dashboard'}
+                  className="text-sm font-medium transition-colors duration-200 hover:underline"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Dashboard
+                </Link>
+                <Link
                   to="/profile"
                   className="text-sm font-medium transition-colors duration-200 hover:underline"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
                   Hello, {user.name}
                 </Link>
-                <button 
+                <button
                   onClick={handleLogout}
                   className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer hover:translate-y-[-1px]"
                   style={{
