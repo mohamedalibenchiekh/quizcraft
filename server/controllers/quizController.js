@@ -281,6 +281,116 @@ export const getQuizById = async (req, res, next) => {
 };
 
 /**
+ * @desc    Inspect whether the external question pool can support adaptive variants
+ * @route   GET /api/quizzes/:id/adaptive-readiness
+ */
+export const getAdaptiveReadiness = async (req, res, next) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id).populate('questions');
+    if (!quiz) {
+      return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
+
+    if (quiz.professorId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: "Forbidden - You do not own this quiz" });
+    }
+
+    const baselineQuestions = Array.isArray(quiz.questions) ? quiz.questions : [];
+    const baselineQuestionIds = baselineQuestions.map((question) => question._id);
+    const baselineTags = [
+      ...(Array.isArray(quiz.tags) ? quiz.tags : []),
+      ...baselineQuestions.flatMap((question) => (Array.isArray(question.tags) ? question.tags : [])),
+    ]
+      .map((tag) => String(tag).trim())
+      .filter(Boolean);
+    const uniqueTags = [...new Set(baselineTags)];
+    const dynamicSetSize = Math.max(3, Math.ceil(baselineQuestions.length * 0.3));
+
+    const baseExternalMatch = {
+      _id: { $nin: baselineQuestionIds },
+    };
+    const hasTags = uniqueTags.length > 0;
+
+    const [
+      eligibleHardCount,
+      eligibleEasyCount,
+      matchingHardCount,
+      matchingEasyCount,
+      matchingTagDocs,
+    ] = await Promise.all([
+      Question.countDocuments({ ...baseExternalMatch, difficulty: "hard" }),
+      Question.countDocuments({ ...baseExternalMatch, difficulty: "easy" }),
+      hasTags
+        ? Question.countDocuments({ ...baseExternalMatch, difficulty: "hard", tags: { $in: uniqueTags } })
+        : 0,
+      hasTags
+        ? Question.countDocuments({ ...baseExternalMatch, difficulty: "easy", tags: { $in: uniqueTags } })
+        : 0,
+      hasTags
+        ? Question.find({ ...baseExternalMatch, tags: { $in: uniqueTags } }).select("tags").lean()
+        : [],
+    ]);
+
+    const matchingTags = [
+      ...new Set(
+        matchingTagDocs
+          .flatMap((question) => (Array.isArray(question.tags) ? question.tags : []))
+          .map((tag) => String(tag).trim())
+          .filter((tag) => uniqueTags.includes(tag))
+      ),
+    ].sort((a, b) => a.localeCompare(b));
+
+    const buildPath = ({ type, eligibleCount, matchingCount }) => {
+      const ready = eligibleCount > 0;
+      let warning = null;
+      if (!ready) {
+        warning =
+          type === "enrichment"
+            ? "No hard questions exist outside this quiz. Enrichment cannot be generated."
+            : "No easy questions exist outside this quiz. Remediation cannot be generated.";
+      } else if (matchingCount === 0 && uniqueTags.length > 0) {
+        warning =
+          type === "enrichment"
+            ? "No hard external questions share this quiz's tags. Enrichment will use generic hard fallback questions."
+            : "No easy external questions share this quiz's tags. Remediation will use generic easy fallback questions.";
+      } else if (eligibleCount < dynamicSetSize) {
+        warning = `Only ${eligibleCount} external ${type === "enrichment" ? "hard" : "easy"} question${eligibleCount === 1 ? "" : "s"} available; adaptive decks may be smaller than the target of ${dynamicSetSize}.`;
+      }
+
+      return {
+        ready,
+        eligibleCount,
+        matchingCount,
+        warning,
+      };
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        quizId: quiz._id,
+        dynamicSetSize,
+        baselineQuestionCount: baselineQuestions.length,
+        baselineTags: uniqueTags,
+        matchingTags,
+        enrichment: buildPath({
+          type: "enrichment",
+          eligibleCount: eligibleHardCount,
+          matchingCount: matchingHardCount,
+        }),
+        remediation: buildPath({
+          type: "remediation",
+          eligibleCount: eligibleEasyCount,
+          matchingCount: matchingEasyCount,
+        }),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @desc    Modify high-level quiz metadata (title, description, isApproved status)
  *          or perform a full quiz update including transactional question replacement
  * @route   PUT /api/quizzes/:id

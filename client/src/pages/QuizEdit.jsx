@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import QuestionPreviewCard from '../components/QuestionPreviewCard';
+import AdaptiveReadinessPanel from '../components/AdaptiveReadinessPanel';
 import useQuizForm from '../hooks/useQuizForm';
 import { normalizeQuestion } from '../utils/quizConstants';
 
@@ -30,6 +31,9 @@ const QuizEdit = () => {
   const [error, setError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [fetchError, setFetchError] = useState('');
+  const [readiness, setReadiness] = useState(null);
+  const [readinessLoading, setReadinessLoading] = useState(true);
+  const [readinessError, setReadinessError] = useState('');
 
   // High-Fidelity UX states
   const [collapsedIds, setCollapsedIds] = useState(new Set());
@@ -54,9 +58,23 @@ const QuizEdit = () => {
         } else {
           setFetchError('Failed to load quiz data.');
         }
+
+        try {
+          setReadinessLoading(true);
+          setReadinessError('');
+          const readinessResponse = await api.get(`/quizzes/${id}/adaptive-readiness`);
+          if (readinessResponse.data?.success) {
+            setReadiness(readinessResponse.data.data);
+          }
+        } catch (readinessErr) {
+          setReadinessError(readinessErr.response?.data?.message || 'Unable to load adaptive readiness.');
+        } finally {
+          setReadinessLoading(false);
+        }
       } catch (err) {
         console.error(err);
         setFetchError(err.response?.data?.message || 'Error loading quiz from server.');
+        setReadinessLoading(false);
       } finally {
         setLoading(false);
       }
@@ -365,6 +383,12 @@ const QuizEdit = () => {
               </div>
             </div>
           </div>
+
+          <AdaptiveReadinessPanel
+            readiness={readiness}
+            loading={readinessLoading}
+            error={readinessError}
+          />
 
           {/* Bulk Actions Panel */}
           <div className="glass-card p-5 border border-slate-300 dark:border-slate-700 shadow-md">

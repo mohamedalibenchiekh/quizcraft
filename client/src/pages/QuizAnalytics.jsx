@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import AdaptiveReadinessPanel from "../components/AdaptiveReadinessPanel";
 
 const QuizAnalytics = () => {
     const { id: quizId } = useParams();
@@ -10,6 +11,8 @@ const QuizAnalytics = () => {
     const [quizDetails, setQuizDetails] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [readiness, setReadiness] = useState(null);
+    const [readinessError, setReadinessError] = useState("");
     const [questionFilter, setQuestionFilter] = useState("all"); // 'all', 'high', 'baseline', 'critical'
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -31,6 +34,16 @@ const QuizAnalytics = () => {
                     setAnalytics(analyticsRes.data.data);
                 } else {
                     setError("Failed to fetch analytics data.");
+                }
+
+                try {
+                    setReadinessError("");
+                    const readinessRes = await api.get(`/quizzes/${quizId}/adaptive-readiness`);
+                    if (readinessRes.data?.success) {
+                        setReadiness(readinessRes.data.data);
+                    }
+                } catch (readinessErr) {
+                    setReadinessError(readinessErr.response?.data?.message || "Unable to load adaptive readiness.");
                 }
             } catch (err) {
                 console.error(err);
@@ -220,6 +233,14 @@ const QuizAnalytics = () => {
                         <span>Live Aggregation Active</span>
                     </div>
                 </div>
+            </div>
+
+            <div className="mb-10">
+                <AdaptiveReadinessPanel
+                    readiness={readiness}
+                    loading={false}
+                    error={readinessError}
+                />
             </div>
 
             {/* KPI Cards Row */}

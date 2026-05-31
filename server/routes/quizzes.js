@@ -5,6 +5,7 @@ import {
   getMyQuizzes,
   getPublishedQuizzes,
   getQuizById,
+  getAdaptiveReadiness,
   updateQuizMetadata,
   deleteQuiz,
   addQuestionToQuiz,
@@ -43,6 +44,9 @@ router.get("/", authenticateToken, requireRole("professor"), getMyQuizzes);
 
 // GET /api/quizzes/published -> Fetch all published quizzes (student-facing, must be before :id).
 router.get("/published", authenticateToken, getPublishedQuizzes);
+
+// GET /api/quizzes/:id/adaptive-readiness -> Inspect external adaptive item-pool readiness.
+router.get("/:id/adaptive-readiness", authenticateToken, requireRole("professor"), getAdaptiveReadiness);
 
 // GET /api/quizzes/:id -> Fetch a single quiz populated with its complete array of detailed question documents.
 router.get("/:id", authenticateToken, getQuizById);
