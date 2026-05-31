@@ -256,7 +256,7 @@ const Home = () => {
 
             {/* Headline */}
             <h1
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7.5xl font-black leading-[1.1] tracking-tight mb-8 animate-fade-in-up"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight mb-8 animate-fade-in-up"
               style={{
                 fontFamily: 'var(--font-display)',
                 animationDelay: '100ms',
