@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import QuizEdit from '../pages/QuizEdit';
 import api from '../services/api';
@@ -62,7 +62,7 @@ describe('QuizEdit Component', () => {
     vi.spyOn(api, 'get').mockReturnValue(new Promise(() => {}));
     renderQuizEdit();
 
-    expect(screen.getByText(/loading quiz data/i)).toBeInTheDocument();
+    expect(screen.getByText(/loading quiz workspace/i)).toBeInTheDocument();
   });
 
   it('renders error state when API call fails', async () => {
@@ -109,7 +109,7 @@ describe('QuizEdit Component', () => {
     });
 
     const saveButton = screen.getByRole('button', { name: /save changes/i });
-    saveButton.click();
+    fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(updateMock).toHaveBeenCalled();
