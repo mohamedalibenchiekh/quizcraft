@@ -52,6 +52,8 @@ const getFailedQuestions = (questions, gradedAnswers) => {
 };
 
 const sampleQuestions = async ({ difficulty, size, excludeIds, targetTag }) => {
+  if (size <= 0) return [];
+
   const match = {
     _id: { $nin: excludeIds },
     difficulty,
@@ -111,12 +113,14 @@ export const buildAdaptiveVariant = async ({
     });
   }
 
-  if (selectedQuestions.length === 0) {
-    selectedQuestions = await sampleQuestions({
+  if (selectedQuestions.length < dynamicSetSize) {
+    const selectedIds = selectedQuestions.map((question) => question._id);
+    const fallbackQuestions = await sampleQuestions({
       difficulty,
-      size: dynamicSetSize,
-      excludeIds,
+      size: dynamicSetSize - selectedQuestions.length,
+      excludeIds: [...excludeIds, ...selectedIds],
     });
+    selectedQuestions = [...selectedQuestions, ...fallbackQuestions];
   }
 
   if (selectedQuestions.length === 0) {

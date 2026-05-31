@@ -452,6 +452,45 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
       expect(res.body.adaptiveQuestions.every((q) => q.tags.includes("calculus"))).toBe(true);
     });
 
+    it("should fill the adaptive deck from fallback questions when the top tag is underfilled", async () => {
+      await Question.insertMany([
+        { text: "Only calc easy", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["calculus"] },
+        { text: "Fallback easy 1", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["general"] },
+        { text: "Fallback easy 2", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["general"] },
+        { text: "Fallback easy 3", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["general"] },
+      ]);
+
+      const baselineQuestions = await Question.insertMany([
+        { text: "Missed calc", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "medium", tags: ["calculus"] },
+        { text: "Missed calc again", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "medium", tags: ["calculus"] },
+        { text: "Correct algebra", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "medium", tags: ["algebra"] },
+      ]);
+
+      const quiz = await Quiz.create({
+        title: "Underfilled Tag",
+        professorId: new mongoose.Types.ObjectId(),
+        questions: baselineQuestions.map((q) => q._id),
+      });
+
+      const res = await request(app)
+        .post("/api/attempts/submit")
+        .set("Authorization", `Bearer ${studentToken}`)
+        .send({
+          quizId: quiz._id.toString(),
+          answers: [
+            { questionId: baselineQuestions[0]._id, selectedAnswer: "B" },
+            { questionId: baselineQuestions[1]._id, selectedAnswer: "B" },
+            { questionId: baselineQuestions[2]._id, selectedAnswer: "A" },
+          ],
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("remediation");
+      expect(res.body.adaptiveQuestions).toHaveLength(3);
+      expect(res.body.adaptiveQuestions.some((q) => q.tags.includes("calculus"))).toBe(true);
+      expect(res.body.adaptiveQuestions.some((q) => q.tags.includes("general"))).toBe(true);
+    });
+
     it("should block remediation generation after depth 3", async () => {
       await seedQuestions("easy", 5);
 

@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import Question from "../models/Question.js";
 import Quiz from "../models/Quiz.js";
+import QuizVariant from "../models/QuizVariant.js";
 
 describe("Mongoose Schema Validation Tests", () => {
   let mongoServer;
@@ -98,6 +99,16 @@ describe("Mongoose Schema Validation Tests", () => {
       const savedQuiz = await quiz.save();
       expect(savedQuiz._id).toBeDefined();
       expect(savedQuiz.isApproved).toBe(false); // Default value verification
+    });
+  });
+
+  describe("QuizVariant Schema", () => {
+    it("should not configure createdAt as a TTL index because attempts may reference variants historically", () => {
+      const createdAtPath = QuizVariant.schema.path("createdAt");
+      const indexes = QuizVariant.schema.indexes();
+
+      expect(createdAtPath.options.expires).toBeUndefined();
+      expect(indexes.some(([, options]) => options?.expireAfterSeconds != null)).toBe(false);
     });
   });
 });
