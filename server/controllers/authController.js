@@ -1,5 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
 import User from "../models/User.js";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -150,6 +152,87 @@ export const changePassword = async (req, res, next) => {
     await user.save();
 
     res.status(200).json({ success: true, message: "Password updated successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+function createTransporter() {
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
+  if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+    return nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT) || 587,
+      secure: Number(SMTP_PORT) === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    });
+  }
+  return null;
+}
+
+async function sendResetEmail(email, token) {
+  const resetUrl = `http://localhost:5173/reset-password/${token}`;
+  const transporter = createTransporter();
+  if (transporter) {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || "noreply@quizcraft.app",
+      to: email,
+      subject: "QuizCraft — Password Reset Request",
+      html: `<p>You requested a password reset.</p><p>Click <a href="${resetUrl}">here</a> to reset your password.</p><p>This link expires in 1 hour.</p>`,
+    });
+  }
+  console.log(`[RESET LINK] ${email} -> ${resetUrl}`);
+}
+
+/**
+ * @desc    Send password reset email with expiring token
+ * @route   POST /api/auth/forgot-password
+ */
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email || typeof email !== "string" || !email.trim()) {
+      return res.status(400).json({ success: false, message: "Please provide a valid email address" });
+    }
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    if (!user) {
+      return res.json({ success: true, message: "If an account exists, a reset link has been dispatched" });
+    }
+    const token = crypto.randomBytes(20).toString("hex");
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = Date.now() + 3600000;
+    await user.save();
+    await sendResetEmail(user.email, token);
+    res.json({ success: true, message: "If an account exists, a reset link has been dispatched" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Reset password using expiring token
+ * @route   POST /api/auth/reset-password/:token
+ */
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+    if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: "Password must be at least 6 characters long" });
+    }
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+    if (!user) {
+      return res.status(400).json({ success: false, message: "Password reset token is invalid or has expired." });
+    }
+    const salt = await bcrypt.genSalt(12);
+    user.password = await bcrypt.hash(newPassword, salt);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+    res.json({ success: true, message: "Password has been reset successfully." });
   } catch (error) {
     next(error);
   }
