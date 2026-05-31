@@ -457,16 +457,16 @@ const QuizEdit = () => {
                 <div
                   key={q.id}
                   onClick={() => !interactionLocked && scrollToQuestion(index, q.id)}
-                  className={`group flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-100/40 dark:bg-slate-900/20 border border-transparent transition-colors ${interactionLocked ? 'cursor-not-allowed opacity-60' : 'hover:bg-slate-200/50 dark:hover:bg-slate-800/40 cursor-pointer hover:border-cyan-400/20'}`}
+                  className={`group flex items-center justify-between gap-2 p-1.5 rounded-lg overflow-hidden bg-slate-100/40 dark:bg-slate-900/20 border border-transparent transition-colors ${interactionLocked ? 'cursor-not-allowed opacity-60' : 'hover:bg-slate-200/50 dark:hover:bg-slate-800/40 cursor-pointer hover:border-cyan-400/20'}`}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-black text-slate-700 dark:text-slate-300">
                       {index + 1}
                     </span>
                     <span className="text-[10px] font-extrabold uppercase bg-slate-200/50 dark:bg-slate-800/30 px-1 rounded text-slate-600 dark:text-slate-400 shrink-0">
                       {q.type === 'True-False' ? 'TF' : q.type === 'Short-Answer' ? 'SA' : 'MCQ'}
                     </span>
-                    <span className="text-xs text-slate-700 dark:text-slate-300 truncate">
+                    <span className="text-xs text-slate-700 dark:text-slate-300 truncate" title={q.text}>
                       {q.text || <span className="italic text-slate-400">Empty question</span>}
                     </span>
                   </div>

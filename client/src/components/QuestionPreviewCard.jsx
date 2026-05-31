@@ -96,33 +96,36 @@ const QuestionPreviewCard = ({
     return (
       <article
         id={`question-card-${questionIndex}`}
-        className={`glass-card p-4 transition-all hover:bg-slate-100/50 dark:hover:bg-slate-900/35 border-l-4 ${
+        className={`glass-card p-4 overflow-hidden transition-all hover:bg-slate-100/50 dark:hover:bg-slate-900/35 border-l-4 ${
           errorText ? 'border-l-amber-500 border-amber-500/20' : 'border-l-cyan-400 border-slate-200 dark:border-slate-800'
         }`}
       >
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 overflow-hidden">
+          <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-cyan-400 text-xs font-black text-slate-950">
               {questionIndex + 1}
             </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <p
+                className="text-sm font-semibold text-slate-800 dark:text-slate-200 line-clamp-2"
+                title={question.text}
+              >
                 {question.text || <span className="text-slate-400 italic">No question text provided yet</span>}
               </p>
               <div className="flex flex-wrap items-center gap-2 mt-1">
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getTypeClass(question.type)}`}>
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${getTypeClass(question.type)}`}>
                   {question.type}
                 </span>
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getDifficultyClass(question.difficulty)}`}>
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${getDifficultyClass(question.difficulty)}`}>
                   {question.difficulty}
                 </span>
                 {errorText && (
-                  <span className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/30 flex items-center gap-1">
+                  <span className="text-[10px] font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/30 flex items-center gap-1 shrink-0">
                     ⚠️ {errorText}
                   </span>
                 )}
                 {!errorText && (
-                  <span className="text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30">
+                  <span className="text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30 shrink-0">
                     ✓ Valid
                   </span>
                 )}
@@ -177,12 +180,12 @@ const QuestionPreviewCard = ({
   return (
     <article
       id={`question-card-${questionIndex}`}
-      className={`glass-card p-5 shadow-lg border-l-4 transition-all duration-200 ${
+      className={`glass-card p-5 shadow-lg overflow-hidden border-l-4 transition-all duration-200 ${
         errorText ? 'border-l-amber-500 border-amber-500/20' : 'border-l-cyan-400 border-cyan-400/10'
       }`}
     >
-      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between overflow-hidden">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400 text-sm font-black text-slate-950">
             {questionIndex + 1}
           </span>
