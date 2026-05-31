@@ -44,20 +44,25 @@ export const getProfileStats = async (req, res, next) => {
       });
     }
 
-    // Student role
-    const attempts = await Attempt.find({ userId })
-      .select("scoreRatio quizId createdAt")
-      .populate({ path: "quizId", select: "title" })
-      .sort({ createdAt: -1 })
-      .lean();
+    // Student role — count all, fetch only latest 5
+    const [totalCount, maxResult, recentAttempts] = await Promise.all([
+      Attempt.countDocuments({ userId }),
+      Attempt.findOne({ userId }).sort({ scoreRatio: -1 }).select("scoreRatio").lean(),
+      Attempt.find({ userId })
+        .select("scoreRatio quizId createdAt")
+        .populate({ path: "quizId", select: "title" })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean(),
+    ]);
 
-    const quizzesTaken = attempts.length;
+    const quizzesTaken = totalCount;
     const highestScore =
-      attempts.length > 0
-        ? Math.round(Math.max(...attempts.map((a) => a.scoreRatio)) * 100)
+      maxResult
+        ? Math.round(maxResult.scoreRatio * 100)
         : 0;
 
-    const recentAttempts = attempts.slice(0, 5).map((a) => ({
+    const recentItems = recentAttempts.map((a) => ({
       _id: a._id,
       quizTitle: a.quizId ? a.quizId.title : "Unknown",
       scoreRatio: a.scoreRatio,
@@ -66,7 +71,7 @@ export const getProfileStats = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: { quizzesTaken, highestScore, recentItems: recentAttempts },
+      data: { quizzesTaken, highestScore, recentItems },
     });
   } catch (error) {
     next(error);
