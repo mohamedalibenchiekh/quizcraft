@@ -95,6 +95,6 @@ describe('QuizGenerator AI workflow', () => {
     expect(screen.getByLabelText(/quiz title/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/question 1 type/i)).toHaveValue('MCQ');
     expect(screen.getByLabelText(/question 1 option 1/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /save to my quizzes/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save quiz/i })).toBeInTheDocument();
   });
 });
