@@ -88,6 +88,7 @@ export const login = async (req, res, next) => {
     if (user.isVerified === false) {
       return res.status(401).json({
         success: false,
+        code: "EMAIL_NOT_VERIFIED",
         message: "Your email has not been verified yet. Please check your inbox.",
       });
     }
@@ -277,7 +278,7 @@ export const resendVerification = async (req, res, next) => {
     }
 
     if (user.isVerified === true) {
-      return res.status(400).json({ success: false, message: "This account has already been verified. Please log in." });
+      return res.json({ success: true, message: "If an account exists with this email, a new verification link has been sent." });
     }
 
     const rawToken = crypto.randomBytes(32).toString("hex");
