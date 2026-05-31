@@ -182,7 +182,7 @@ async function sendResetEmail(email, token) {
       html: `<p>You requested a password reset.</p><p>Click <a href="${resetUrl}">here</a> to reset your password.</p><p>This link expires in 1 hour.</p>`,
     });
   }
-  console.log(`[RESET LINK] ${email} -> ${transporter ? "password reset link dispatched" : resetUrl}`);
+  console.log(`[RESET LINK] ${email} -> password reset link dispatched`);
 }
 
 /**
