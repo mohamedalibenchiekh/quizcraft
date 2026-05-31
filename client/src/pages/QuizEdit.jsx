@@ -103,6 +103,7 @@ const QuizEdit = () => {
 
   // Swap reorder handler
   const handleMoveQuestion = (index, direction) => {
+    if (interactionLocked) return;
     if (direction === 'up' && index === 0) return;
     if (direction === 'down' && index === questions.length - 1) return;
 
@@ -114,12 +115,14 @@ const QuizEdit = () => {
 
   // Bulk Actions
   const handleBulkDifficulty = (diff) => {
+    if (interactionLocked) return;
     setQuestions((prev) => prev.map((q) => ({ ...q, difficulty: diff })));
     setStatusMessage(`Applied "${diff}" difficulty to all questions.`);
     setTimeout(() => setStatusMessage(''), 3000);
   };
 
   const handleBulkAddTag = () => {
+    if (interactionLocked) return;
     const cleanTag = bulkTagInput.trim();
     if (!cleanTag) return;
     setQuestions((prev) =>
@@ -134,6 +137,7 @@ const QuizEdit = () => {
   };
 
   const handleBulkClearTags = () => {
+    if (interactionLocked) return;
     setQuestions((prev) => prev.map((q) => ({ ...q, tags: [] })));
     setStatusMessage('Cleared all question tags.');
     setTimeout(() => setStatusMessage(''), 3000);
@@ -168,6 +172,7 @@ const QuizEdit = () => {
   );
 
   const onAddQuestion = () => {
+    if (interactionLocked) return;
     setError('');
     setStatusMessage('');
     handleAddManualQuestion();
@@ -375,7 +380,8 @@ const QuizEdit = () => {
                       key={d}
                       type="button"
                       onClick={() => handleBulkDifficulty(d)}
-                      className="px-2 py-1.5 rounded bg-slate-100 dark:bg-slate-900/60 hover:bg-cyan-400/20 border border-slate-300 dark:border-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase transition-colors"
+                      disabled={interactionLocked}
+                      className="px-2 py-1.5 rounded bg-slate-100 dark:bg-slate-900/60 hover:bg-cyan-400/20 border border-slate-300 dark:border-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase transition-colors disabled:opacity-50 disabled:pointer-events-none"
                     >
                       {d}
                     </button>
@@ -394,12 +400,14 @@ const QuizEdit = () => {
                     onChange={(e) => setBulkTagInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleBulkAddTag()}
                     placeholder="Tag name"
-                    className="flex-1 rounded border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950/60 px-2 py-1.5 text-xs text-slate-800 dark:text-white outline-none focus:border-cyan-400 transition-colors"
+                    disabled={interactionLocked}
+                    className="flex-1 rounded border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950/60 px-2 py-1.5 text-xs text-slate-800 dark:text-white outline-none focus:border-cyan-400 transition-colors disabled:opacity-50"
                   />
                   <button
                     type="button"
                     onClick={handleBulkAddTag}
-                    className="px-3 py-1.5 rounded bg-cyan-400 text-slate-950 font-bold text-xs hover:bg-cyan-300 transition-colors shrink-0"
+                    disabled={interactionLocked}
+                    className="px-3 py-1.5 rounded bg-cyan-400 text-slate-950 font-bold text-xs hover:bg-cyan-300 transition-colors shrink-0 disabled:opacity-50 disabled:pointer-events-none"
                   >
                     Apply
                   </button>
@@ -409,7 +417,8 @@ const QuizEdit = () => {
               <button
                 type="button"
                 onClick={handleBulkClearTags}
-                className="w-full text-center py-1.5 rounded border border-red-500/25 text-red-500 dark:text-red-400 bg-red-50/10 hover:bg-red-50/30 text-xs font-bold transition-colors"
+                disabled={interactionLocked}
+                className="w-full text-center py-1.5 rounded border border-red-500/25 text-red-500 dark:text-red-400 bg-red-50/10 hover:bg-red-50/30 text-xs font-bold transition-colors disabled:opacity-50 disabled:pointer-events-none"
               >
                 Clear All Question Tags
               </button>
@@ -447,8 +456,8 @@ const QuizEdit = () => {
               {questions.map((q, index) => (
                 <div
                   key={q.id}
-                  onClick={() => scrollToQuestion(index, q.id)}
-                  className="group flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-100/40 dark:bg-slate-900/20 hover:bg-slate-200/50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors border border-transparent hover:border-cyan-400/20"
+                  onClick={() => !interactionLocked && scrollToQuestion(index, q.id)}
+                  className={`group flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-100/40 dark:bg-slate-900/20 border border-transparent transition-colors ${interactionLocked ? 'cursor-not-allowed opacity-60' : 'hover:bg-slate-200/50 dark:hover:bg-slate-800/40 cursor-pointer hover:border-cyan-400/20'}`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-black text-slate-700 dark:text-slate-300">
@@ -462,27 +471,28 @@ const QuizEdit = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center shrink-0 opacity-40 group-hover:opacity-100 gap-0.5 transition-opacity">
+                  <div className={`flex items-center shrink-0 opacity-40 group-hover:opacity-100 gap-0.5 transition-opacity ${interactionLocked ? '!opacity-30 pointer-events-none' : ''}`}>
                     <button
                       type="button"
-                      disabled={index === 0}
+                      disabled={interactionLocked || index === 0}
                       onClick={(e) => { e.stopPropagation(); handleMoveQuestion(index, 'up'); }}
-                      className="p-0.5 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 disabled:opacity-30 transition-colors"
+                      className="p-0.5 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                     >
                       ▲
                     </button>
                     <button
                       type="button"
-                      disabled={index === questions.length - 1}
+                      disabled={interactionLocked || index === questions.length - 1}
                       onClick={(e) => { e.stopPropagation(); handleMoveQuestion(index, 'down'); }}
-                      className="p-0.5 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 disabled:opacity-30 transition-colors"
+                      className="p-0.5 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                     >
                       ▼
                     </button>
                     <button
                       type="button"
+                      disabled={interactionLocked}
                       onClick={(e) => { e.stopPropagation(); onRemoveQuestion(index); }}
-                      className="p-0.5 hover:bg-red-200/40 hover:text-red-500 rounded text-slate-600 dark:text-slate-400 transition-colors"
+                      className="p-0.5 hover:bg-red-200/40 hover:text-red-500 rounded text-slate-600 dark:text-slate-400 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                     >
                       ✕
                     </button>
