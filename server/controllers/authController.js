@@ -88,6 +88,7 @@ export const login = async (req, res, next) => {
     if (user.isVerified === false) {
       return res.status(401).json({
         success: false,
+        code: "EMAIL_NOT_VERIFIED",
         message: "Your email has not been verified yet. Please check your inbox.",
       });
     }
@@ -257,6 +258,39 @@ export const forgotPassword = async (req, res, next) => {
     await user.save();
     await sendResetEmail(user.email, token);
     res.json({ success: true, message: "If an account exists, a reset link has been dispatched" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || typeof email !== "string" || !email.trim()) {
+      return res.status(400).json({ success: false, message: "Please provide a valid email address" });
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+    if (!user) {
+      return res.json({ success: true, message: "If an account exists with this email, a new verification link has been sent." });
+    }
+
+    if (user.isVerified === true) {
+      return res.json({ success: true, message: "If an account exists with this email, a new verification link has been sent." });
+    }
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+    user.verificationToken = tokenHash;
+    user.verificationTokenExpires = Date.now() + 86400000;
+    await user.save();
+
+    await sendVerificationEmail(user.email, rawToken);
+
+    res.json({ success: true, message: "If an account exists with this email, a new verification link has been sent." });
   } catch (error) {
     next(error);
   }

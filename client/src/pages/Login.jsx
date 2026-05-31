@@ -44,6 +44,9 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [resendStatus, setResendStatus] = useState(''); // 'loading', 'success', 'error'
+  const [resendMessage, setResendMessage] = useState('');
+  const [verificationRequired, setVerificationRequired] = useState(false);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -52,6 +55,9 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setVerificationRequired(false);
+    setResendStatus('');
+    setResendMessage('');
     setSubmitting(true);
     try {
       const { data } = await api.post('/auth/login', {
@@ -63,9 +69,36 @@ const Login = () => {
       navigate(data.user.role === 'professor' ? '/dashboard' : '/student/dashboard', { replace: true });
     } catch (err) {
       setError(err?.response?.data?.message || 'Unable to sign in. Please try again.');
+      if (err?.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        setVerificationRequired(true);
+      } else {
+        setVerificationRequired(false);
+        setResendStatus('');
+        setResendMessage('');
+      }
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleResendVerification = async () => {
+    if (!form.email.trim()) return;
+    setResendStatus('loading');
+    setResendMessage('');
+    try {
+      const { data } = await api.post('/auth/resend-verification', { email: form.email.trim() });
+      setResendStatus('success');
+      setResendMessage(data.message || 'A new verification link has been sent to your inbox.');
+    } catch (err) {
+      setResendStatus('error');
+      setResendMessage(err?.response?.data?.message || 'Failed to resend verification email.');
+    }
+  };
+
+  const onResendClick = () => {
+    setResendStatus('');
+    setResendMessage('');
+    handleResendVerification();
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
@@ -78,6 +111,9 @@ const Login = () => {
       navigate(data.user.role === 'professor' ? '/dashboard' : '/student/dashboard', { replace: true });
     } catch (err) {
       setError(err?.response?.data?.message || 'Google sign-in failed. Please try again.');
+      setVerificationRequired(false);
+      setResendStatus('');
+      setResendMessage('');
     }
   };
 
@@ -172,7 +208,28 @@ const Login = () => {
                 color: '#fca5a5',
               }}
             >
-              {error}
+              {verificationRequired ? (
+                <div className="flex flex-col gap-2">
+                  <p>{error}</p>
+                  {resendStatus === 'success' && (
+                    <p className="text-xs font-medium" style={{ color: '#6ee7b7' }}>{resendMessage}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onResendClick}
+                    disabled={resendStatus === 'loading'}
+                    className="text-left text-xs font-medium underline focus:outline-none transition-colors"
+                    style={{ color: '#fca5a5' }}
+                  >
+                    {resendStatus === 'loading' ? 'Sending link...' : 'Click here to resend the verification link'}
+                  </button>
+                  {resendStatus === 'error' && (
+                    <p className="text-xs font-medium" style={{ color: '#fca5a5' }}>{resendMessage}</p>
+                  )}
+                </div>
+              ) : (
+                error
+              )}
             </div>
           )}
 
