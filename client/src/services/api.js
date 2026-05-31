@@ -29,13 +29,27 @@ api.generateQuizFromFiles = async (formData) => {
   const uploadResponse = await api.post('/upload', formData);
 
   const text = uploadResponse.data?.consolidatedText;
-  const numQuestions = Number(formData.get('numQuestions') || 10);
   const difficulty = formData.get('difficulty') || 'medium';
+
+  const isAdvanced = formData.get('isAdvanced') === 'true';
+  let matrix = null;
+  let numQuestions = Number(formData.get('numQuestions') || 10);
+
+  if (isAdvanced) {
+    const raw = formData.get('matrix');
+    matrix = raw ? JSON.parse(raw) : null;
+    if (matrix) {
+      numQuestions = Object.values(matrix).reduce(
+        (s, d) => s + (d.easy || 0) + (d.medium || 0) + (d.hard || 0), 0
+      );
+    }
+  }
 
   const generationResponse = await api.post('/ai/generate', {
     text,
     numQuestions,
     difficulty,
+    ...(isAdvanced && matrix ? { isAdvanced: true, matrix } : {}),
   });
 
   return {

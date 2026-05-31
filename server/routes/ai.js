@@ -26,7 +26,7 @@ router.post(
   aiLimiter,
   async (req, res, next) => {
     try {
-      const { text, numQuestions, difficulty } = req.body;
+      const { text, numQuestions, difficulty, isAdvanced, matrix } = req.body;
 
       // ── Input validation ────────────────────────────────
       if (!text || typeof text !== "string" || text.trim().length === 0) {
@@ -61,6 +61,34 @@ router.post(
         });
       }
 
+      // ── Advanced matrix validation ──────────────────────
+      if (isAdvanced) {
+        if (!matrix || typeof matrix !== "object") {
+          return res.status(400).json({
+            success: false,
+            message: "Validation failed — 'matrix' must be a valid object when advanced mode is enabled.",
+          });
+        }
+        const types = ["MCQ", "True-False", "Short-Answer"];
+        const diffs = ["easy", "medium", "hard"];
+        for (const t of types) {
+          if (!matrix[t] || typeof matrix[t] !== "object") {
+            return res.status(400).json({
+              success: false,
+              message: `Validation failed — matrix missing question type '${t}'.`,
+            });
+          }
+          for (const d of diffs) {
+            if (typeof matrix[t][d] !== "number" || matrix[t][d] < 0 || !Number.isInteger(matrix[t][d])) {
+              return res.status(400).json({
+                success: false,
+                message: `Validation failed — matrix[${t}][${d}] must be a non-negative integer.`,
+              });
+            }
+          }
+        }
+      }
+
       // ── Route-level text length truncation ──────────────
       const sourceText = text.trim();
       const truncatedText = sourceText.length > MAX_TEXT_LENGTH
@@ -72,6 +100,8 @@ router.post(
         text: truncatedText,
         numQuestions: parsedNum,
         difficulty,
+        isAdvanced: !!isAdvanced,
+        matrix: isAdvanced ? matrix : null,
       });
 
       res.status(200).json({
