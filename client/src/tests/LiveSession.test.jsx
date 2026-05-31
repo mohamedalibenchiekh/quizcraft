@@ -1,9 +1,10 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import StudentSession from '../pages/StudentSession.jsx';
 import { socket } from '../services/socket';
+import api from '../services/api';
 
 // 1. Mock the socket singleton service
 vi.mock('../services/socket', () => {
@@ -63,10 +64,29 @@ vi.mock('../context/AuthContext', () => ({
   }),
 }));
 
+vi.mock('../services/api', () => ({
+  default: {
+    post: vi.fn(),
+  },
+}));
+
 describe('LiveSession Student Portal Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     socket.connected = false;
+    api.post.mockResolvedValue({
+      data: {
+        success: true,
+        status: 'standard',
+        message: 'Quiz completed successfully.',
+        data: {
+          score: 1,
+          totalQuestions: 1,
+          scoreRatio: 1,
+          correctCount: 1,
+        },
+      },
+    });
     // Clear callbacks dictionary
     Object.keys(socket._callbacks).forEach((key) => {
       delete socket._callbacks[key];
@@ -161,5 +181,79 @@ describe('LiveSession Student Portal Tests', () => {
 
     // Verify the waiting overlay appears
     expect(screen.getByText(/Answer locked in! Waiting for other participants/i)).toBeInTheDocument();
+  });
+
+  it('should show the adaptive enrichment challenge after a live session ends and submit the variant ID', async () => {
+    joinLobbyHelper();
+
+    act(() => {
+      socket._callbacks['adaptive-session-result']({
+        success: true,
+        status: 'enrichment',
+        message: 'Advanced variant block triggered!',
+        adaptiveVariantId: 'variant-live-1',
+        adaptiveVariant: {
+          _id: 'variant-live-1',
+          baselineQuizId: 'quiz-live-1',
+          type: 'enrichment',
+          attemptDepth: 1,
+        },
+        adaptiveQuestions: [
+          {
+            _id: 'vq-live-1',
+            text: 'Advanced live-session question?',
+            type: 'MCQ',
+            options: ['Correct', 'Wrong'],
+            difficulty: 'hard',
+          },
+        ],
+        data: {
+          score: 1,
+          totalQuestions: 1,
+          scoreRatio: 1,
+          correctCount: 1,
+          adaptiveTriggered: true,
+          adaptiveType: 'enrichment',
+        },
+      });
+      socket._callbacks['quiz-terminated']({ message: 'Quiz has been terminated by the host.' });
+    });
+
+    expect(screen.getByText('Advanced Challenge Unlocked')).toBeInTheDocument();
+    expect(screen.getByText('Advanced live-session question?')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Correct'));
+    fireEvent.click(screen.getByRole('button', { name: /submit advanced challenge/i }));
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/attempts/submit', {
+        quizId: 'variant-live-1',
+        answers: [{ questionId: 'vq-live-1', selectedAnswer: 'Correct' }],
+      });
+    });
+  });
+
+  it('should show an adaptive unavailable message when live-session variant generation fails', () => {
+    joinLobbyHelper();
+
+    act(() => {
+      socket._callbacks['adaptive-session-result']({
+        success: false,
+        status: 'enrichment',
+        message: 'Advanced challenge could not be prepared. Your quiz attempt was saved.',
+        data: {
+          score: 1,
+          totalQuestions: 1,
+          scoreRatio: 1,
+          correctCount: 1,
+          adaptiveTriggered: false,
+          adaptiveType: 'enrichment',
+        },
+      });
+      socket._callbacks['quiz-terminated']({ message: 'Quiz has been terminated by the host.' });
+    });
+
+    expect(screen.getByText('Advanced Challenge Unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Advanced challenge could not be prepared. Your quiz attempt was saved.')).toBeInTheDocument();
   });
 });

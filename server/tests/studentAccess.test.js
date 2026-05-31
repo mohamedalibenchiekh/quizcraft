@@ -119,6 +119,7 @@ describe("Student Role Access Control Tests", () => {
       await Attempt.create({
         userId: studentId,
         quizId,
+        baselineQuizId: quizId,
         answers: [],
         score: 8,
         totalQuestions: 10,
@@ -130,6 +131,19 @@ describe("Student Role Access Control Tests", () => {
       await Attempt.create({
         userId: studentId,
         quizId,
+        baselineQuizId: quizId,
+        answers: [],
+        score: 9,
+        totalQuestions: 10,
+        scoreRatio: 0.9,
+        adaptiveTriggered: true,
+        adaptiveType: "enrichment",
+      });
+
+      await Attempt.create({
+        userId: studentId,
+        quizId,
+        baselineQuizId: quizId,
         answers: [],
         score: 6,
         totalQuestions: 10,
@@ -143,8 +157,8 @@ describe("Student Role Access Control Tests", () => {
         .set("Authorization", `Bearer ${studentToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.totalQuizzes).toBe(2);
-      expect(res.body.data.averageScoreRatio).toBe(70);
+      expect(res.body.data.totalQuizzes).toBe(3);
+      expect(res.body.data.averageScoreRatio).toBe(77);
       expect(res.body.data.trophies).toBe(1);
     });
   });

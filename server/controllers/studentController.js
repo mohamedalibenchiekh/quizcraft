@@ -1,6 +1,7 @@
+import mongoose from 'mongoose';
 import Attempt from '../models/Attempt.js';
 import Quiz from '../models/Quiz.js';
-import Question from '../models/Question.js';
+import QuizVariant from '../models/QuizVariant.js';
 
 export const getMyAttempts = async (req, res, next) => {
   try {
@@ -19,21 +20,48 @@ export const getMyAttempts = async (req, res, next) => {
 
 export const getMyStats = async (req, res, next) => {
   try {
-    const attempts = await Attempt.find({ userId: req.user.id })
-      .select('scoreRatio adaptiveType');
+    const [stats] = await Attempt.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(req.user.id) } },
+      {
+        $facet: {
+          overall: [
+            {
+              $group: {
+                _id: null,
+                totalQuizzes: { $sum: 1 },
+                averageScoreRatio: { $avg: '$scoreRatio' },
+              },
+            },
+          ],
+          trophies: [
+            { $match: { adaptiveType: 'enrichment' } },
+            {
+              $group: {
+                _id: null,
+                enrichmentBaselineIds: { $addToSet: { $ifNull: ['$baselineQuizId', '$quizId'] } },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                trophies: { $size: '$enrichmentBaselineIds' },
+              },
+            },
+          ],
+        },
+      },
+      {
+        $project: {
+          totalQuizzes: { $ifNull: [{ $arrayElemAt: ['$overall.totalQuizzes', 0] }, 0] },
+          averageScoreRatio: { $ifNull: [{ $arrayElemAt: ['$overall.averageScoreRatio', 0] }, 0] },
+          trophies: { $ifNull: [{ $arrayElemAt: ['$trophies.trophies', 0] }, 0] },
+        },
+      },
+    ]);
 
-    const totalQuizzes = attempts.length;
-
-    const averageScoreRatio =
-      totalQuizzes > 0
-        ? attempts.reduce((sum, a) => sum + a.scoreRatio, 0) / totalQuizzes
-        : 0;
-
-    const enrichmentCount = attempts.filter(
-      (a) => a.adaptiveType === 'enrichment'
-    ).length;
-
-    const trophies = enrichmentCount;
+    const totalQuizzes = stats?.totalQuizzes || 0;
+    const averageScoreRatio = stats?.averageScoreRatio || 0;
+    const trophies = stats?.trophies || 0;
 
     res.status(200).json({
       success: true,
@@ -76,7 +104,12 @@ export const getAttemptById = async (req, res, next) => {
     }
 
     const questionMap = {};
-    for (const q of quiz.questions) {
+    const answerSource = attempt.quizVariantId
+      ? await QuizVariant.findById(attempt.quizVariantId)
+      : null;
+    const questions = answerSource?.questions || quiz.questions;
+
+    for (const q of questions) {
       questionMap[q._id.toString()] = q;
     }
 

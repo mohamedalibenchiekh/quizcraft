@@ -8,6 +8,9 @@ import {
   joinRoom,
   submitAnswer as emitSubmitAnswer,
 } from '../services/socket';
+import api from '../services/api';
+import ActiveQuizEngine from '../components/ActiveQuizEngine';
+import { buildAdaptiveQuiz } from '../utils/adaptiveQuiz';
 
 const isGuest = (user) => !user;
 
@@ -53,6 +56,10 @@ const StudentSession = () => {
   const [resultsData, setResultsData] = useState(null); // { correctAnswer, scoreboard }
   const [yourQuestionResult, setYourQuestionResult] = useState(null); // { pointsAwarded, speedPoints, streakBonus, cumulativeScore, isCorrect }
   const [leaderboard, setLeaderboard] = useState([]);
+  const [adaptiveSessionResult, setAdaptiveSessionResult] = useState(null);
+  const [adaptiveAnswers, setAdaptiveAnswers] = useState({});
+  const [adaptiveSubmitting, setAdaptiveSubmitting] = useState(false);
+  const [adaptiveError, setAdaptiveError] = useState('');
 
   const activePinRef = useRef('');
 
@@ -153,6 +160,12 @@ const StudentSession = () => {
       clearInterval(countdownRef.current);
     };
 
+    const onAdaptiveSessionResult = (payload) => {
+      setAdaptiveSessionResult(payload);
+      setAdaptiveAnswers({});
+      setAdaptiveError('');
+    };
+
     const onJoinRejected = ({ reason, message }) => {
       if (reason === 'name_taken') {
         setError(message || 'That nickname is already taken! Try another one.');
@@ -178,6 +191,7 @@ const StudentSession = () => {
     socket.on('reveal-question-results', onRevealQuestionResults);
     socket.on('your-question-result', onYourQuestionResult);
     socket.on('leaderboard-updated', onLeaderboard);
+    socket.on('adaptive-session-result', onAdaptiveSessionResult);
     socket.on('quiz-terminated', onTerminated);
     socket.on('connect_error', onConnectError);
 
@@ -186,6 +200,7 @@ const StudentSession = () => {
       socket.off('reveal-question-results', onRevealQuestionResults);
       socket.off('your-question-result', onYourQuestionResult);
       socket.off('leaderboard-updated', onLeaderboard);
+      socket.off('adaptive-session-result', onAdaptiveSessionResult);
       socket.off('quiz-terminated', onTerminated);
       socket.off('connect_error', onConnectError);
     };
@@ -284,6 +299,47 @@ const StudentSession = () => {
       emitSubmitAnswer(activePin, currentQuestion._id, text);
     }
   }, [frozen, shortAnswerText, currentQuestion, activePin]);
+
+  const handleAdaptiveSelectOption = useCallback((questionId, option) => {
+    setAdaptiveAnswers((prev) => ({ ...prev, [questionId]: option }));
+  }, []);
+
+  const handleAdaptiveShortAnswerChange = useCallback((questionId, text) => {
+    setAdaptiveAnswers((prev) => ({ ...prev, [questionId]: text }));
+  }, []);
+
+  const allAdaptiveAnswered = useCallback((adaptiveQuiz) => {
+    if (!adaptiveQuiz) return false;
+    return adaptiveQuiz.questions.every((question) => {
+      const answer = adaptiveAnswers[question._id];
+      return answer != null && String(answer).trim() !== '';
+    });
+  }, [adaptiveAnswers]);
+
+  const handleAdaptiveSubmit = useCallback(async (adaptiveQuiz) => {
+    if (!adaptiveQuiz) return;
+
+    setAdaptiveSubmitting(true);
+    setAdaptiveError('');
+
+    const answers = adaptiveQuiz.questions.map((question) => ({
+      questionId: question._id,
+      selectedAnswer: adaptiveAnswers[question._id] || null,
+    }));
+
+    try {
+      const res = await api.post('/attempts/submit', {
+        quizId: adaptiveQuiz._id,
+        answers,
+      });
+      setAdaptiveSessionResult(res.data);
+      setAdaptiveAnswers({});
+    } catch (err) {
+      setAdaptiveError(err.response?.data?.message || 'Submission failed. Please try again.');
+    } finally {
+      setAdaptiveSubmitting(false);
+    }
+  }, [adaptiveAnswers]);
 
   /* ---- Countdown ring SVG math ---- */
   const RING_RADIUS = 54;
@@ -666,6 +722,75 @@ const StudentSession = () => {
 
   // --- Ended ---
   if (phase === 'ended') {
+    const adaptiveQuiz = buildAdaptiveQuiz(adaptiveSessionResult);
+
+    const adaptiveType = adaptiveSessionResult?.adaptiveVariant?.type || adaptiveSessionResult?.status;
+    const isRemediation = adaptiveType === 'remediation';
+
+    if (adaptiveQuiz) {
+
+      return (
+        <div className="min-h-[calc(100vh-64px)] px-4 py-8 animate-fade-in-up" style={{ background: 'var(--color-surface-base)' }}>
+          <div className="w-full max-w-3xl mx-auto mb-6 p-6 rounded-2xl text-center" style={{
+            background: isRemediation ? 'rgba(234, 179, 8, 0.08)' : 'rgba(34, 197, 94, 0.08)',
+            border: `1px solid ${isRemediation ? 'rgba(234, 179, 8, 0.25)' : 'rgba(34, 197, 94, 0.25)'}`,
+          }}>
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: isRemediation ? 'rgba(234, 179, 8, 0.15)' : 'rgba(34, 197, 94, 0.15)' }}>
+              <span className="text-3xl">{isRemediation ? '!' : '+'}</span>
+            </div>
+            <h3 className="text-xl font-extrabold mb-2" style={{ color: isRemediation ? '#fbbf24' : '#4ade80', fontFamily: 'var(--font-display)' }}>
+              {isRemediation ? 'Reinforce the Core Concepts' : 'Advanced Challenge Unlocked'}
+            </h3>
+            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              {adaptiveSessionResult.message}
+            </p>
+          </div>
+
+          <ActiveQuizEngine
+            quiz={adaptiveQuiz}
+            answers={adaptiveAnswers}
+            error={adaptiveError}
+            submitting={adaptiveSubmitting}
+            allAnswered={allAdaptiveAnswered(adaptiveQuiz)}
+            onSelectOption={handleAdaptiveSelectOption}
+            onShortAnswerChange={handleAdaptiveShortAnswerChange}
+            onSubmit={() => handleAdaptiveSubmit(adaptiveQuiz)}
+            submitLabel={isRemediation ? 'Submit Revision Assessment' : 'Submit Advanced Challenge'}
+          />
+        </div>
+      );
+    }
+
+    if (adaptiveSessionResult && adaptiveSessionResult.success === false) {
+      return (
+        <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4" style={{ background: 'var(--color-surface-base)' }}>
+          <div className="w-full max-w-md text-center animate-fade-in-up">
+            <div className="glass-card p-8">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{
+                background: isRemediation ? 'rgba(234, 179, 8, 0.12)' : 'rgba(34, 197, 94, 0.12)',
+                border: `2px solid ${isRemediation ? 'rgba(234, 179, 8, 0.25)' : 'rgba(34, 197, 94, 0.25)'}`,
+              }}>
+                <span className="text-4xl">{isRemediation ? '!' : '+'}</span>
+              </div>
+              <h2 className="text-2xl font-extrabold mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
+                {isRemediation ? 'Remediation Unavailable' : 'Advanced Challenge Unavailable'}
+              </h2>
+              <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
+                {adaptiveSessionResult.message || 'The adaptive follow-up could not be prepared. Your quiz attempt was saved.'}
+              </p>
+              <button
+                onClick={() => navigate(isGuest(user) ? '/' : '/student/dashboard')}
+                className="px-8 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 cursor-pointer hover:translate-y-[-1px]"
+                style={{ background: 'linear-gradient(135deg, var(--color-brand-500), #6d28d9)', boxShadow: '0 4px 16px rgba(124, 58, 237, 0.25)' }}
+              >
+                {isGuest(user) ? 'Back to Home' : 'Back to Dashboard'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4" style={{ background: 'var(--color-surface-base)' }}>
         <div className="w-full max-w-md text-center animate-fade-in-up">

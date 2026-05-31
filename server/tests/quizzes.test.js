@@ -149,6 +149,97 @@ describe("Quiz CRUD API Integration Tests", () => {
     });
   });
 
+  describe("GET /api/quizzes/:id/adaptive-readiness", () => {
+    it("should report external easy and hard adaptive pool readiness for matching tags", async () => {
+      const baselineQuestions = await Question.insertMany([
+        {
+          text: "Baseline JS",
+          type: "MCQ",
+          options: ["A", "B"],
+          correctAnswer: "A",
+          difficulty: "medium",
+          tags: ["javascript", "scope"],
+        },
+        {
+          text: "Baseline closure",
+          type: "MCQ",
+          options: ["A", "B"],
+          correctAnswer: "A",
+          difficulty: "medium",
+          tags: ["javascript", "closures"],
+        },
+      ]);
+
+      await Question.insertMany([
+        {
+          text: "Hard external",
+          type: "MCQ",
+          options: ["A", "B"],
+          correctAnswer: "A",
+          difficulty: "hard",
+          tags: ["javascript"],
+        },
+        {
+          text: "Easy external",
+          type: "MCQ",
+          options: ["A", "B"],
+          correctAnswer: "A",
+          difficulty: "easy",
+          tags: ["scope"],
+        },
+        {
+          text: "Generic hard external",
+          type: "MCQ",
+          options: ["A", "B"],
+          correctAnswer: "A",
+          difficulty: "hard",
+          tags: ["database"],
+        },
+      ]);
+
+      const quiz = await Quiz.create({
+        title: "Adaptive Readiness",
+        professorId,
+        questions: baselineQuestions.map((question) => question._id),
+        tags: ["javascript"],
+      });
+
+      const res = await request(app)
+        .get(`/api/quizzes/${quiz._id}/adaptive-readiness`)
+        .set("Authorization", `Bearer ${professorToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.dynamicSetSize).toBe(3);
+      expect(res.body.data.enrichment.eligibleCount).toBe(2);
+      expect(res.body.data.enrichment.matchingCount).toBe(1);
+      expect(res.body.data.remediation.eligibleCount).toBe(1);
+      expect(res.body.data.remediation.matchingCount).toBe(1);
+      expect(res.body.data.matchingTags).toEqual(expect.arrayContaining(["javascript", "scope"]));
+    });
+
+    it("should return 403 when another professor checks adaptive readiness", async () => {
+      const question = await Question.create({
+        text: "Private Q",
+        type: "MCQ",
+        options: ["A", "B"],
+        correctAnswer: "A",
+        difficulty: "medium",
+      });
+      const quiz = await Quiz.create({
+        title: "Private Quiz",
+        professorId,
+        questions: [question._id],
+      });
+
+      const res = await request(app)
+        .get(`/api/quizzes/${quiz._id}/adaptive-readiness`)
+        .set("Authorization", `Bearer ${otherProfessorToken}`);
+
+      expect(res.status).toBe(403);
+    });
+  });
+
   describe("PATCH /api/quizzes/:id/approve (Toggle Approval)", () => {
     it("should set isApproved to true when passing isApproved=true", async () => {
       const quiz = new Quiz({ title: "Test", professorId, questions: [] });

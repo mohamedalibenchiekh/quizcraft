@@ -1,13 +1,97 @@
 import Attempt from '../models/Attempt.js';
 import Quiz from '../models/Quiz.js';
-import Question from '../models/Question.js';
-
-const ADAPTIVE_SET_SIZE = 4;
+import QuizVariant from '../models/QuizVariant.js';
+import {
+  buildAdaptiveVariant,
+  REMEDIATION_LIMIT_MESSAGE,
+} from '../services/adaptiveEngine.js';
+import { evaluateShortAnswer } from '../services/shortAnswerEvaluator.js';
 
 function computeRatio(correctCount, totalCount) {
   if (totalCount === 0) return 0;
   return correctCount / totalCount;
 }
+
+const toIdString = (value) => value?._id?.toString?.() || value?.toString?.() || '';
+
+const sanitizeVariantMetadata = (variant) => ({
+  _id: variant._id,
+  baselineQuizId: variant.baselineQuizId,
+  type: variant.type,
+  attemptDepth: variant.attemptDepth,
+});
+
+const normalizeAnswer = (value) => String(value || '').trim().toLowerCase();
+
+const resolveSubmissionTarget = async (quizId, userId) => {
+  const quiz = await Quiz.findById(quizId).populate('questions');
+  if (quiz) {
+    return {
+      baselineQuiz: quiz,
+      sourceVariant: null,
+      questions: quiz.questions,
+    };
+  }
+
+  const variant = await QuizVariant.findById(quizId);
+  if (!variant) return null;
+
+  if (variant.studentId.toString() !== userId) {
+    return { forbidden: true };
+  }
+
+  const baselineQuiz = await Quiz.findById(variant.baselineQuizId).populate('questions');
+  if (!baselineQuiz) return null;
+
+  return {
+    baselineQuiz,
+    sourceVariant: variant,
+    questions: variant.questions,
+  };
+};
+
+const gradeQuestion = async (question, userAnswer) => {
+  if (!userAnswer) {
+    return {
+      questionId: question._id,
+      selectedAnswer: null,
+      isCorrect: false,
+    };
+  }
+
+  const selectedAnswer = userAnswer.selectedAnswer;
+
+  if (question.type === 'Short-Answer') {
+    const evaluation = await evaluateShortAnswer({
+      correctAnswer: question.correctAnswer,
+      selectedAnswer,
+    });
+
+    return {
+      questionId: question._id,
+      selectedAnswer,
+      isCorrect: evaluation.isCorrect,
+      feedback: evaluation.feedback,
+    };
+  }
+
+  const isCorrect =
+    normalizeAnswer(selectedAnswer) !== '' &&
+    normalizeAnswer(selectedAnswer) === normalizeAnswer(question.correctAnswer);
+
+  return {
+    questionId: question._id,
+    selectedAnswer,
+    isCorrect,
+  };
+};
+
+const getNextAdaptiveType = ({ scoreRatio, sourceVariant }) => {
+  if (sourceVariant?.type === 'enrichment') return null;
+  if (scoreRatio < 0.5) return 'remediation';
+  if (scoreRatio > 0.85) return 'enrichment';
+  return null;
+};
 
 /**
  * @desc    Submit a quiz attempt and evaluate performance for adaptive difficulty
@@ -24,12 +108,18 @@ export const submitAttempt = async (req, res, next) => {
       });
     }
 
-    const quiz = await Quiz.findById(quizId).populate('questions');
-    if (!quiz) {
+    const target = await resolveSubmissionTarget(quizId, req.user.id);
+    if (!target) {
       return res.status(404).json({ success: false, message: 'Quiz not found.' });
     }
+    if (target.forbidden) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden - this adaptive quiz belongs to another student.',
+      });
+    }
 
-    const questions = quiz.questions;
+    const { baselineQuiz, sourceVariant, questions } = target;
     const totalQuestions = questions.length;
 
     let correctCount = 0;
@@ -37,138 +127,59 @@ export const submitAttempt = async (req, res, next) => {
 
     for (const question of questions) {
       const userAnswer = answers.find(
-        (a) => a.questionId && a.questionId.toString() === question._id.toString()
+        (answer) => answer.questionId && toIdString(answer.questionId) === toIdString(question._id)
       );
 
-      if (!userAnswer) {
-        gradedAnswers.push({
-          questionId: question._id,
-          selectedAnswer: null,
-          isCorrect: false,
-        });
-        continue;
-      }
-
-      const rawSelected = userAnswer.selectedAnswer;
-      const selectedStr =
-        rawSelected != null && typeof rawSelected === 'string'
-          ? rawSelected.trim()
-          : '';
-      const correctStr =
-        question.correctAnswer != null && typeof question.correctAnswer === 'string'
-          ? question.correctAnswer.trim()
-          : '';
-
-      const isCorrect =
-        selectedStr !== '' &&
-        selectedStr.toLowerCase() === correctStr.toLowerCase();
-
-      if (isCorrect) correctCount++;
-
-      gradedAnswers.push({
-        questionId: question._id,
-        selectedAnswer: userAnswer.selectedAnswer,
-        isCorrect,
-      });
+      const gradedAnswer = await gradeQuestion(question, userAnswer);
+      if (gradedAnswer.isCorrect) correctCount++;
+      gradedAnswers.push(gradedAnswer);
     }
 
     const scoreRatio = computeRatio(correctCount, totalQuestions);
     const score = correctCount;
+    const nextAdaptiveType = getNextAdaptiveType({ scoreRatio, sourceVariant });
 
     let adaptiveTriggered = false;
-    let adaptiveType = 'none';
-    let adaptiveQuestions = [];
-    let statusMessage = 'Quiz completed successfully.';
+    let attemptAdaptiveType = sourceVariant?.type || 'none';
     let responseStatus = 'standard';
+    let statusMessage = 'Quiz completed successfully.';
+    let variantResult = null;
 
-    const topicTags = [
-      ...new Set(
-        questions.flatMap((q) => (Array.isArray(q.tags) ? q.tags : []))
-      ),
-    ];
+    if (nextAdaptiveType) {
+      variantResult = await buildAdaptiveVariant({
+        baselineQuiz,
+        studentId: req.user.id,
+        type: nextAdaptiveType,
+        sourceQuestions: questions,
+        gradedAnswers,
+      });
 
-    // BOUNDARY A — QC-BR-04: Remediation Loop (ratio < 0.50)
-    if (scoreRatio < 0.50) {
-      adaptiveTriggered = true;
-      adaptiveType = 'remediation';
-      responseStatus = 'remediation';
-
-      let simplifiedQuestions = [];
-      const excludeIds = questions.map((q) => q._id);
-
-      if (topicTags.length > 0) {
-        simplifiedQuestions = await Question.aggregate([
-          { $match: { _id: { $nin: excludeIds }, difficulty: 'easy', tags: { $in: topicTags } } },
-          { $sample: { size: ADAPTIVE_SET_SIZE } },
-        ]);
+      if (variantResult.limitReached) {
+        responseStatus = 'adaptive-limit';
+        statusMessage = REMEDIATION_LIMIT_MESSAGE;
+        attemptAdaptiveType = nextAdaptiveType;
+      } else if (variantResult.variant) {
+        adaptiveTriggered = true;
+        attemptAdaptiveType = nextAdaptiveType;
+        responseStatus = nextAdaptiveType;
+        statusMessage =
+          nextAdaptiveType === 'remediation'
+            ? 'Remediation block unlocked.'
+            : 'Advanced variant block triggered!';
       }
-
-      // Fallback query if no questions found matching tags
-      if (simplifiedQuestions.length === 0) {
-        simplifiedQuestions = await Question.aggregate([
-          { $match: { _id: { $nin: excludeIds }, difficulty: 'easy' } },
-          { $sample: { size: ADAPTIVE_SET_SIZE } },
-        ]);
-      }
-
-      adaptiveQuestions = simplifiedQuestions.map((q) => ({
-        _id: q._id,
-        text: q.text,
-        type: q.type,
-        options: q.options,
-        difficulty: q.difficulty,
-        tags: q.tags,
-      }));
-
-      statusMessage = 'Remediation block unlocked.';
     }
 
-    // BOUNDARY B — QC-BR-05: Enrichment Loop (ratio > 0.85)
-    if (scoreRatio > 0.85) {
-      adaptiveTriggered = true;
-      adaptiveType = 'enrichment';
-      responseStatus = 'enrichment';
-
-      let advancedQuestions = [];
-      const excludeIds = questions.map((q) => q._id);
-
-      if (topicTags.length > 0) {
-        advancedQuestions = await Question.aggregate([
-          { $match: { _id: { $nin: excludeIds }, difficulty: 'hard', tags: { $in: topicTags } } },
-          { $sample: { size: ADAPTIVE_SET_SIZE } },
-        ]);
-      }
-
-      // Fallback query if no questions found matching tags
-      if (advancedQuestions.length === 0) {
-        advancedQuestions = await Question.aggregate([
-          { $match: { _id: { $nin: excludeIds }, difficulty: 'hard' } },
-          { $sample: { size: ADAPTIVE_SET_SIZE } },
-        ]);
-      }
-
-      adaptiveQuestions = advancedQuestions.map((q) => ({
-        _id: q._id,
-        text: q.text,
-        type: q.type,
-        options: q.options,
-        difficulty: q.difficulty,
-        tags: q.tags,
-      }));
-
-      statusMessage = 'Advanced variant block triggered!';
-    }
-
-    // Persist attempt record
     const attempt = await Attempt.create({
       userId: req.user.id,
-      quizId: quiz._id,
+      quizId: baselineQuiz._id,
+      baselineQuizId: baselineQuiz._id,
+      quizVariantId: sourceVariant?._id,
       answers: gradedAnswers,
       score,
       totalQuestions,
       scoreRatio,
       adaptiveTriggered,
-      adaptiveType,
+      adaptiveType: attemptAdaptiveType,
     });
 
     const payload = {
@@ -183,13 +194,17 @@ export const submitAttempt = async (req, res, next) => {
         scoreRatio,
         correctCount,
         adaptiveTriggered,
-        adaptiveType,
+        adaptiveType: attemptAdaptiveType,
+        quizVariantId: sourceVariant?._id || null,
+        baselineQuizId: baselineQuiz._id,
       },
     };
 
-    if (adaptiveTriggered && adaptiveQuestions.length > 0) {
-      payload.adaptiveDeck = adaptiveQuestions;
-      payload.adaptiveQuestions = adaptiveQuestions; // Keep for test and client compatibility
+    if (variantResult?.variant && variantResult.questions.length > 0) {
+      payload.adaptiveVariantId = variantResult.variant._id;
+      payload.adaptiveVariant = sanitizeVariantMetadata(variantResult.variant);
+      payload.adaptiveDeck = variantResult.questions;
+      payload.adaptiveQuestions = variantResult.questions;
     }
 
     res.status(200).json(payload);
