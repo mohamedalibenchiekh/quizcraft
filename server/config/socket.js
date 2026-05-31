@@ -223,9 +223,10 @@ const handleJoinRoom = (io, socket, { pin: rawPin, username, roomCode, token } =
 
 export const initSocket = (httpServer) => {
   const allowedOrigins = [
-    process.env.CLIENT_URL, // Your live React production URL
-    'http://localhost:5173' // Retain for fallback local development testing
-  ].filter(Boolean);
+    process.env.CLIENT_URL,
+    'https://quizcraft-flame.vercel.app',  // production (fallback if env var unset)
+    'http://localhost:5173',               // local dev
+  ].map(s => s?.trim()).filter(Boolean);
 
   const io = new Server(httpServer, {
     cors: {
