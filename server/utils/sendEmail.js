@@ -8,6 +8,8 @@ function createTransporter() {
       port: Number(SMTP_PORT) || 587,
       secure: Number(SMTP_PORT) === 465,
       auth: { user: SMTP_USER, pass: SMTP_PASS },
+      // Force IPv4 — Render instances cannot reach IPv6 endpoints
+      family: 4,
     });
   }
   return null;
