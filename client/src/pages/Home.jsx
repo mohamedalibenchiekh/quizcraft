@@ -36,7 +36,7 @@ const ParticleField = () => {
 
     const createParticles = () => {
       particles = [];
-      const count = Math.floor((canvas.width * canvas.height) / 12000);
+      const count = Math.min(220, Math.floor((canvas.width * canvas.height) / 15000));
       for (let i = 0; i < count; i++) {
         particles.push({
           x: Math.random() * canvas.width,
