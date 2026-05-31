@@ -285,7 +285,7 @@ const Home = () => {
             >
               <button
                 id="hero-professor-portal"
-                onClick={handleProfessorPortal}
+                onClick={user ? () => navigate(user.role === 'professor' ? '/dashboard' : '/student/dashboard') : handleProfessorPortal}
                 className="group relative px-8 py-4 rounded-xl text-base font-bold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:shadow-2xl w-full sm:w-auto flex items-center justify-center gap-2"
                 style={{
                   background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
