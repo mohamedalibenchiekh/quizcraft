@@ -61,12 +61,17 @@ const QuizEdit = () => {
 
         try {
           setReadinessLoading(true);
+          setReadiness(null);
           setReadinessError('');
           const readinessResponse = await api.get(`/quizzes/${id}/adaptive-readiness`);
           if (readinessResponse.data?.success) {
             setReadiness(readinessResponse.data.data);
+          } else {
+            setReadiness(null);
+            setReadinessError(readinessResponse.data?.message || 'Unable to load adaptive readiness.');
           }
         } catch (readinessErr) {
+          setReadiness(null);
           setReadinessError(readinessErr.response?.data?.message || 'Unable to load adaptive readiness.');
         } finally {
           setReadinessLoading(false);
@@ -74,6 +79,7 @@ const QuizEdit = () => {
       } catch (err) {
         console.error(err);
         setFetchError(err.response?.data?.message || 'Error loading quiz from server.');
+        setReadiness(null);
         setReadinessLoading(false);
       } finally {
         setLoading(false);

@@ -132,45 +132,52 @@ const persistAttempts = async (io, pinStr) => {
       });
 
       if (adaptiveTriggered) {
-        const variantResult = await buildAdaptiveVariant({
-          baselineQuiz: quiz,
-          studentId: uId,
-          type: adaptiveType,
-          sourceQuestions: quiz.questions,
-          gradedAnswers,
-        });
+        try {
+          const variantResult = await buildAdaptiveVariant({
+            baselineQuiz: quiz,
+            studentId: uId,
+            type: adaptiveType,
+            sourceQuestions: quiz.questions,
+            gradedAnswers,
+          });
 
-        const payload = {
-          success: true,
-          status: adaptiveType,
-          message:
-            variantResult.limitReached
-              ? REMEDIATION_LIMIT_MESSAGE
-              : adaptiveType === "remediation"
-                ? "Remediation block unlocked."
-                : "Advanced variant block triggered!",
-          data: {
-            score: correctCount,
-            totalQuestions,
-            scoreRatio,
-            correctCount,
-            adaptiveTriggered: Boolean(variantResult.variant),
-            adaptiveType,
-            baselineQuizId: room.quizId,
-          },
-        };
+          const payload = {
+            success: true,
+            status: adaptiveType,
+            message:
+              variantResult.limitReached
+                ? REMEDIATION_LIMIT_MESSAGE
+                : adaptiveType === "remediation"
+                  ? "Remediation block unlocked."
+                  : "Advanced variant block triggered!",
+            data: {
+              score: correctCount,
+              totalQuestions,
+              scoreRatio,
+              correctCount,
+              adaptiveTriggered: Boolean(variantResult.variant),
+              adaptiveType,
+              baselineQuizId: room.quizId,
+            },
+          };
 
-        if (variantResult.variant && variantResult.questions.length > 0) {
-          payload.adaptiveVariantId = variantResult.variant._id;
-          payload.adaptiveVariant = sanitizeVariantMetadata(variantResult.variant);
-          payload.adaptiveDeck = variantResult.questions;
-          payload.adaptiveQuestions = variantResult.questions;
-        }
-
-        for (const [socketId, participant] of room.participants.entries()) {
-          if (participant.userId?.toString() === uId) {
-            io.to(socketId).emit("adaptive-session-result", payload);
+          if (variantResult.variant && variantResult.questions.length > 0) {
+            payload.adaptiveVariantId = variantResult.variant._id;
+            payload.adaptiveVariant = sanitizeVariantMetadata(variantResult.variant);
+            payload.adaptiveDeck = variantResult.questions;
+            payload.adaptiveQuestions = variantResult.questions;
           }
+
+          for (const [socketId, participant] of room.participants.entries()) {
+            if (participant.userId?.toString() === uId) {
+              io.to(socketId).emit("adaptive-session-result", payload);
+            }
+          }
+        } catch (adaptiveErr) {
+          console.error(
+            `[Socket] Failed to build adaptive variant for user ${uId} in room ${pinStr}:`,
+            adaptiveErr.message
+          );
         }
       }
 
