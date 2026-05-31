@@ -71,7 +71,7 @@ describe('QuizGenerator AI workflow', () => {
     fireEvent.change(screen.getByLabelText(/upload documents/i), { target: { files: [file] } });
     fireEvent.click(screen.getByRole('button', { name: /generate ai quiz/i }));
 
-    expect(await screen.findByText(/generated quiz preview/i)).toBeInTheDocument();
+    expect(await screen.findByText(/review ai draft/i)).toBeInTheDocument();
     expect(screen.getByDisplayValue('What does supervised learning require?')).toBeInTheDocument();
     expect(screen.getAllByDisplayValue('Labeled data').length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue('No data')).toBeInTheDocument();
