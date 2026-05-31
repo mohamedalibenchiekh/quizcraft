@@ -15,8 +15,8 @@ const QuizGenerator = () => {
   const navigate = useNavigate();
 
   const {
-    questions: generatedQuestions,
-    setQuestions: setGeneratedQuestions,
+    questions,
+    setQuestions,
     difficulty,
     setDifficulty,
     updateQuestion,
@@ -49,7 +49,7 @@ const QuizGenerator = () => {
   const [isAllCollapsed, setIsAllCollapsed] = useState(false);
 
   const interactionLocked = isGenerating || isSaving;
-  const hasDraftQuestions = generatedQuestions.length > 0;
+  const hasDraftQuestions = questions.length > 0;
 
   const handleAddFiles = (incomingFiles, fileError) => {
     if (interactionLocked) return;
@@ -99,7 +99,7 @@ const QuizGenerator = () => {
 
     if (files.length === 0) {
       setError('Attach at least one PDF or DOCX document before generating.');
-      setGeneratedQuestions([]);
+      setQuestions([]);
       return;
     }
 
@@ -130,23 +130,23 @@ const QuizGenerator = () => {
     try {
       const response = await api.generateQuizFromFiles(formData);
       const payload = response?.data || response;
-      const questions = Array.isArray(payload?.questions) ? payload.questions : [];
+      const fetchedQuestions = Array.isArray(payload?.questions) ? payload.questions : [];
 
-      if (questions.length === 0) {
+      if (fetchedQuestions.length === 0) {
         setError('The AI engine returned no usable questions. Try a richer document or adjust the parameters.');
-        setGeneratedQuestions([]);
+        setQuestions([]);
         return;
       }
 
       setQuizTitle(payload.title || "");
       setDescription(payload.description || "");
       setTags(Array.isArray(payload.tags) ? payload.tags : ["AI Generated", "Gemini"]);
-      setGeneratedQuestions(questions.map((question, index) => normalizeQuestion(question, index, difficulty)));
-      setStatusMessage(`${questions.length} AI question${questions.length === 1 ? '' : 's'} ready for review.`);
+      setQuestions(fetchedQuestions.map((question, index) => normalizeQuestion(question, index, difficulty)));
+      setStatusMessage(`${fetchedQuestions.length} AI question${fetchedQuestions.length === 1 ? '' : 's'} ready for review.`);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || 'AI generation failed. Please verify your documents and try again.');
-      setGeneratedQuestions([]);
+      setQuestions([]);
     } finally {
       setIsGenerating(false);
     }
@@ -166,7 +166,7 @@ const QuizGenerator = () => {
   };
 
   const handleSave = async () => {
-    const validationError = validateQuestions(quizTitle, generatedQuestions);
+    const validationError = validateQuestions(quizTitle, questions);
     if (validationError) {
       setError(validationError);
       return;
@@ -179,7 +179,7 @@ const QuizGenerator = () => {
       title: quizTitle.trim(),
       description: description.trim(),
       tags,
-      questions: buildQuestionPayload(generatedQuestions),
+      questions: buildQuestionPayload(questions),
     };
 
     try {
@@ -196,14 +196,12 @@ const QuizGenerator = () => {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in-up">
-      <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 py-4 px-6 mb-6 flex items-center justify-between shadow-lg rounded-xl">
+      <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 py-4 px-6 mb-6 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-4">
           <h1 className="text-lg font-bold text-white max-w-xs truncate">{quizTitle || 'New AI Quiz'}</h1>
-          {hasDraftQuestions && (
-            <span className="bg-slate-800 text-cyan-400 text-xs px-2.5 py-1 rounded-full border border-slate-700/60 font-medium">
-              {generatedQuestions.length} Questions
-            </span>
-          )}
+          <span className="bg-slate-800 text-cyan-400 text-xs px-2.5 py-1 rounded-full border border-slate-700/60 font-medium">
+            {questions.length} Questions
+          </span>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -335,18 +333,38 @@ const QuizGenerator = () => {
                   : 'Add questions, fill the required fields, and save the finished draft.'}
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
               {hasDraftQuestions && (
-                <button
-                  type="button"
-                  onClick={() => setIsAllCollapsed((prev) => !prev)}
-                  className="rounded-xl border border-slate-600/40 px-4 py-2 text-sm font-bold text-slate-300 hover:bg-slate-800/50 transition-colors"
-                >
-                  <svg className="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d={isAllCollapsed ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} />
-                  </svg>
-                  {isAllCollapsed ? 'Expand All' : 'Collapse All Details'}
-                </button>
+                <div className="inline-flex rounded-xl border border-slate-700 bg-slate-900 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsAllCollapsed(true)}
+                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                      isAllCollapsed
+                        ? 'bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                    </svg>
+                    Collapse All Details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAllCollapsed(false)}
+                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                      !isAllCollapsed
+                        ? 'bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                    </svg>
+                    Expand All
+                  </button>
+                </div>
               )}
               {creationMode === 'manual' && (
                 <button
@@ -393,9 +411,10 @@ const QuizGenerator = () => {
           </div>
 
           <div className="space-y-5">
-            {generatedQuestions.map((question, questionIndex) => (
+            {questions.map((question, questionIndex) => (
               <QuestionPreviewCard
                 key={question.id}
+                id={`question-card-${question.id || questionIndex}`}
                 elementId={`question-card-${question.id || questionIndex}`}
                 isCollapsed={isAllCollapsed}
                 question={question}
@@ -412,9 +431,9 @@ const QuizGenerator = () => {
           </div>
         </section>
       )}
-      {hasDraftQuestions && generatedQuestions.length > 3 && (
+      {questions.length > 0 && (
         <nav className="fixed right-6 top-32 hidden xl:flex flex-col gap-2 bg-slate-900/60 backdrop-blur border border-slate-800 p-3 rounded-2xl shadow-xl max-h-[60vh] overflow-y-auto custom-scrollbar">
-          {generatedQuestions.map((question, i) => (
+          {questions.map((question, i) => (
             <button
               key={question.id || i}
               type="button"

@@ -12,6 +12,7 @@ const QuestionPreviewCard = ({
   onRemove,
   disabled,
   elementId,
+  id,
   isCollapsed,
 }) => {
   const [tagInput, setTagInput] = useState('');
@@ -41,7 +42,7 @@ const QuestionPreviewCard = ({
   const tags = Array.isArray(question.tags) ? question.tags : [];
 
   return (
-    <article id={elementId} key={question.id} className="glass-card p-5 shadow-lg">
+    <article id={id || elementId} key={question.id} className="glass-card p-5 shadow-lg">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400 text-sm font-black text-slate-950">
