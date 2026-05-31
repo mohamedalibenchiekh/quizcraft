@@ -7,6 +7,7 @@ import app from "../app.js";
 import Quiz from "../models/Quiz.js";
 import Question from "../models/Question.js";
 import Attempt from "../models/Attempt.js";
+import QuizVariant from "../models/QuizVariant.js";
 
 process.env.JWT_SECRET = "supersecretfortesting";
 
@@ -107,6 +108,9 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
       // Assert remediation block has simplified questions
       expect(res.body).toHaveProperty("adaptiveQuestions");
       expect(res.body).toHaveProperty("adaptiveDeck");
+      expect(res.body).toHaveProperty("adaptiveVariantId");
+      expect(res.body).toHaveProperty("adaptiveVariant");
+      expect(res.body.adaptiveVariant.type).toBe("remediation");
       expect(Array.isArray(res.body.adaptiveQuestions)).toBe(true);
       expect(res.body.adaptiveQuestions.length).toBeGreaterThan(0);
       expect(res.body.adaptiveQuestions.length).toBeLessThanOrEqual(5);
@@ -115,7 +119,15 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
       // All returned questions must be difficulty "easy"
       for (const q of res.body.adaptiveQuestions) {
         expect(q.difficulty).toBe("easy");
+        expect(q).not.toHaveProperty("correctAnswer");
       }
+
+      const variant = await QuizVariant.findById(res.body.adaptiveVariantId);
+      expect(variant).not.toBeNull();
+      expect(variant.baselineQuizId.toString()).toBe(quizId.toString());
+      expect(variant.studentId.toString()).toBe(studentId.toString());
+      expect(variant.type).toBe("remediation");
+      expect(variant.questions.length).toBe(res.body.adaptiveQuestions.length);
 
       // Verify attempt was persisted in DB
       const attempt = await Attempt.findById(res.body.data.attemptId);
@@ -216,6 +228,8 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
       // Assert enrichment block has advanced questions
       expect(res.body).toHaveProperty("adaptiveQuestions");
       expect(res.body).toHaveProperty("adaptiveDeck");
+      expect(res.body).toHaveProperty("adaptiveVariantId");
+      expect(res.body.adaptiveVariant.type).toBe("enrichment");
       expect(Array.isArray(res.body.adaptiveQuestions)).toBe(true);
       expect(res.body.adaptiveQuestions.length).toBeGreaterThan(0);
       expect(res.body.adaptiveQuestions.length).toBeLessThanOrEqual(5);
@@ -224,7 +238,12 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
       // All returned questions must be difficulty "hard"
       for (const q of res.body.adaptiveQuestions) {
         expect(q.difficulty).toBe("hard");
+        expect(q).not.toHaveProperty("correctAnswer");
       }
+
+      const variant = await QuizVariant.findById(res.body.adaptiveVariantId);
+      expect(variant).not.toBeNull();
+      expect(variant.type).toBe("enrichment");
 
       // Verify attempt was persisted in DB
       const attempt = await Attempt.findById(res.body.data.attemptId);
@@ -305,6 +324,167 @@ describe("POST /api/attempts/submit — Adaptive Difficulty Engine", () => {
       expect(res.body.status).toBe("standard");
       expect(res.body.data.adaptiveTriggered).toBe(false);
       expect(res.body.data.adaptiveType).toBe("none");
+      expect(res.body).not.toHaveProperty("adaptiveQuestions");
+    });
+  });
+
+  describe("Variant routing and generation safeguards", () => {
+    it("should grade a submitted adaptive variant by variant question keys", async () => {
+      const baselineQuestion = await Question.create({
+        text: "Baseline Q",
+        type: "MCQ",
+        options: ["A", "B"],
+        correctAnswer: "A",
+        difficulty: "medium",
+        tags: ["routing"],
+      });
+
+      const quiz = await Quiz.create({
+        title: "Routing Baseline",
+        professorId: new mongoose.Types.ObjectId(),
+        questions: [baselineQuestion._id],
+      });
+
+      const variantQuestion = await Question.create({
+        text: "Variant Q",
+        type: "MCQ",
+        options: ["A", "B"],
+        correctAnswer: "B",
+        difficulty: "hard",
+        tags: ["routing"],
+      });
+
+      const variant = await QuizVariant.create({
+        baselineQuizId: quiz._id,
+        studentId,
+        type: "enrichment",
+        questions: [variantQuestion.toObject()],
+      });
+
+      const res = await request(app)
+        .post("/api/attempts/submit")
+        .set("Authorization", `Bearer ${studentToken}`)
+        .send({
+          quizId: variant._id.toString(),
+          answers: [{ questionId: variantQuestion._id, selectedAnswer: "B" }],
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.score).toBe(1);
+      expect(res.body.data.quizVariantId).toBe(variant._id.toString());
+
+      const attempt = await Attempt.findById(res.body.data.attemptId);
+      expect(attempt.quizId.toString()).toBe(quiz._id.toString());
+      expect(attempt.baselineQuizId.toString()).toBe(quiz._id.toString());
+      expect(attempt.quizVariantId.toString()).toBe(variant._id.toString());
+    });
+
+    it("should use 30 percent of baseline length with a minimum of 3 adaptive questions", async () => {
+      await seedQuestions("hard", 10);
+
+      const baselineQuestions = await Question.insertMany(
+        Array.from({ length: 10 }, (_, index) => ({
+          text: `Baseline sizing ${index + 1}`,
+          type: "MCQ",
+          options: ["A", "B"],
+          correctAnswer: "A",
+          difficulty: "easy",
+          tags: COMMON_TAGS,
+        }))
+      );
+
+      const quiz = await Quiz.create({
+        title: "Sizing Baseline",
+        professorId: new mongoose.Types.ObjectId(),
+        questions: baselineQuestions.map((q) => q._id),
+      });
+
+      const res = await request(app)
+        .post("/api/attempts/submit")
+        .set("Authorization", `Bearer ${studentToken}`)
+        .send({
+          quizId: quiz._id.toString(),
+          answers: baselineQuestions.map((q) => ({ questionId: q._id, selectedAnswer: "A" })),
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("enrichment");
+      expect(res.body.adaptiveQuestions).toHaveLength(3);
+    });
+
+    it("should target remediation using only the highest-frequency missed question tag", async () => {
+      await Question.insertMany([
+        { text: "Calc easy 1", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["calculus"] },
+        { text: "Calc easy 2", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["calculus"] },
+        { text: "Calc easy 3", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["calculus"] },
+        { text: "Algebra easy 1", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["algebra"] },
+        { text: "Algebra easy 2", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["algebra"] },
+        { text: "Algebra easy 3", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "easy", tags: ["algebra"] },
+      ]);
+
+      const baselineQuestions = await Question.insertMany([
+        { text: "Missed calc 1", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "medium", tags: ["calculus"] },
+        { text: "Missed calc 2", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "medium", tags: ["calculus"] },
+        { text: "Correct algebra", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "medium", tags: ["algebra"] },
+      ]);
+
+      const quiz = await Quiz.create({
+        title: "Tag Targeting",
+        professorId: new mongoose.Types.ObjectId(),
+        questions: baselineQuestions.map((q) => q._id),
+      });
+
+      const res = await request(app)
+        .post("/api/attempts/submit")
+        .set("Authorization", `Bearer ${studentToken}`)
+        .send({
+          quizId: quiz._id.toString(),
+          answers: [
+            { questionId: baselineQuestions[0]._id, selectedAnswer: "B" },
+            { questionId: baselineQuestions[1]._id, selectedAnswer: "B" },
+            { questionId: baselineQuestions[2]._id, selectedAnswer: "A" },
+          ],
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("remediation");
+      expect(res.body.adaptiveQuestions).toHaveLength(3);
+      expect(res.body.adaptiveQuestions.every((q) => q.tags.includes("calculus"))).toBe(true);
+    });
+
+    it("should block remediation generation after depth 3", async () => {
+      await seedQuestions("easy", 5);
+
+      const baselineQuestions = await Question.insertMany([
+        { text: "Depth Q1", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "medium", tags: COMMON_TAGS },
+        { text: "Depth Q2", type: "MCQ", options: ["A", "B"], correctAnswer: "A", difficulty: "medium", tags: COMMON_TAGS },
+      ]);
+
+      const quiz = await Quiz.create({
+        title: "Depth Baseline",
+        professorId: new mongoose.Types.ObjectId(),
+        questions: baselineQuestions.map((q) => q._id),
+      });
+
+      await QuizVariant.create({
+        baselineQuizId: quiz._id,
+        studentId,
+        type: "remediation",
+        attemptDepth: 3,
+        questions: baselineQuestions.map((q) => q.toObject()),
+      });
+
+      const res = await request(app)
+        .post("/api/attempts/submit")
+        .set("Authorization", `Bearer ${studentToken}`)
+        .send({
+          quizId: quiz._id.toString(),
+          answers: baselineQuestions.map((q) => ({ questionId: q._id, selectedAnswer: "B" })),
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("adaptive-limit");
+      expect(res.body.message).toMatch(/Maximum adaptive remediation depth reached/);
       expect(res.body).not.toHaveProperty("adaptiveQuestions");
     });
   });

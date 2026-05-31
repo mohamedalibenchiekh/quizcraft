@@ -12,6 +12,15 @@ const AttemptSchema = new mongoose.Schema(
       ref: 'Quiz',
       required: true,
     },
+    baselineQuizId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Quiz',
+      index: true,
+    },
+    quizVariantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'QuizVariant',
+    },
     answers: [
       {
         questionId: {
