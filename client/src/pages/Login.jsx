@@ -55,6 +55,9 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setVerificationRequired(false);
+    setResendStatus('');
+    setResendMessage('');
     setSubmitting(true);
     try {
       const { data } = await api.post('/auth/login', {
@@ -108,6 +111,9 @@ const Login = () => {
       navigate(data.user.role === 'professor' ? '/dashboard' : '/student/dashboard', { replace: true });
     } catch (err) {
       setError(err?.response?.data?.message || 'Google sign-in failed. Please try again.');
+      setVerificationRequired(false);
+      setResendStatus('');
+      setResendMessage('');
     }
   };
 
