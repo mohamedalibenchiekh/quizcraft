@@ -44,6 +44,8 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [resendStatus, setResendStatus] = useState(''); // 'loading', 'success', 'error'
+  const [resendMessage, setResendMessage] = useState('');
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -65,6 +67,20 @@ const Login = () => {
       setError(err?.response?.data?.message || 'Unable to sign in. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!form.email.trim()) return;
+    setResendStatus('loading');
+    setResendMessage('');
+    try {
+      const { data } = await api.post('/auth/resend-verification', { email: form.email.trim() });
+      setResendStatus('success');
+      setResendMessage(data.message || 'A new verification link has been sent to your inbox.');
+    } catch (err) {
+      setResendStatus('error');
+      setResendMessage(err?.response?.data?.message || 'Failed to resend verification email.');
     }
   };
 
@@ -172,7 +188,29 @@ const Login = () => {
                 color: '#fca5a5',
               }}
             >
-              {error}
+              {error && error.includes('not been verified') ? (
+                <div className="flex flex-col gap-2">
+                  <p>{error}</p>
+                  {resendStatus !== 'success' ? (
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={resendStatus === 'loading'}
+                      className="text-left text-xs font-medium underline focus:outline-none transition-colors"
+                      style={{ color: '#fca5a5' }}
+                    >
+                      {resendStatus === 'loading' ? 'Sending link...' : 'Click here to resend the verification link'}
+                    </button>
+                  ) : (
+                    <p className="text-xs font-medium" style={{ color: '#6ee7b7' }}>{resendMessage}</p>
+                  )}
+                  {resendStatus === 'error' && (
+                    <p className="text-xs font-medium" style={{ color: '#fca5a5' }}>{resendMessage}</p>
+                  )}
+                </div>
+              ) : (
+                error
+              )}
             </div>
           )}
 

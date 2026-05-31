@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { register, login, changePassword, forgotPassword, resetPassword, verifyEmail, googleAuth } from "../controllers/authController.js";
+import { register, login, changePassword, forgotPassword, resetPassword, verifyEmail, googleAuth, resendVerification } from "../controllers/authController.js";
 import { authenticateToken } from "../middleware/auth.js";
 
 const router = Router();
@@ -51,6 +51,16 @@ router.get("/verify-email/:token", verifyEmail);
 router.post("/google", googleLimiter, googleAuth);
 router.put("/password", authenticateToken, changePassword);
 router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);
+
+const resendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, message: "Too many resend attempts. Please try again after 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post("/resend-verification", resendLimiter, resendVerification);
 router.post("/reset-password/:token", resetPasswordLimiter, resetPassword);
 
 export default router;
