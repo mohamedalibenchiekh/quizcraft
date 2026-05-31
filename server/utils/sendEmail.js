@@ -36,8 +36,10 @@ export async function sendVerificationEmail(email, token) {
         </div>
       `,
     });
+    console.log(`[VERIFICATION EMAIL] ${email} -> verification link dispatched`);
+    return;
   }
-  console.log(`[VERIFICATION EMAIL] ${email} -> verification link dispatched`);
+  console.warn(`[VERIFICATION EMAIL] ${email} -> SMTP not configured; verification email skipped`);
 }
 
 export async function sendResetEmail(email, token) {
@@ -63,6 +65,8 @@ export async function sendResetEmail(email, token) {
         </div>
       `,
     });
+    console.log(`[RESET LINK] ${email} -> password reset link dispatched`);
+    return;
   }
-  console.log(`[RESET LINK] ${email} -> password reset link dispatched`);
+  console.warn(`[RESET LINK] ${email} -> SMTP not configured; password reset email skipped`);
 }

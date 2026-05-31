@@ -52,7 +52,13 @@ export const register = async (req, res, next) => {
       verificationTokenExpires: Date.now() + 86400000,
     });
 
-    await sendVerificationEmail(user.email, rawToken);
+    try {
+      await sendVerificationEmail(user.email, rawToken);
+    } catch (emailError) {
+      await User.findByIdAndDelete(user._id);
+      console.error(`[REGISTER] Failed to send verification email to ${email}:`, emailError);
+      return res.status(500).json({ success: false, message: "Registration failed. Could not send verification email. Please try again later." });
+    }
 
     res.status(201).json({
       success: true,
@@ -79,7 +85,7 @@ export const login = async (req, res, next) => {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
 
-    if (!user.isVerified) {
+    if (user.isVerified === false) {
       return res.status(401).json({
         success: false,
         message: "Your email has not been verified yet. Please check your inbox.",
@@ -148,6 +154,10 @@ export const googleAuth = async (req, res, next) => {
 
     if (!credential) {
       return res.status(400).json({ success: false, message: "Google credential is required" });
+    }
+
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      return res.status(500).json({ success: false, message: "Google OAuth is not configured on the server" });
     }
 
     const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);

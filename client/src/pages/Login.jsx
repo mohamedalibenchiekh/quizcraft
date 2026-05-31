@@ -202,7 +202,6 @@ const Login = () => {
             onSuccess={handleGoogleSuccess}
             onError={() => setError('Google sign-in was unsuccessful. Please try again.')}
             size="large"
-            width="384"
             shape="rectangular"
             theme="outline"
             text="signin_with"

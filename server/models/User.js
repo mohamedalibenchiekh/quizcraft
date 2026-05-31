@@ -52,5 +52,13 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+userSchema.index(
+  { googleId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { googleId: { $type: "string" } },
+  }
+);
+
 const User = mongoose.model("User", userSchema);
 export default User;
