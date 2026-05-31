@@ -15,6 +15,7 @@ import uploadRoutes from "./routes/upload.js";
 import aiRoutes from "./routes/ai.js";
 import attemptRoutes from "./routes/attempts.js";
 import analyticsRoutes from "./routes/analytics.js";
+import userRoutes from "./routes/users.js";
 
 // ─── Initialise app ─────────────────────────────────────
 const app = express();
@@ -73,6 +74,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/attempts", attemptRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/users", userRoutes);
 
 // ─── Root endpoint ───────────────────────────────────────
 app.get("/", (_req, res) => {

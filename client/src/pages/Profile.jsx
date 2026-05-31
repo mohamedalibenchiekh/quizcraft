@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -39,6 +39,23 @@ const Profile = () => {
   const [pwdError, setPwdError] = useState('');
   const [pwdSuccess, setPwdSuccess] = useState('');
   const [pwdSubmitting, setPwdSubmitting] = useState(false);
+
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data } = await api.get('/users/profile/stats');
+        if (data.success) setStats(data.data);
+      } catch {
+        // Silently fail — stats are non-critical
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
 
   const handlePwdChange = (e) => {
     setPwdForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -163,32 +180,40 @@ const Profile = () => {
         </div>
 
         {/* Stats Summary */}
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t" style={{ borderColor: 'rgba(139, 92, 246, 0.1)' }}>
-          <div
-            className="p-4 rounded-xl text-center"
-            style={{
-              background: 'rgba(139, 92, 246, 0.08)',
-              border: '1px solid rgba(139, 92, 246, 0.15)',
-            }}
-          >
-            <p className="text-2xl font-extrabold" style={{ color: '#8b5cf6' }}>—</p>
-            <p className="text-xs font-medium mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-              {user.role === 'professor' ? 'Total Quizzes' : 'Quizzes Taken'}
-            </p>
+        {statsLoading ? (
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t" style={{ borderColor: 'rgba(139, 92, 246, 0.1)' }}>
+            <div className="p-4 rounded-xl text-center animate-pulse" style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.15)' }}>
+              <div className="h-7 w-12 bg-slate-600/30 rounded mx-auto" />
+              <div className="h-3 w-20 bg-slate-600/20 rounded mx-auto mt-2" />
+            </div>
+            <div className="p-4 rounded-xl text-center animate-pulse" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+              <div className="h-7 w-12 bg-slate-600/30 rounded mx-auto" />
+              <div className="h-3 w-20 bg-slate-600/20 rounded mx-auto mt-2" />
+            </div>
           </div>
-          <div
-            className="p-4 rounded-xl text-center"
-            style={{
-              background: 'rgba(16, 185, 129, 0.08)',
-              border: '1px solid rgba(16, 185, 129, 0.15)',
-            }}
-          >
-            <p className="text-2xl font-extrabold" style={{ color: '#10b981' }}>—</p>
-            <p className="text-xs font-medium mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-              {user.role === 'professor' ? 'Avg Score' : 'Highest Score'}
-            </p>
+        ) : user.role === 'professor' ? (
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t" style={{ borderColor: 'rgba(139, 92, 246, 0.1)' }}>
+            <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.15)' }}>
+              <p className="text-2xl font-extrabold" style={{ color: '#8b5cf6' }}>{stats?.totalQuizzes ?? 0}</p>
+              <p className="text-xs font-medium mt-1" style={{ color: 'var(--color-text-secondary)' }}>Total Quizzes Created</p>
+            </div>
+            <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+              <p className="text-2xl font-extrabold" style={{ color: '#10b981' }}>{stats?.avgStudentScore ?? 0}%</p>
+              <p className="text-xs font-medium mt-1" style={{ color: 'var(--color-text-secondary)' }}>Class Average Accuracy</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t" style={{ borderColor: 'rgba(139, 92, 246, 0.1)' }}>
+            <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.15)' }}>
+              <p className="text-2xl font-extrabold" style={{ color: '#8b5cf6' }}>{stats?.quizzesTaken ?? 0}</p>
+              <p className="text-xs font-medium mt-1" style={{ color: 'var(--color-text-secondary)' }}>Quizzes Completed</p>
+            </div>
+            <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+              <p className="text-2xl font-extrabold" style={{ color: '#10b981' }}>{stats?.highestScore ?? 0}%</p>
+              <p className="text-xs font-medium mt-1" style={{ color: 'var(--color-text-secondary)' }}>Personal Highest Score</p>
+            </div>
+          </div>
+        )}
 
         {/* Change Password */}
         <div className="pt-4 border-t space-y-4" style={{ borderColor: 'rgba(139, 92, 246, 0.1)' }}>
@@ -322,6 +347,56 @@ const Profile = () => {
             </button>
           </form>
         </div>
+
+        {/* Role-specific detailed content */}
+        {!statsLoading && stats?.recentItems?.length > 0 && (
+          <div className="pt-4 border-t space-y-3" style={{ borderColor: 'rgba(139, 92, 246, 0.1)' }}>
+            <h3 className="text-lg font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
+              {user.role === 'professor' ? 'Recent Quizzes' : 'Recent Attempts'}
+            </h3>
+
+            {user.role === 'professor' ? (
+              <div className="space-y-2">
+                {stats.recentItems.map((q) => (
+                  <div
+                    key={q._id}
+                    className="flex items-center justify-between px-4 py-3 rounded-xl text-sm"
+                    style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.1)' }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{q.title}</span>
+                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{q.questionCount} Q</span>
+                    </div>
+                    <span
+                      className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                        q.isApproved
+                          ? 'bg-emerald-100 dark:bg-emerald-950/65 text-emerald-700 dark:text-emerald-400'
+                          : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      {q.isApproved ? 'Published' : 'Draft'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {stats.recentItems.map((a) => (
+                  <div
+                    key={a._id}
+                    className="flex items-center justify-between px-4 py-3 rounded-xl text-sm"
+                    style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.1)' }}
+                  >
+                    <span className="font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{a.quizTitle}</span>
+                    <span className="shrink-0 font-bold" style={{ color: a.scoreRatio >= 0.7 ? '#10b981' : a.scoreRatio >= 0.4 ? '#f59e0b' : '#ef4444' }}>
+                      {Math.round(a.scoreRatio * 100)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
