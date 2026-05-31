@@ -724,8 +724,10 @@ const StudentSession = () => {
   if (phase === 'ended') {
     const adaptiveQuiz = buildAdaptiveQuiz(adaptiveSessionResult);
 
+    const adaptiveType = adaptiveSessionResult?.adaptiveVariant?.type || adaptiveSessionResult?.status;
+    const isRemediation = adaptiveType === 'remediation';
+
     if (adaptiveQuiz) {
-      const isRemediation = adaptiveSessionResult?.adaptiveVariant?.type === 'remediation';
 
       return (
         <div className="min-h-[calc(100vh-64px)] px-4 py-8 animate-fade-in-up" style={{ background: 'var(--color-surface-base)' }}>
@@ -755,6 +757,36 @@ const StudentSession = () => {
             onSubmit={() => handleAdaptiveSubmit(adaptiveQuiz)}
             submitLabel={isRemediation ? 'Submit Revision Assessment' : 'Submit Advanced Challenge'}
           />
+        </div>
+      );
+    }
+
+    if (adaptiveSessionResult && adaptiveSessionResult.success === false) {
+      return (
+        <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4" style={{ background: 'var(--color-surface-base)' }}>
+          <div className="w-full max-w-md text-center animate-fade-in-up">
+            <div className="glass-card p-8">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" style={{
+                background: isRemediation ? 'rgba(234, 179, 8, 0.12)' : 'rgba(34, 197, 94, 0.12)',
+                border: `2px solid ${isRemediation ? 'rgba(234, 179, 8, 0.25)' : 'rgba(34, 197, 94, 0.25)'}`,
+              }}>
+                <span className="text-4xl">{isRemediation ? '!' : '+'}</span>
+              </div>
+              <h2 className="text-2xl font-extrabold mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
+                {isRemediation ? 'Remediation Unavailable' : 'Advanced Challenge Unavailable'}
+              </h2>
+              <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
+                {adaptiveSessionResult.message || 'The adaptive follow-up could not be prepared. Your quiz attempt was saved.'}
+              </p>
+              <button
+                onClick={() => navigate(isGuest(user) ? '/' : '/student/dashboard')}
+                className="px-8 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 cursor-pointer hover:translate-y-[-1px]"
+                style={{ background: 'linear-gradient(135deg, var(--color-brand-500), #6d28d9)', boxShadow: '0 4px 16px rgba(124, 58, 237, 0.25)' }}
+              >
+                {isGuest(user) ? 'Back to Home' : 'Back to Dashboard'}
+              </button>
+            </div>
+          </div>
         </div>
       );
     }

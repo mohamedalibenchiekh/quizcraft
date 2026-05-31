@@ -232,4 +232,28 @@ describe('LiveSession Student Portal Tests', () => {
       });
     });
   });
+
+  it('should show an adaptive unavailable message when live-session variant generation fails', () => {
+    joinLobbyHelper();
+
+    act(() => {
+      socket._callbacks['adaptive-session-result']({
+        success: false,
+        status: 'enrichment',
+        message: 'Advanced challenge could not be prepared. Your quiz attempt was saved.',
+        data: {
+          score: 1,
+          totalQuestions: 1,
+          scoreRatio: 1,
+          correctCount: 1,
+          adaptiveTriggered: false,
+          adaptiveType: 'enrichment',
+        },
+      });
+      socket._callbacks['quiz-terminated']({ message: 'Quiz has been terminated by the host.' });
+    });
+
+    expect(screen.getByText('Advanced Challenge Unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Advanced challenge could not be prepared. Your quiz attempt was saved.')).toBeInTheDocument();
+  });
 });

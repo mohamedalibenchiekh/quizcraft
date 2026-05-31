@@ -33,6 +33,14 @@ const sanitizeVariantMetadata = (variant) => ({
   attemptDepth: variant.attemptDepth,
 });
 
+const emitAdaptiveResultToUser = (io, room, userId, payload) => {
+  for (const [socketId, participant] of room.participants.entries()) {
+    if (participant.userId?.toString() === userId) {
+      io.to(socketId).emit("adaptive-session-result", payload);
+    }
+  }
+};
+
 const getRoom = (pin) => {
   if (!rooms.has(pin)) {
     rooms.set(pin, {
@@ -168,16 +176,30 @@ const persistAttempts = async (io, pinStr) => {
             payload.adaptiveQuestions = variantResult.questions;
           }
 
-          for (const [socketId, participant] of room.participants.entries()) {
-            if (participant.userId?.toString() === uId) {
-              io.to(socketId).emit("adaptive-session-result", payload);
-            }
-          }
+          emitAdaptiveResultToUser(io, room, uId, payload);
         } catch (adaptiveErr) {
           console.error(
             `[Socket] Failed to build adaptive variant for user ${uId} in room ${pinStr}:`,
             adaptiveErr.message
           );
+
+          emitAdaptiveResultToUser(io, room, uId, {
+            success: false,
+            status: adaptiveType,
+            message:
+              adaptiveType === "remediation"
+                ? "Remediation could not be prepared. Your quiz attempt was saved."
+                : "Advanced challenge could not be prepared. Your quiz attempt was saved.",
+            data: {
+              score: correctCount,
+              totalQuestions,
+              scoreRatio,
+              correctCount,
+              adaptiveTriggered: false,
+              adaptiveType,
+              baselineQuizId: room.quizId,
+            },
+          });
         }
       }
 
