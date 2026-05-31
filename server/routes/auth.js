@@ -1,6 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { register, login } from "../controllers/authController.js";
+import { register, login, changePassword } from "../controllers/authController.js";
+import { authenticateToken } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -27,5 +28,8 @@ router.post("/register", registerLimiter, register);
 
 // POST /api/auth/login
 router.post("/login", loginLimiter, login);
+
+// PUT /api/auth/password -> Change the authenticated user's password
+router.put("/password", authenticateToken, changePassword);
 
 export default router;

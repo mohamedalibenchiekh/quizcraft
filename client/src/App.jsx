@@ -16,6 +16,7 @@ import HostSession from './pages/HostSession';
 import TakeQuiz from './pages/TakeQuiz';
 import StudentQuizBrowser from './pages/StudentQuizBrowser';
 import QuizAnalytics from './pages/QuizAnalytics';
+import Profile from './pages/Profile';
 
 import './App.css';
 
@@ -134,6 +135,18 @@ const AppRoutes = () => {
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
               <Navbar />
               <QuizAnalytics />
+            </div>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+              <Navbar />
+              <Profile />
             </div>
           </ProtectedRoute>
         }
