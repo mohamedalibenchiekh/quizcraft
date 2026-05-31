@@ -271,7 +271,7 @@ export const generateQuestions = async ({ text, numQuestions, difficulty, isAdva
     ? buildDistributionInstructions(matrix)
     : "";
 
-  if (isAdvanced && matrix && distributionInstructions) {
+  if (isAdvanced && matrix) {
     const matrixTotal = Object.values(matrix).reduce(
       (s, d) => s + d.easy + d.medium + d.hard, 0
     );
