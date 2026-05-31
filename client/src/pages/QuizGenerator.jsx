@@ -86,7 +86,7 @@ const QuizGenerator = () => {
   };
 
   const handleMatrixCellChange = (type, difficulty, value) => {
-    const clamped = Math.min(20, Math.max(0, Number(value) || 0));
+    const clamped = Math.min(20, Math.max(0, parseInt(value, 10) || 0));
     setMatrix((prev) => ({
       ...prev,
       [type]: { ...prev[type], [difficulty]: clamped },

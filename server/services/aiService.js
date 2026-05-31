@@ -193,7 +193,7 @@ export const generateQuizFromPrompt = async (topic, questionCount, difficulty, i
                     items: { type: "STRING" },
                     description: "For MCQ: array of 4 answer choices. For True-False: ['True', 'False']. For Short-Answer: empty array [].",
                   },
-                  correctAnswer: { type: "STRING", description: "The correct answer text matching one of the options" },
+                  correctAnswer: { type: "STRING", description: "For MCQ/True-False: must match one of the options. For Short-Answer: free-form correct answer text." },
                   tags: { type: "ARRAY", items: { type: "STRING" }, minItems: 2, maxItems: 3 },
                 },
                 required: ["type", "questionText", "options", "correctAnswer", "difficulty", "tags"],
@@ -270,6 +270,18 @@ export const generateQuestions = async ({ text, numQuestions, difficulty, isAdva
   const distributionInstructions = isAdvanced && matrix
     ? buildDistributionInstructions(matrix)
     : "";
+
+  if (isAdvanced && matrix && distributionInstructions) {
+    const matrixTotal = Object.values(matrix).reduce(
+      (s, d) => s + d.easy + d.medium + d.hard, 0
+    );
+    if (matrixTotal !== numQuestions) {
+      throw new Error(
+        `Matrix total (${matrixTotal}) does not match requested question count (${numQuestions}). Adjust the matrix values or the question count.`
+      );
+    }
+  }
+
   return generateQuizFromPrompt(text, numQuestions, difficulty, true, distributionInstructions);
 };
 
