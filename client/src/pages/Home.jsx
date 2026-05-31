@@ -284,7 +284,8 @@ const Home = () => {
               style={{ animationDelay: '300ms' }}
             >
               <button
-                onClick={user ? () => navigate(user.role === 'professor' ? '/dashboard' : '/student/dashboard') : handleSignup}
+                id="hero-professor-portal"
+                onClick={handleProfessorPortal}
                 className="group relative px-8 py-4 rounded-xl text-base font-bold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] hover:shadow-2xl w-full sm:w-auto flex items-center justify-center gap-2"
                 style={{
                   background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
@@ -292,8 +293,21 @@ const Home = () => {
                   boxShadow: '0 8px 30px rgba(139, 92, 246, 0.4)',
                 }}
               >
-                {user ? 'Go to Dashboard' : 'Get Started Free'}
+                Professor Portal
                 <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+              </button>
+
+              <button
+                id="hero-join-session"
+                onClick={() => document.getElementById('room-code-input')?.focus()}
+                className="group px-8 py-4 rounded-xl text-base font-bold transition-all duration-300 cursor-pointer hover:translate-y-[-2px] w-full sm:w-auto flex items-center justify-center gap-2"
+                style={{
+                  background: 'rgba(139, 92, 246, 0.1)',
+                  color: 'var(--color-brand-300)',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                }}
+              >
+                Join Live Session
               </button>
 
               <button
@@ -348,7 +362,7 @@ const Home = () => {
                       onKeyDown={handleCodeKeyDown}
                       onFocus={() => setIsCodeFocused(true)}
                       onBlur={() => setIsCodeFocused(false)}
-                      placeholder="CODE24"
+                      placeholder="ABC123"
                       className="w-full px-4 py-3.5 rounded-xl text-center text-xl font-mono font-bold tracking-[0.25em] outline-none transition-all duration-300"
                       style={{
                         background: 'rgba(9, 5, 20, 0.7)',

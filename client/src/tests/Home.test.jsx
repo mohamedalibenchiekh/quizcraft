@@ -4,6 +4,12 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Home from "../pages/Home.jsx";
 
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({
+    user: null,
+  }),
+}));
+
 describe("Home Screen Tests", () => {
   it("should render modern Tech-Hero text, Professor Portal button, and Join Live Session link reliably", () => {
     render(
@@ -12,10 +18,8 @@ describe("Home Screen Tests", () => {
       </MemoryRouter>
     );
 
-    // 1. Verify Tech-Hero headline renders (broken into parts in Home.jsx)
-    expect(screen.getByText(/Transform Course/i)).toBeInTheDocument();
-    expect(screen.getByText(/Materials into/i)).toBeInTheDocument();
-    expect(screen.getByText(/Interactive Quizzes/i)).toBeInTheDocument();
+    // 1. Verify Tech-Hero headline renders
+    expect(screen.getByText(/Elevate Assessments/i)).toBeInTheDocument();
 
     // 2. Verify "Professor Portal" button renders reliably
     const profPortalBtn = screen.getByRole("button", { name: /professor portal/i });
