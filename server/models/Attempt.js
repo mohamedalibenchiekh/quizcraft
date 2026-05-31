@@ -35,6 +35,9 @@ const AttemptSchema = new mongoose.Schema(
           type: Boolean,
           required: true,
         },
+        feedback: {
+          type: String,
+        },
       },
     ],
     score: {
