@@ -175,7 +175,7 @@ quizcraft/
 │
 ├── .gitignore
 ├── README.md
-└── package-lock.json
+└── skills-lock.json
 ```
 
 ---
@@ -266,9 +266,9 @@ npm run dev
 ```
 
 #### Option B: Concurrent Execution (Single Terminal)
-From the root directory, if you have a concurrent runner configured:
+From the root directory, use a tool like `concurrently` or `npm-run-all` to run both servers simultaneously. First, install a concurrent runner globally or in a root `package.json`:
 ```bash
-npm run dev
+npx concurrently "npm run dev --prefix server" "npm run dev --prefix client"
 ```
 
 ### Running Tests
