@@ -111,7 +111,7 @@ const useQuizForm = (initialQuestions = []) => {
         question.type === 'MCQ' && question.correctAnswerIndex >= 0
           ? (question.options[question.correctAnswerIndex] || '').trim()
           : question.correctAnswer.trim();
-      return {
+      const payload = {
         text: question.text.trim(),
         type: question.type,
         options:
@@ -122,6 +122,13 @@ const useQuizForm = (initialQuestions = []) => {
         difficulty: question.difficulty,
         tags: question.tags || [],
       };
+      // Preserve the persisted ObjectId for existing questions so the backend
+      // updates them in place instead of deleting + recreating (which would
+      // orphan historical attempt references). Generated client ids are ignored.
+      if (/^[a-f\d]{24}$/i.test(question.id || '')) {
+        payload._id = question.id;
+      }
+      return payload;
     });
   }, []);
 

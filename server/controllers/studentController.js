@@ -115,12 +115,18 @@ export const getAttemptById = async (req, res, next) => {
 
     const detailedAnswers = attempt.answers.map((a) => {
       const question = questionMap[a.questionId.toString()] || null;
+      // Prefer the snapshot stored on the answer at submit time; fall back to a
+      // live lookup for older attempts saved before snapshots were introduced.
+      // questionText is required on every question, so its presence reliably
+      // marks a snapshot — gating on it avoids treating a legitimately empty
+      // snapshot (e.g. Short-Answer options: []) as missing data.
+      const hasSnapshot = a.questionText != null;
       return {
         questionId: a.questionId,
-        questionText: question ? question.text : 'Unknown question',
-        questionType: question ? question.type : null,
-        options: question ? question.options : [],
-        difficulty: question ? question.difficulty : null,
+        questionText: hasSnapshot ? a.questionText : question?.text ?? 'Unknown question',
+        questionType: hasSnapshot ? a.questionType : question?.type ?? null,
+        options: hasSnapshot ? a.options ?? [] : question?.options ?? [],
+        difficulty: hasSnapshot ? a.difficulty : question?.difficulty ?? null,
         selectedAnswer: a.selectedAnswer,
         isCorrect: a.isCorrect,
       };

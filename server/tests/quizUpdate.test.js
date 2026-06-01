@@ -174,6 +174,159 @@ describe("PUT /api/quizzes/:id — Quiz Update Endpoint", () => {
     });
   });
 
+  describe("Question ID stability on edit (Option 2 hardening)", () => {
+    it("should update an existing question in place and keep its _id stable", async () => {
+      const original = await Quiz.findById(quizId);
+      const originalQuestionId = original.questions[0].toString();
+
+      const res = await request(app)
+        .put(`/api/quizzes/${quizId}`)
+        .set("Authorization", `Bearer ${professorToken}`)
+        .send({
+          title: "Edited title",
+          questions: [
+            {
+              _id: originalQuestionId,
+              text: "What is 2 + 2? (edited)",
+              type: "MCQ",
+              options: ["3", "4", "5", "6"],
+              correctAnswer: "4",
+              difficulty: "easy",
+            },
+          ],
+        });
+
+      expect(res.status).toBe(200);
+
+      const updated = await Quiz.findById(quizId).populate("questions");
+      expect(updated.questions).toHaveLength(1);
+      // Same ObjectId — historical attempts referencing it still resolve.
+      expect(updated.questions[0]._id.toString()).toBe(originalQuestionId);
+      expect(updated.questions[0].text).toBe("What is 2 + 2? (edited)");
+
+      // The document was updated, not deleted + recreated.
+      const stillExists = await Question.findById(originalQuestionId);
+      expect(stillExists).not.toBeNull();
+      expect(stillExists.text).toBe("What is 2 + 2? (edited)");
+    });
+
+    it("should keep the edited question stable while adding a new one", async () => {
+      const original = await Quiz.findById(quizId);
+      const originalQuestionId = original.questions[0].toString();
+
+      const res = await request(app)
+        .put(`/api/quizzes/${quizId}`)
+        .set("Authorization", `Bearer ${professorToken}`)
+        .send({
+          questions: [
+            {
+              _id: originalQuestionId,
+              text: "What is 2 + 2?",
+              type: "MCQ",
+              options: ["3", "4", "5", "6"],
+              correctAnswer: "4",
+              difficulty: "easy",
+            },
+            {
+              text: "Capital of France?",
+              type: "MCQ",
+              options: ["London", "Paris"],
+              correctAnswer: "Paris",
+              difficulty: "medium",
+            },
+          ],
+        });
+
+      expect(res.status).toBe(200);
+
+      const updated = await Quiz.findById(quizId).populate("questions");
+      expect(updated.questions).toHaveLength(2);
+      expect(updated.questions[0]._id.toString()).toBe(originalQuestionId);
+      expect(updated.questions[1]._id.toString()).not.toBe(originalQuestionId);
+    });
+
+    it("should delete only the removed question, not the kept one", async () => {
+      // Add a second question first.
+      const extra = await new Question({
+        text: "Throwaway?",
+        type: "MCQ",
+        options: ["A", "B"],
+        correctAnswer: "A",
+        difficulty: "easy",
+      }).save();
+      await Quiz.findByIdAndUpdate(quizId, { $push: { questions: extra._id } });
+
+      const quiz = await Quiz.findById(quizId);
+      const keepId = quiz.questions[0].toString();
+      const removeId = extra._id.toString();
+
+      const res = await request(app)
+        .put(`/api/quizzes/${quizId}`)
+        .set("Authorization", `Bearer ${professorToken}`)
+        .send({
+          questions: [
+            {
+              _id: keepId,
+              text: "What is 2 + 2?",
+              type: "MCQ",
+              options: ["3", "4", "5", "6"],
+              correctAnswer: "4",
+              difficulty: "easy",
+            },
+          ],
+        });
+
+      expect(res.status).toBe(200);
+
+      const updated = await Quiz.findById(quizId);
+      expect(updated.questions).toHaveLength(1);
+      expect(updated.questions[0].toString()).toBe(keepId);
+
+      // Kept question still exists; removed one is gone.
+      expect(await Question.findById(keepId)).not.toBeNull();
+      expect(await Question.findById(removeId)).toBeNull();
+    });
+
+    it("should ignore an _id that belongs to another quiz and create a new question instead", async () => {
+      // A question owned by a different quiz must never be mutated via this edit.
+      const foreign = await new Question({
+        text: "Foreign question",
+        type: "MCQ",
+        options: ["A", "B"],
+        correctAnswer: "A",
+        difficulty: "easy",
+      }).save();
+      const foreignId = foreign._id.toString();
+
+      const res = await request(app)
+        .put(`/api/quizzes/${quizId}`)
+        .set("Authorization", `Bearer ${professorToken}`)
+        .send({
+          questions: [
+            {
+              _id: foreignId,
+              text: "Tampered text",
+              type: "MCQ",
+              options: ["A", "B"],
+              correctAnswer: "A",
+              difficulty: "easy",
+            },
+          ],
+        });
+
+      expect(res.status).toBe(200);
+
+      const updated = await Quiz.findById(quizId);
+      // The quiz points at a freshly created question, not the foreign one.
+      expect(updated.questions[0].toString()).not.toBe(foreignId);
+
+      // The foreign question is untouched.
+      const foreignAfter = await Question.findById(foreignId);
+      expect(foreignAfter).not.toBeNull();
+      expect(foreignAfter.text).toBe("Foreign question");
+    });
+  });
+
   describe("Cross-Tenant Theft Defense", () => {
     it("should return 403 Forbidden when a different professor attempts to edit the quiz", async () => {
       const updatePayload = {
