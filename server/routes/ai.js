@@ -26,7 +26,7 @@ router.post(
   aiLimiter,
   async (req, res, next) => {
     try {
-      const { text, numQuestions, difficulty, isAdvanced, matrix } = req.body;
+      const { text, numQuestions, difficulty, isAdvanced, matrix, customPrompt } = req.body;
 
       // ── Input validation ────────────────────────────────
       if (!text || typeof text !== "string" || text.trim().length === 0) {
@@ -102,6 +102,7 @@ router.post(
         difficulty,
         isAdvanced: !!isAdvanced,
         matrix: isAdvanced ? matrix : null,
+        customPrompt,
       });
 
       res.status(200).json({

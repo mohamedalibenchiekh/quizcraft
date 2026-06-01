@@ -48,7 +48,7 @@ const buildDistributionInstructions = (matrix) => {
  * @param {string} distributionInstructions — Optional per-type × per-difficulty breakdown.
  * @returns {string} The combined prompt string.
  */
-const buildPrompt = (topic, questionCount, difficulty, isDocumentText, distributionInstructions = "") => {
+const buildPrompt = (topic, questionCount, difficulty, isDocumentText, distributionInstructions = "", customPrompt = "") => {
   const sourceLabel = isDocumentText ? "document text" : "topic";
   const sourceText = isDocumentText ? truncateText(topic) : topic;
 
@@ -70,11 +70,19 @@ const buildPrompt = (topic, questionCount, difficulty, isDocumentText, distribut
     requirements.splice(2, 0, "", distributionInstructions);
   }
 
-  return `Generate a complete quiz based on the following ${sourceLabel}.
+  let prompt = `Generate a complete quiz based on the following ${sourceLabel}.
 
 ${sourceLabel === "document text" ? `Document:\n${sourceText}\n` : `Topic: ${topic}`}
 
 ${requirements.join("\n")}`;
+
+  if (customPrompt && customPrompt.trim() !== "") {
+    prompt += `\n\nCRITICAL ADDITIONAL USER INSTRUCTIONS:
+The professor has specified the following strict guidelines for this quiz generation. You must adhere to them perfectly:
+"${customPrompt.trim()}"`;
+  }
+
+  return prompt;
 };
 
 /**
@@ -157,14 +165,14 @@ export const transformAndValidateHFQuestions = (questions, requestedDifficulty) 
  * @param {string} distributionInstructions — Optional per-type × per-difficulty breakdown.
  * @returns {Promise<{ title: string, description: string, tags: string[], questions: object[] }>}
  */
-export const generateQuizFromPrompt = async (topic, questionCount, difficulty, isDocumentText = false, distributionInstructions = "") => {
+export const generateQuizFromPrompt = async (topic, questionCount, difficulty, isDocumentText = false, distributionInstructions = "", customPrompt = "") => {
   if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "your_gemini_api_key_here") {
     throw new Error(
       "GEMINI_API_KEY is not configured. Set a valid Gemini API key in your environment.",
     );
   }
 
-  const prompt = buildPrompt(topic, questionCount, difficulty, isDocumentText, distributionInstructions);
+  const prompt = buildPrompt(topic, questionCount, difficulty, isDocumentText, distributionInstructions, customPrompt);
 
   let response;
   try {
@@ -266,7 +274,7 @@ export const generateQuizFromPrompt = async (topic, questionCount, difficulty, i
  * @param {string} params.difficulty   — Target difficulty: "easy" | "medium" | "hard".
  * @returns {Promise<{ title: string, description: string, tags: string[], questions: object[] }>}
  */
-export const generateQuestions = async ({ text, numQuestions, difficulty, isAdvanced, matrix }) => {
+export const generateQuestions = async ({ text, numQuestions, difficulty, isAdvanced, matrix, customPrompt }) => {
   const distributionInstructions = isAdvanced && matrix
     ? buildDistributionInstructions(matrix)
     : "";
@@ -282,7 +290,7 @@ export const generateQuestions = async ({ text, numQuestions, difficulty, isAdva
     }
   }
 
-  return generateQuizFromPrompt(text, numQuestions, difficulty, true, distributionInstructions);
+  return generateQuizFromPrompt(text, numQuestions, difficulty, true, distributionInstructions, customPrompt);
 };
 
 // Dummy exports for backward compatibility and testing

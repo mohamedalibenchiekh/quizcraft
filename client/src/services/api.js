@@ -45,10 +45,13 @@ api.generateQuizFromFiles = async (formData) => {
     }
   }
 
+  const customPrompt = formData.get('customPrompt') || '';
+
   const generationResponse = await api.post('/ai/generate', {
     text,
     numQuestions,
     difficulty,
+    customPrompt,
     ...(isAdvanced && matrix ? { isAdvanced: true, matrix } : {}),
   });
 

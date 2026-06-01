@@ -17,6 +17,8 @@ const AIParameterForm = ({
   matrix,
   onToggleAdvanced,
   onMatrixCellChange,
+  customPrompt,
+  onCustomPromptChange,
 }) => {
   const interactionLocked = isGenerating || isSaving;
 
@@ -76,6 +78,21 @@ const AIParameterForm = ({
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="mt-5">
+          <label htmlFor="customPrompt" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Custom AI Instructions / Topic Focus (Optional)
+          </label>
+          <textarea
+            id="customPrompt"
+            rows={3}
+            value={customPrompt}
+            disabled={interactionLocked}
+            onChange={(e) => onCustomPromptChange(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950/45 px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-cyan-400 disabled:opacity-60 placeholder:text-slate-500 transition-colors resize-none"
+            placeholder="e.g., Focus heavily on chapter 4, avoid complex calculus formulas, or format text emphasizing medical case terminology..."
+          />
         </div>
 
         <button

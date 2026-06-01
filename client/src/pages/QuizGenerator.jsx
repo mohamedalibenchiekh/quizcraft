@@ -50,6 +50,7 @@ const QuizGenerator = () => {
   // High-Fidelity UX states
   const [collapsedIds, setCollapsedIds] = useState(new Set());
   const [bulkTagInput, setBulkTagInput] = useState('');
+  const [customPrompt, setCustomPrompt] = useState('');
 
   const interactionLocked = isGenerating || isSaving;
   const hasDraftQuestions = generatedQuestions.length > 0;
@@ -237,6 +238,7 @@ const QuizGenerator = () => {
       formData.append('numQuestions', String(clampQuestionCount(numQuestions)));
     }
     formData.append('difficulty', difficulty);
+    formData.append('customPrompt', customPrompt);
 
     try {
       const response = await api.generateQuizFromFiles(formData);
@@ -391,6 +393,8 @@ const QuizGenerator = () => {
             matrix={matrix}
             onToggleAdvanced={handleToggleAdvanced}
             onMatrixCellChange={handleMatrixCellChange}
+            customPrompt={customPrompt}
+            onCustomPromptChange={setCustomPrompt}
           />
         </form>
       )}
