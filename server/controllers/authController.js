@@ -7,6 +7,25 @@ import { sendVerificationEmail, sendResetEmail } from "../utils/sendEmail.js";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Helper function to generate JWT and response payload for a user
+const generateAuthResponse = (user) => {
+  const token = jwt.sign(
+    { id: user._id, name: user.name, email: user.email, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+  );
+
+  return {
+    success: true,
+    token,
+    user: {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+  };
+};
+
 export const register = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
@@ -171,36 +190,38 @@ export const googleAuth = async (req, res, next) => {
 
     let user = await User.findOne({ email });
 
+    // Scenario A: User exists - proceed with login
     if (user) {
       user.googleId = user.googleId || googleId;
       user.isVerified = true;
       await user.save();
-    } else {
-      user = await User.create({
-        name,
-        email,
-        password: "GOOGLE_OAUTH",
-        role: role || "student",
-        googleId,
-        isVerified: true,
+      return res.status(200).json(generateAuthResponse(user));
+    }
+
+    // Scenario B: New user AND no role provided - request role selection
+    if (!role) {
+      return res.status(200).json({
+        success: true,
+        isNewUser: true,
+        message: "Role selection required for registration.",
       });
     }
 
-    const token = jwt.sign(
-      { id: user._id, name: user.name, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
-    );
+    // Scenario C: New user AND role provided - create account
+    if (role && !["professor", "student"].includes(role)) {
+      return res.status(400).json({ success: false, message: "Role must be either 'professor' or 'student'" });
+    }
 
-    res.status(200).json({
-      success: true,
-      token,
-      user: {
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+    user = await User.create({
+      name,
+      email,
+      password: "GOOGLE_OAUTH",
+      role: role,
+      googleId,
+      isVerified: true,
     });
+
+    res.status(200).json(generateAuthResponse(user));
   } catch (error) {
     if (error.message?.includes("Token used too late") || error.message?.includes("Invalid token")) {
       return res.status(401).json({ success: false, message: "Invalid or expired Google credential" });
