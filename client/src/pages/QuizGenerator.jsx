@@ -209,8 +209,8 @@ const QuizGenerator = () => {
   const handleGenerate = async (event) => {
     event.preventDefault();
 
-    if (files.length === 0) {
-      setError('Attach at least one PDF or DOCX document before generating.');
+    if (files.length === 0 && !customPrompt.trim()) {
+      setError('Attach at least one PDF or DOCX document or provide custom AI instructions before generating.');
       setGeneratedQuestions([]);
       return;
     }
