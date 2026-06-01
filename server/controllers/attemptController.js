@@ -5,7 +5,7 @@ import {
   buildAdaptiveVariant,
   REMEDIATION_LIMIT_MESSAGE,
 } from '../services/adaptiveEngine.js';
-import { sanitizeAnswer, evaluateShortAnswerWithAI } from '../utils/gradingUtils.js';
+import { evaluateShortAnswer } from '../services/shortAnswerEvaluator.js';
 
 function computeRatio(correctCount, totalCount) {
   if (totalCount === 0) return 0;
@@ -71,33 +71,11 @@ const gradeQuestion = async (question, userAnswer) => {
   const selectedAnswer = userAnswer.selectedAnswer;
 
   if (question.type === 'Short-Answer') {
-    const correctAnswer = question.correctAnswer;
-    const sanitizedCorrect = sanitizeAnswer(correctAnswer);
-    const sanitizedStudent = sanitizeAnswer(selectedAnswer);
-
-    if (!sanitizedStudent) {
-      return {
-        ...snapshot,
-        selectedAnswer,
-        isCorrect: false,
-        feedback: 'No answer provided.',
-      };
-    }
-
-    if (sanitizedStudent === sanitizedCorrect) {
-      return {
-        ...snapshot,
-        selectedAnswer,
-        isCorrect: true,
-        feedback: 'Answer matches the expected response.',
-      };
-    }
-
-    const evaluation = await evaluateShortAnswerWithAI(
-      question.questionText || question.text || '',
-      correctAnswer,
+    const evaluation = await evaluateShortAnswer({
+      questionText: question.questionText || question.text || '',
+      correctAnswer: question.correctAnswer,
       selectedAnswer,
-    );
+    });
 
     return {
       ...snapshot,

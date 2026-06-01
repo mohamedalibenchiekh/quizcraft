@@ -9,8 +9,10 @@ import {
   buildAdaptiveVariant,
   REMEDIATION_LIMIT_MESSAGE,
 } from "../services/adaptiveEngine.js";
+import { evaluateShortAnswer } from "../services/shortAnswerEvaluator.js";
 import {
   startQuestion,
+  markAnswerPending,
   recordAnswer,
   compileLeaderboard,
   finalizeUnansweredPlayers,
@@ -41,6 +43,24 @@ const emitAdaptiveResultToUser = (io, room, userId, payload) => {
   }
 };
 
+const normalizeAnswer = (value) => String(value || "").trim().toLowerCase();
+
+const gradeSubmittedAnswer = async (question, selectedAnswer) => {
+  if (question.type !== "Short-Answer") {
+    return {
+      isCorrect:
+        normalizeAnswer(selectedAnswer) !== "" &&
+        normalizeAnswer(selectedAnswer) === normalizeAnswer(question.correctAnswer),
+    };
+  }
+
+  return evaluateShortAnswer({
+    questionText: question.text || "",
+    correctAnswer: question.correctAnswer,
+    selectedAnswer,
+  });
+};
+
 const getRoom = (pin) => {
   if (!rooms.has(pin)) {
     rooms.set(pin, {
@@ -53,6 +73,8 @@ const getRoom = (pin) => {
       currentQuestionId: null,
       questionTimeoutId: null,
       resultsRevealed: false,
+      pendingAnswerGrades: 0,
+      questionTimedOut: false,
       quizId: null,        // set when quiz starts
       answerLog: new Map(), // playerId -> [{ questionId, selectedAnswer, isCorrect }]
       allPlayers: new Map(), // NEW: playerId -> { playerId, username, role, userId }
@@ -111,6 +133,7 @@ const persistAttempts = async (io, pinStr) => {
           questionId: q._id,
           selectedAnswer: logged ? logged.selectedAnswer : null,
           isCorrect: logged ? logged.isCorrect : false,
+          feedback: logged?.feedback,
         };
       });
 
@@ -452,6 +475,8 @@ export const initSocket = (httpServer) => {
         room.currentCorrectAnswer = questionDoc.correctAnswer;
         room.currentQuestionId = questionDoc._id;
         room.resultsRevealed = false;
+        room.pendingAnswerGrades = 0;
+        room.questionTimedOut = false;
 
         if (room.questionTimeoutId) {
           clearTimeout(room.questionTimeoutId);
@@ -460,6 +485,8 @@ export const initSocket = (httpServer) => {
           const r = rooms.get(pinStr);
           if (!r) return;
           if (r.questionStartTime && !r.resultsRevealed) {
+            r.questionTimedOut = true;
+            if (r.pendingAnswerGrades > 0) return;
             r.resultsRevealed = true;
             finalizeUnansweredPlayers(pinStr);
             emitRevealQuestionResults(io, pinStr);
@@ -531,13 +558,29 @@ export const initSocket = (httpServer) => {
           return;
         }
 
-        const isCorrect = question.correctAnswer === chosenOption;
-
         if (!pid) {
           socket.emit("submit-error", { message: "Participant not found." });
           return;
         }
 
+        room.pendingAnswerGrades += 1;
+        markAnswerPending(pinStr, {
+          playerId: pid,
+          username: participant.username,
+        });
+
+        socket.emit("answer-received", {
+          questionId,
+        });
+
+        let evaluation;
+        try {
+          evaluation = await gradeSubmittedAnswer(question, chosenOption);
+        } finally {
+          room.pendingAnswerGrades = Math.max(0, room.pendingAnswerGrades - 1);
+        }
+
+        const isCorrect = evaluation.isCorrect === true;
         const responseTimeMs = receivedAt - room.questionStartTime;
         recordAnswer(pinStr, {
           playerId: pid,
@@ -555,18 +598,23 @@ export const initSocket = (httpServer) => {
           questionId: questionId.toString(),
           selectedAnswer: chosenOption,
           isCorrect,
-        });
-
-        socket.emit("answer-received", {
-          questionId,
+          feedback: evaluation.feedback,
         });
 
         const nonHostCount = Array.from(room.participants.values()).filter((p) => p.role !== "host").length;
-        if (allAnsweredThisRound(pinStr, nonHostCount) && !room.resultsRevealed) {
+        const noPendingGrades = room.pendingAnswerGrades === 0;
+        const canReveal =
+          noPendingGrades &&
+          (allAnsweredThisRound(pinStr, nonHostCount) || room.questionTimedOut);
+
+        if (canReveal && !room.resultsRevealed) {
           room.resultsRevealed = true;
           if (room.questionTimeoutId) {
             clearTimeout(room.questionTimeoutId);
             room.questionTimeoutId = null;
+          }
+          if (room.questionTimedOut) {
+            finalizeUnansweredPlayers(pinStr);
           }
           emitRevealQuestionResults(io, pinStr);
         }

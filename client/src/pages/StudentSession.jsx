@@ -616,7 +616,11 @@ const StudentSession = () => {
   if (phase === 'results') {
     const isLate = answerStatus === 'rejected';
     const studentAnswer = currentQuestion?.type === 'Short-Answer' ? submittedAnswer : selectedOption;
-    const isCorrect = !isLate && studentAnswer === resultsData?.correctAnswer;
+    const isCorrect = !isLate && (
+      typeof yourQuestionResult?.isCorrect === 'boolean'
+        ? yourQuestionResult.isCorrect
+        : studentAnswer === resultsData?.correctAnswer
+    );
 
     const myEntry = Array.isArray(resultsData?.scoreboard)
       ? resultsData.scoreboard.find((e) => e.playerId)
