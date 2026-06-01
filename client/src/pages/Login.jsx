@@ -134,7 +134,9 @@ const Login = () => {
         setTempGoogleCredential(credentialResponse.credential);
         setShowRoleModal(true);
       } else if (data.token) {
-        // Standard successful login/registration processing
+        // Successful login/registration — clean up modal state only on success
+        setTempGoogleCredential(null);
+        setShowRoleModal(false);
         login(data.token, data.user);
         navigate(data.user.role === 'professor' ? '/dashboard' : '/student/dashboard', { replace: true });
       }
@@ -143,6 +145,7 @@ const Login = () => {
       setVerificationRequired(false);
       setResendStatus('');
       setResendMessage('');
+      // Keep modal and credential cached so user can retry
     } finally {
       setAuthLoading(false);
     }
@@ -155,8 +158,8 @@ const Login = () => {
       return;
     }
 
-    setShowRoleModal(false);
-    setTempGoogleCredential(null);
+    // Keep modal open and credential cached during the API call
+    // The handleGoogleSuccess function will handle cleanup on success
     await handleGoogleSuccess({ credential: tempGoogleCredential }, role);
   };
 
