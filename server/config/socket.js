@@ -613,6 +613,9 @@ export const initSocket = (httpServer) => {
             clearTimeout(room.questionTimeoutId);
             room.questionTimeoutId = null;
           }
+          if (room.questionTimedOut) {
+            finalizeUnansweredPlayers(pinStr);
+          }
           emitRevealQuestionResults(io, pinStr);
         }
       } catch (error) {

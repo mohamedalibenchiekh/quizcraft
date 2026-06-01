@@ -24,29 +24,31 @@ export const startQuestion = (pin, startTime) => {
   }
 };
 
-export const markAnswerPending = (pin, { playerId, username }) => {
-  const sb = getScoreboard(pin);
+const ensurePlayer = (sb, playerId, username) => {
   if (!sb.players[playerId]) {
     sb.players[playerId] = { username, score: 0, currentStreak: 0, lastPlacement: 0, lastResult: null };
   }
 
   sb.players[playerId].username = username;
+  return sb.players[playerId];
+};
+
+const registerAnsweredThisRound = (sb, playerId) => {
   if (sb.answeredThisRound) {
     sb.answeredThisRound.add(playerId);
   }
 };
 
+export const markAnswerPending = (pin, { playerId, username }) => {
+  const sb = getScoreboard(pin);
+  ensurePlayer(sb, playerId, username);
+  registerAnsweredThisRound(sb, playerId);
+};
+
 export const recordAnswer = (pin, { playerId, username, isCorrect, responseTimeMs, questionDurationMs }) => {
   const sb = getScoreboard(pin);
-  if (!sb.players[playerId]) {
-    sb.players[playerId] = { username, score: 0, currentStreak: 0, lastPlacement: 0, lastResult: null };
-  }
-
-  const player = sb.players[playerId];
-  player.username = username;
-  if (sb.answeredThisRound) {
-    sb.answeredThisRound.add(playerId);
-  }
+  const player = ensurePlayer(sb, playerId, username);
+  registerAnsweredThisRound(sb, playerId);
 
   if (!isCorrect) {
     player.currentStreak = 0;
