@@ -36,7 +36,7 @@ api.generateQuizFromFiles = async (formData) => {
     text = uploadResponse.data?.consolidatedText;
     uploadData = uploadResponse.data;
   } else {
-    text = 'Generate quiz questions based on the professor\'s custom instructions below.';
+    text = formData.get('customPrompt') || '';
   }
 
   const difficulty = formData.get('difficulty') || 'medium';
