@@ -290,7 +290,7 @@ const Home = () => {
         style={{ background: 'radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 80%)' }}
       />
       <div
-        className="absolute bottom-[-150px] left-[15%] w-[600px] h-[600px] rounded-full pointer-events-none z-0 filter blur-[140px]"
+        className="absolute bottom-0 left-[15%] w-[600px] h-[600px] rounded-full pointer-events-none z-0 filter blur-[140px]"
         style={{ background: 'radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 80%)' }}
       />
 
