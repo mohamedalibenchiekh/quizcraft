@@ -51,9 +51,18 @@ const resolveSubmissionTarget = async (quizId, userId) => {
 };
 
 const gradeQuestion = async (question, userAnswer) => {
+  // Snapshot the question so historical reviews survive later quiz edits.
+  const snapshot = {
+    questionId: question._id,
+    questionText: question.text,
+    questionType: question.type,
+    options: question.options || [],
+    difficulty: question.difficulty,
+  };
+
   if (!userAnswer) {
     return {
-      questionId: question._id,
+      ...snapshot,
       selectedAnswer: null,
       isCorrect: false,
     };
@@ -68,7 +77,7 @@ const gradeQuestion = async (question, userAnswer) => {
 
     if (!sanitizedStudent) {
       return {
-        questionId: question._id,
+        ...snapshot,
         selectedAnswer,
         isCorrect: false,
         feedback: 'No answer provided.',
@@ -77,7 +86,7 @@ const gradeQuestion = async (question, userAnswer) => {
 
     if (sanitizedStudent === sanitizedCorrect) {
       return {
-        questionId: question._id,
+        ...snapshot,
         selectedAnswer,
         isCorrect: true,
         feedback: 'Answer matches the expected response.',
@@ -91,7 +100,7 @@ const gradeQuestion = async (question, userAnswer) => {
     );
 
     return {
-      questionId: question._id,
+      ...snapshot,
       selectedAnswer,
       isCorrect: evaluation.isCorrect,
       feedback: evaluation.feedback,
@@ -103,7 +112,7 @@ const gradeQuestion = async (question, userAnswer) => {
     normalizeAnswer(selectedAnswer) === normalizeAnswer(question.correctAnswer);
 
   return {
-    questionId: question._id,
+    ...snapshot,
     selectedAnswer,
     isCorrect,
   };

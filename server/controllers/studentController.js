@@ -114,13 +114,15 @@ export const getAttemptById = async (req, res, next) => {
     }
 
     const detailedAnswers = attempt.answers.map((a) => {
+      // Prefer the snapshot stored on the answer at submit time; fall back to a
+      // live lookup for older attempts saved before snapshots were introduced.
       const question = questionMap[a.questionId.toString()] || null;
       return {
         questionId: a.questionId,
-        questionText: question ? question.text : 'Unknown question',
-        questionType: question ? question.type : null,
-        options: question ? question.options : [],
-        difficulty: question ? question.difficulty : null,
+        questionText: a.questionText || question?.text || 'Unknown question',
+        questionType: a.questionType || question?.type || null,
+        options: a.options?.length ? a.options : question?.options || [],
+        difficulty: a.difficulty || question?.difficulty || null,
         selectedAnswer: a.selectedAnswer,
         isCorrect: a.isCorrect,
       };

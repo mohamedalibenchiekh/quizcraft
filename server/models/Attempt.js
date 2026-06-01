@@ -28,6 +28,21 @@ const AttemptSchema = new mongoose.Schema(
           ref: 'Question',
           required: true,
         },
+        // Snapshot of the question at submit time, so historical reviews
+        // survive later quiz edits that delete/recreate Question documents.
+        questionText: {
+          type: String,
+        },
+        questionType: {
+          type: String,
+        },
+        options: {
+          type: [String],
+          default: [],
+        },
+        difficulty: {
+          type: String,
+        },
         selectedAnswer: {
           type: String,
         },

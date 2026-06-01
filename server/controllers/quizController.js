@@ -421,7 +421,9 @@ export const updateQuizMetadata = async (req, res, next) => {
         if (result.error) {
           return res.status(400).json({ success: false, message: result.error });
         }
-        sanitizedQuestions.push(result.sanitized);
+        // Carry the client-supplied _id so existing questions can be updated in
+        // place, keeping their ObjectId stable for historical attempt references.
+        sanitizedQuestions.push({ _id: q._id, data: result.sanitized });
       }
 
       await Question.createCollection();
@@ -447,17 +449,35 @@ export const updateQuizMetadata = async (req, res, next) => {
           });
         }
 
-        // Delete old questions
-        if (quiz.questions.length > 0) {
-          await Question.deleteMany({ _id: { $in: quiz.questions } }, { session });
+        // Update existing questions in place and create only the new ones, so
+        // that unchanged/edited questions keep their ObjectId. This prevents
+        // orphaning historical attempts that reference those question IDs.
+        const existingIds = new Set(quiz.questions.map((id) => id.toString()));
+        const keptIds = new Set();
+        const newQuestionIds = [];
+
+        for (const { _id, data } of sanitizedQuestions) {
+          const idStr = _id ? _id.toString() : null;
+          // Only update in place when the supplied _id genuinely belongs to this
+          // quiz; otherwise treat it as a new question (guards against passing an
+          // _id from another quiz to tamper with it).
+          if (idStr && existingIds.has(idStr)) {
+            await Question.findByIdAndUpdate(idStr, data, {
+              session,
+              runValidators: true,
+            });
+            newQuestionIds.push(_id);
+            keptIds.add(idStr);
+          } else {
+            const savedQuestion = await new Question(data).save({ session });
+            newQuestionIds.push(savedQuestion._id);
+          }
         }
 
-        // Create new questions
-        const newQuestionIds = [];
-        for (const sq of sanitizedQuestions) {
-          const newQuestion = new Question(sq);
-          const savedQuestion = await newQuestion.save({ session });
-          newQuestionIds.push(savedQuestion._id);
+        // Delete only the questions that were removed from the quiz.
+        const removedIds = [...existingIds].filter((id) => !keptIds.has(id));
+        if (removedIds.length > 0) {
+          await Question.deleteMany({ _id: { $in: removedIds } }, { session });
         }
 
         // Update quiz fields
