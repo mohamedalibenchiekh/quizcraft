@@ -24,6 +24,18 @@ export const startQuestion = (pin, startTime) => {
   }
 };
 
+export const markAnswerPending = (pin, { playerId, username }) => {
+  const sb = getScoreboard(pin);
+  if (!sb.players[playerId]) {
+    sb.players[playerId] = { username, score: 0, currentStreak: 0, lastPlacement: 0, lastResult: null };
+  }
+
+  sb.players[playerId].username = username;
+  if (sb.answeredThisRound) {
+    sb.answeredThisRound.add(playerId);
+  }
+};
+
 export const recordAnswer = (pin, { playerId, username, isCorrect, responseTimeMs, questionDurationMs }) => {
   const sb = getScoreboard(pin);
   if (!sb.players[playerId]) {

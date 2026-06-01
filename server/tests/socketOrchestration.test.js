@@ -17,6 +17,7 @@ let server;
 let serverUrl;
 let mongoServer;
 let questionId;
+let shortAnswerQuestionId;
 let hostToken;
 let hostId;
 
@@ -54,11 +55,20 @@ beforeAll(async () => {
   });
   questionId = question._id;
 
+  const shortAnswerQuestion = await Question.create({
+    text: "Name one responsibility engineers have in AI systems.",
+    type: "Short-Answer",
+    options: [],
+    correctAnswer: "Engineers choose the data.",
+    difficulty: "medium",
+  });
+  shortAnswerQuestionId = shortAnswerQuestion._id;
+
   const quiz = await Quiz.create({
     title: "Math Test",
     description: "Basic arithmetic",
     professorId: hostId,
-    questions: [question._id],
+    questions: [question._id, shortAnswerQuestion._id],
   });
 
   await Session.create({
@@ -225,6 +235,51 @@ describe("Socket.io Live Quiz Orchestration", () => {
     });
     const dupPayload = await dupErr;
     expect(dupPayload).toMatchObject({ message: expect.stringContaining("already answered") });
+
+    hostSocket.close();
+    studentSocket.close();
+  });
+
+  it("should grade live short answers through normalized short-answer evaluation", async () => {
+    const hostSocket = createClient();
+    const studentSocket = createClient();
+
+    await Promise.all([
+      waitForEvent(hostSocket, "connect"),
+      waitForEvent(studentSocket, "connect"),
+    ]);
+
+    hostSocket.emit("hostClaim", { pin: PIN, token: hostToken });
+    await Promise.all([
+      waitForEvent(hostSocket, "host-claimed"),
+      waitForEvent(hostSocket, "room-roster-updated"),
+    ]);
+
+    studentSocket.emit("joinRoom", { pin: PIN, username: "Casey" });
+    await Promise.all([
+      waitForEvent(hostSocket, "room-roster-updated"),
+      waitForEvent(studentSocket, "room-roster-updated"),
+    ]);
+
+    hostSocket.emit("startQuiz", { pin: PIN });
+    await waitForEvent(studentSocket, "quiz-started");
+
+    const revealPromise = waitForEvent(studentSocket, "reveal-question");
+    hostSocket.emit("nextQuestion", { pin: PIN, questionIndex: 1, durationMs: 10000 });
+    const questionPayload = await revealPromise;
+    expect(questionPayload.type).toBe("Short-Answer");
+    expect(questionPayload).not.toHaveProperty("correctAnswer");
+
+    const resultsPromise = waitForEvent(studentSocket, "reveal-question-results");
+    studentSocket.emit("submitAnswer", {
+      pin: PIN,
+      questionId: shortAnswerQuestionId.toString(),
+      chosenOption: "engineers choose the data.",
+    });
+
+    const results = await resultsPromise;
+    expect(results.scoreboard).toHaveLength(1);
+    expect(results.scoreboard[0].score).toBeGreaterThan(0);
 
     hostSocket.close();
     studentSocket.close();
