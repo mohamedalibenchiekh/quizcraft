@@ -275,7 +275,7 @@ const Home = () => {
 
   return (
     <div
-      className="relative min-h-screen overflow-x-hidden font-sans"
+      className="relative min-h-screen font-sans"
       style={{ background: 'var(--color-surface-base)', color: 'var(--color-text-primary)' }}
     >
       <ParticleField />
