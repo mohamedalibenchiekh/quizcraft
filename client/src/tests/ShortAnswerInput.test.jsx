@@ -195,4 +195,41 @@ describe('Short-Answer Input Rendering', () => {
     expect(screen.getAllByText('Paris')).toHaveLength(2);
     expect(screen.getByRole('heading', { name: /correct/i })).toBeInTheDocument();
   });
+
+  it('should trust server semantic grading when a short answer earns points', () => {
+    joinLobbyHelper();
+
+    const mockShortAnswerQuestion = {
+      _id: 'q-bias',
+      text: 'List one type of bias mentioned in the document that can affect AI systems.',
+      type: 'Short-Answer',
+    };
+
+    act(() => {
+      socket._callbacks['reveal-question']?.(mockShortAnswerQuestion);
+    });
+
+    fireEvent.change(screen.getByTestId('short-answer-input'), {
+      target: { value: 'Labeling Bias' },
+    });
+    fireEvent.click(screen.getByTestId('short-answer-submit'));
+
+    act(() => {
+      socket._callbacks['reveal-question-results']?.({
+        correctAnswer: 'One type of bias is Data Bias, Labeling Bias, or Feedback Loop Bias.',
+        scoreboard: [],
+      });
+      socket._callbacks['your-question-result']?.({
+        pointsAwarded: 817,
+        speedPoints: 817,
+        streakBonus: 0,
+        cumulativeScore: 1628,
+        isCorrect: true,
+      });
+    });
+
+    expect(screen.getByRole('heading', { name: /correct/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /incorrect/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/\+817 pts/i)).toBeInTheDocument();
+  });
 });
