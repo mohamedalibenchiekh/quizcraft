@@ -9,7 +9,13 @@ import {
   X,
   BrainCircuit,
   Trophy,
-  GraduationCap
+  GraduationCap,
+  UploadCloud,
+  Sliders,
+  BarChart3,
+  PlayCircle,
+  CheckCircle2,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
@@ -202,6 +208,77 @@ const METRICS = [
   { icon: GraduationCap, iconColor: 'text-cyan-400', value: '3.5x', label: 'Student Mastery Speed' },
 ];
 
+/* ─────────────────────────────────────────────
+   Workflow Step Data & Card
+   ───────────────────────────────────────────── */
+const PROFESSOR_STEPS = [
+  {
+    step: '01',
+    icon: UploadCloud,
+    title: 'Ingest Learning Media',
+    description: 'Upload study files, lecture slide PDFs, or text documents directly into the document ingestion area.',
+  },
+  {
+    step: '02',
+    icon: Sliders,
+    title: 'Command the AI Matrix',
+    description: 'Configure your exact parameter matrix distribution count by difficulty level, and write targeted custom prompt guidelines.',
+  },
+  {
+    step: '03',
+    icon: BarChart3,
+    title: 'Publish & Track Insights',
+    description: 'Instantly distribute evaluation keys, lock access limits, and view auto-aggregated class accuracy analytics reports.',
+  },
+];
+
+const STUDENT_STEPS = [
+  {
+    step: '01',
+    icon: PlayCircle,
+    title: 'Launch Active App Engine',
+    description: 'Access shared tests or personalized practice spaces directly from an interactive, high-performance clean testing layout.',
+  },
+  {
+    step: '02',
+    icon: CheckCircle2,
+    title: 'Instant Smart Evaluation',
+    description: 'Receive immediate grading responses. Open-ended short-form answers are evaluated via semantic AI logic to protect variation spelling accuracy.',
+  },
+  {
+    step: '03',
+    icon: RefreshCw,
+    title: 'Trigger Adaptive Remediation',
+    description: 'Scored below 50%? The adaptive difficulty engine automatically compiles custom secondary review decks to isolate and cure weak topics.',
+  },
+];
+
+const WorkflowStepCard = ({ step, icon: Icon, title, description, accent }) => {
+  const accentBorder = accent === 'cyan' ? 'hover:border-cyan-500/30' : 'hover:border-purple-500/30';
+  const iconWrapBg = accent === 'cyan' ? 'bg-cyan-500/10 border-cyan-500/20' : 'bg-purple-500/10 border-purple-500/20';
+  const iconColor = accent === 'cyan' ? 'text-cyan-400' : 'text-purple-400';
+
+  return (
+    <div
+      className={`group relative backdrop-blur-md border border-[var(--color-nav-border)] p-6 rounded-2xl transition-all duration-300 shadow-xl flex-1 w-full ${accentBorder}`}
+      style={{ background: 'var(--color-surface-glass)' }}
+    >
+      <div className="absolute top-4 right-4 text-4xl font-black select-none font-mono opacity-20" style={{ color: 'var(--color-text-muted)' }}>
+        {step}
+      </div>
+      <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 ${iconWrapBg}`}>
+        <Icon className={`w-6 h-6 ${iconColor}`} />
+      </div>
+      <h3 className="text-xl font-bold mb-4 tracking-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
+        {title}
+      </h3>
+      <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+        {description}
+      </p>
+    </div>
+  );
+};
+
 const MetricItem = ({ icon: Icon, iconColor, value, label }) => (
   <div className="flex flex-col justify-center items-center p-4 hover:scale-105 transition-transform duration-300">
     <div className="flex items-center gap-2 mb-2">
@@ -225,6 +302,7 @@ const Home = () => {
   const [roomCode, setRoomCode] = useState('');
   const [isCodeFocused, setIsCodeFocused] = useState(false);
   const [isDemoOpen, setIsDemoOpen] = useState(false);
+  const [activeRoleWorkflow, setActiveRoleWorkflow] = useState('professor');
 
   const handleProfessorPortal = () => {
     if (user) {
@@ -474,7 +552,71 @@ const Home = () => {
       </section>
 
       {/* ─────────────────────────────────────
-           SECTION B: COMPREHENSIVE CAPABILITIES GRID (3 Columns)
+           SECTION B': SPLIT-PERSONA WORKFLOW CLARIFICATION
+         ───────────────────────────────────── */}
+      <section className="relative z-10 py-24 md:py-36 border-t border-b border-purple-500/5">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+
+          {/* Section Accent Header */}
+          <div className="text-center mb-16">
+            <span className="inline-block text-xs font-bold uppercase tracking-widest mb-3 text-cyan-500">
+              How It Works
+            </span>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+              Tailored Experience for Creators &amp; Learners
+            </h2>
+            <p className="max-w-2xl mx-auto text-base sm:text-lg" style={{ color: 'var(--color-text-secondary)' }}>
+              Choose an ecosystem to explore how QuizCraft automates assessment creation and accelerates student knowledge retention.
+            </p>
+          </div>
+
+          {/* Interactive Pill Toggle */}
+          <div className="flex justify-center mb-16">
+            <div className="inline-flex p-1 rounded-full" style={{ background: 'var(--color-surface-glass)', border: '1px solid var(--color-nav-border)' }}>
+              <button
+                onClick={() => setActiveRoleWorkflow('professor')}
+                className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 cursor-pointer ${
+                  activeRoleWorkflow === 'professor'
+                    ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                    : 'border border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                Professor
+              </button>
+              <button
+                onClick={() => setActiveRoleWorkflow('student')}
+                className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 cursor-pointer ${
+                  activeRoleWorkflow === 'student'
+                    ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+                    : 'border border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                Student
+              </button>
+            </div>
+          </div>
+
+          {/* Dynamic Workflow Cards */}
+          <div className="flex flex-col md:flex-row items-start gap-6 md:gap-4 lg:gap-8">
+            {(activeRoleWorkflow === 'professor' ? PROFESSOR_STEPS : STUDENT_STEPS).map((step, index) => {
+              const accent = activeRoleWorkflow === 'professor' ? 'cyan' : 'purple';
+              return (
+                <div key={step.step} className="flex-1 w-full flex items-stretch">
+                  <WorkflowStepCard {...step} accent={accent} />
+                  {index < 2 && (
+                    <div className="hidden md:flex items-center self-center mx-2" style={{ color: 'var(--color-text-muted)', opacity: 0.5 }}>
+                      <ArrowRight className="w-6 h-6 shrink-0" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────
+           SECTION C: COMPREHENSIVE CAPABILITIES GRID (3 Columns)
          ───────────────────────────────────── */}
       <section id="features" className="relative z-10 py-24 md:py-36 border-t border-b border-purple-500/5">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
