@@ -171,20 +171,51 @@ export const googleAuth = async (req, res, next) => {
 
     let user = await User.findOne({ email });
 
+    // Scenario A: User exists - proceed with login
     if (user) {
       user.googleId = user.googleId || googleId;
       user.isVerified = true;
       await user.save();
-    } else {
-      user = await User.create({
-        name,
-        email,
-        password: "GOOGLE_OAUTH",
-        role: role || "student",
-        googleId,
-        isVerified: true,
+
+      const token = jwt.sign(
+        { id: user._id, name: user.name, email: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+      );
+
+      return res.status(200).json({
+        success: true,
+        token,
+        user: {
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
       });
     }
+
+    // Scenario B: New user AND no role provided - request role selection
+    if (!role) {
+      return res.status(200).json({
+        success: true,
+        isNewUser: true,
+        message: "Role selection required for registration.",
+      });
+    }
+
+    // Scenario C: New user AND role provided - create account
+    if (role && !["professor", "student"].includes(role)) {
+      return res.status(400).json({ success: false, message: "Role must be either 'professor' or 'student'" });
+    }
+
+    user = await User.create({
+      name,
+      email,
+      password: "GOOGLE_OAUTH",
+      role: role,
+      googleId,
+      isVerified: true,
+    });
 
     const token = jwt.sign(
       { id: user._id, name: user.name, email: user.email, role: user.role },
