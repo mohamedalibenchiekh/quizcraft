@@ -26,9 +26,19 @@ api.updateQuiz = async (id, quizData) => {
 };
 
 api.generateQuizFromFiles = async (formData) => {
-  const uploadResponse = await api.post('/upload', formData);
+  const hasFiles = formData.get('documents') !== null;
 
-  const text = uploadResponse.data?.consolidatedText;
+  let text;
+  let uploadData = null;
+
+  if (hasFiles) {
+    const uploadResponse = await api.post('/upload', formData);
+    text = uploadResponse.data?.consolidatedText;
+    uploadData = uploadResponse.data;
+  } else {
+    text = formData.get('customPrompt') || '';
+  }
+
   const difficulty = formData.get('difficulty') || 'medium';
 
   const isAdvanced = formData.get('isAdvanced') === 'true';
@@ -45,16 +55,19 @@ api.generateQuizFromFiles = async (formData) => {
     }
   }
 
+  const customPrompt = formData.get('customPrompt') || '';
+
   const generationResponse = await api.post('/ai/generate', {
     text,
     numQuestions,
     difficulty,
+    customPrompt,
     ...(isAdvanced && matrix ? { isAdvanced: true, matrix } : {}),
   });
 
   return {
     ...generationResponse.data,
-    upload: uploadResponse.data,
+    ...(hasFiles ? { upload: uploadData } : {}),
   };
 };
 
