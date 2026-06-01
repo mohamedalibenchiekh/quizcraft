@@ -87,6 +87,7 @@ const AIParameterForm = ({
           <textarea
             id="customPrompt"
             rows={3}
+            maxLength={2000}
             value={customPrompt}
             disabled={interactionLocked}
             onChange={(e) => onCustomPromptChange(e.target.value)}

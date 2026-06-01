@@ -61,6 +61,21 @@ router.post(
         });
       }
 
+      // ── Custom prompt validation ────────────────────────
+      const MAX_CUSTOM_PROMPT_LENGTH = 2000;
+      if (customPrompt !== undefined && typeof customPrompt !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Validation failed — 'customPrompt' must be a string.",
+        });
+      }
+      if (customPrompt && customPrompt.length > MAX_CUSTOM_PROMPT_LENGTH) {
+        return res.status(400).json({
+          success: false,
+          message: `Validation failed — 'customPrompt' exceeds the maximum length of ${MAX_CUSTOM_PROMPT_LENGTH} characters.`,
+        });
+      }
+
       // ── Advanced matrix validation ──────────────────────
       if (isAdvanced) {
         if (!matrix || typeof matrix !== "object") {
