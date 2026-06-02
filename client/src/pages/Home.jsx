@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import api from '../services/api';
 import {
   Sparkles,
   Activity,
@@ -299,7 +300,9 @@ const MetricItem = ({ icon: Icon, iconColor, value, label }) => (
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [roomCode, setRoomCode] = useState('');
+  const [sessionCode, setSessionCode] = useState('');
+  const [sessionError, setSessionError] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
   const [isCodeFocused, setIsCodeFocused] = useState(false);
   const [isDemoOpen, setIsDemoOpen] = useState(false);
   const [activeRoleWorkflow, setActiveRoleWorkflow] = useState('professor');
@@ -316,20 +319,38 @@ const Home = () => {
     navigate('/signup');
   };
 
-  const handleJoinSession = () => {
-    if (roomCode.length === 6) {
-      navigate('/session', { state: { roomCode } });
+  const handleJoinSession = async (e) => {
+    e.preventDefault();
+    if (!sessionCode.trim()) {
+      setSessionError('Please enter a session code.');
+      return;
+    }
+
+    setIsValidating(true);
+    setSessionError('');
+
+    try {
+      const response = await api.post('/sessions/verify', { code: sessionCode.trim() });
+
+      if (response.data.success) {
+        navigate(`/session/${sessionCode.trim()}`, { state: { roomCode: sessionCode.trim() } });
+      }
+    } catch (err) {
+      setSessionError(err.response?.data?.message || 'Invalid session code. Try again.');
+    } finally {
+      setIsValidating(false);
     }
   };
 
   const handleCodeChange = (e) => {
     const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6);
-    setRoomCode(value);
+    setSessionCode(value);
+    if (sessionError) setSessionError('');
   };
 
   const handleCodeKeyDown = (e) => {
     if (e.key === 'Enter') {
-      handleJoinSession();
+      e.preventDefault();
     }
   };
 
@@ -494,56 +515,65 @@ const Home = () => {
                   Enter a 6-character room code from your professor to instantly join a real-time live session.
                 </p>
 
-                <div className="flex gap-3">
-                  <div className="relative flex-1">
-                    <input
-                      id="room-code-input"
-                      type="text"
-                      inputMode="text"
-                      pattern="[A-Za-z0-9]*"
-                      maxLength={6}
-                      value={roomCode}
-                      onChange={handleCodeChange}
-                      onKeyDown={handleCodeKeyDown}
-                      onFocus={() => setIsCodeFocused(true)}
-                      onBlur={() => setIsCodeFocused(false)}
-                      placeholder="ABC123"
-                      className="w-full px-4 py-3.5 rounded-xl text-center text-xl font-mono font-bold tracking-[0.25em] outline-none transition-all duration-300"
-                      style={{
-                        background: 'var(--color-surface-input)',
-                        color: 'var(--color-text-primary)',
-                        border: isCodeFocused
-                          ? '2px solid rgba(139, 92, 246, 0.7)'
-                          : '2px solid rgba(139, 92, 246, 0.2)',
-                        caretColor: 'var(--color-brand-400)',
-                      }}
-                    />
-                    <div
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-bold"
-                      style={{ color: roomCode.length === 6 ? '#34d399' : 'var(--color-text-muted)' }}
-                    >
-                      {roomCode.length}/6
+                <form onSubmit={handleJoinSession} className="flex flex-col gap-3">
+                  <div className="flex gap-3">
+                    <div className="relative flex-1">
+                      <input
+                        id="room-code-input"
+                        type="text"
+                        inputMode="text"
+                        pattern="[A-Za-z0-9]*"
+                        maxLength={6}
+                        value={sessionCode}
+                        onChange={handleCodeChange}
+                        onKeyDown={handleCodeKeyDown}
+                        onFocus={() => setIsCodeFocused(true)}
+                        onBlur={() => setIsCodeFocused(false)}
+                        disabled={isValidating}
+                        placeholder="ABC123"
+                        className="w-full px-4 py-3.5 rounded-xl text-center text-xl font-mono font-bold tracking-[0.25em] outline-none transition-all duration-300"
+                        style={{
+                          background: 'var(--color-surface-input)',
+                          color: 'var(--color-text-primary)',
+                          border: isCodeFocused
+                            ? '2px solid rgba(139, 92, 246, 0.7)'
+                            : '2px solid rgba(139, 92, 246, 0.2)',
+                          caretColor: 'var(--color-brand-400)',
+                        }}
+                      />
+                      <div
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-bold"
+                        style={{ color: sessionCode.length === 6 ? '#34d399' : 'var(--color-text-muted)' }}
+                      >
+                        {sessionCode.length}/6
+                      </div>
                     </div>
+
+                    <button
+                      type="submit"
+                      disabled={isValidating || sessionCode.trim().length !== 6}
+                      className="px-6 py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:translate-y-[-2px]"
+                      style={{
+                        background: sessionCode.length === 6
+                          ? 'linear-gradient(135deg, #10b981, #059669)'
+                          : 'rgba(16, 185, 129, 0.15)',
+                        color: sessionCode.length === 6 ? '#fff' : '#10b981',
+                        border: sessionCode.length === 6
+                          ? 'none'
+                          : '1px solid rgba(16, 185, 129, 0.25)',
+                        boxShadow: sessionCode.length === 6 ? '0 6px 20px rgba(16, 185, 129, 0.3)' : 'none',
+                      }}
+                    >
+                      {isValidating ? 'Joining…' : 'Join'}
+                    </button>
                   </div>
 
-                  <button
-                    onClick={handleJoinSession}
-                    disabled={roomCode.length !== 6}
-                    className="px-6 py-3.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:translate-y-[-2px]"
-                    style={{
-                      background: roomCode.length === 6
-                        ? 'linear-gradient(135deg, #10b981, #059669)'
-                        : 'rgba(16, 185, 129, 0.15)',
-                      color: roomCode.length === 6 ? '#fff' : '#10b981',
-                      border: roomCode.length === 6
-                        ? 'none'
-                        : '1px solid rgba(16, 185, 129, 0.25)',
-                      boxShadow: roomCode.length === 6 ? '0 6px 20px rgba(16, 185, 129, 0.3)' : 'none',
-                    }}
-                  >
-                    Join
-                  </button>
-                </div>
+                  {sessionError && (
+                    <p className="mt-1 text-xs font-medium text-red-400 animate-fadeIn">
+                      ⚠️ {sessionError}
+                    </p>
+                  )}
+                </form>
               </div>
             </div>
 

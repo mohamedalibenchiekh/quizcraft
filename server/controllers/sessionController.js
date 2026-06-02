@@ -161,6 +161,45 @@ export const cancelSession = async (req, res, next) => {
   }
 };
 
+export const verifySession = async (req, res, next) => {
+  try {
+    const { code } = req.body;
+
+    if (!code || typeof code !== "string" || !code.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "A session code is required.",
+      });
+    }
+
+    const normalized = code.trim().toUpperCase();
+    if (!/^[A-Z0-9]{6}$/.test(normalized)) {
+      return res.status(400).json({
+        success: false,
+        message: "Session code must be exactly 6 alphanumeric characters.",
+      });
+    }
+
+    const session = await Session.findOne({
+      pin: normalized,
+      status: { $in: ["waiting", "active"] },
+    });
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "No active session found with that code. Please double-check your PIN.",
+      });
+    }
+
+    res.status(200).json({ success: true, data: session });
+  } catch (error) {
+    console.error("verifySession error:", error);
+    next(error);
+  }
+};
+
 export const submitAnswer = async (req, res, next) => {
   try {
     res.status(501).json({
