@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/Navbar';
@@ -56,7 +56,8 @@ const ProtectedRoute = ({ children, allowedRole }) => {
 const SessionGuard = ({ children }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const hasRoomCode = Boolean(location.state?.roomCode);
+  const params = useParams();
+  const hasRoomCode = Boolean(location.state?.roomCode || params?.code);
 
   if (loading) {
     return <Spinner />;
@@ -249,6 +250,17 @@ const AppRoutes = () => {
       {/* Session – requires either auth OR a room code from the Home page */}
       <Route
         path="/session"
+        element={
+          <SessionGuard>
+            <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>
+              <Navbar />
+              <StudentSession />
+            </div>
+          </SessionGuard>
+        }
+      />
+      <Route
+        path="/session/:code"
         element={
           <SessionGuard>
             <div className="min-h-screen" style={{ background: 'var(--color-surface-base)' }}>

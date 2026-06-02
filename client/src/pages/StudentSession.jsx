@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   socket,
@@ -32,11 +32,12 @@ const StudentSession = () => {
   const { user, token } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { code } = useParams();
 
   /* ---- State ---- */
   const [phase, setPhase] = useState('join');           // join | lobby | question | results | leaderboard | ended
   const [isConnecting, setIsConnecting] = useState(false);
-  const [pinInput, setPinInput] = useState(location.state?.roomCode || '');
+  const [pinInput, setPinInput] = useState(location.state?.roomCode || code || '');
   const [usernameInput, setUsernameInput] = useState('');
   const [activePin, setActivePin] = useState('');
   const [error, setError] = useState('');
