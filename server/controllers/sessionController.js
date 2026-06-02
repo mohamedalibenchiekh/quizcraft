@@ -193,7 +193,7 @@ export const verifySession = async (req, res, next) => {
       });
     }
 
-    res.status(200).json({ success: true, data: session });
+    res.status(200).json({ success: true });
   } catch (error) {
     console.error("verifySession error:", error);
     next(error);

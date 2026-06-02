@@ -348,12 +348,6 @@ const Home = () => {
     if (sessionError) setSessionError('');
   };
 
-  const handleCodeKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-    }
-  };
-
   // Demo modal: close on Escape and lock body scroll while open
   useEffect(() => {
     if (!isDemoOpen) return;
@@ -526,7 +520,6 @@ const Home = () => {
                         maxLength={6}
                         value={sessionCode}
                         onChange={handleCodeChange}
-                        onKeyDown={handleCodeKeyDown}
                         onFocus={() => setIsCodeFocused(true)}
                         onBlur={() => setIsCodeFocused(false)}
                         disabled={isValidating}
