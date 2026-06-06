@@ -264,7 +264,7 @@ const HostSession = () => {
                     bgColor="#ffffff"
                     fgColor="#0f0a1e"
                     level="M"
-                    includeMargin={false}
+                    marginSize={4}
                   />
                 </div>
                 <p className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
@@ -283,7 +283,7 @@ const HostSession = () => {
                     a.href = url;
                     a.download = `quizcraft-pin-${pin}.svg`;
                     a.click();
-                    URL.revokeObjectURL(url);
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 hover:translate-y-[-1px]"
                   style={{
