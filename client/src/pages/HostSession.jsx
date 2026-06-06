@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
@@ -216,17 +217,88 @@ const HostSession = () => {
     return (
       <div className="min-h-[calc(100vh-64px)] flex flex-col items-center px-4 py-10" style={{ background: 'var(--color-surface-base)' }}>
         <div className="w-full max-w-4xl animate-fade-in-up">
-          {/* PIN Display */}
-          <div className="text-center mb-10">
-            <p className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>Room PIN</p>
-            <div className="inline-block px-10 py-5 rounded-2xl" style={{ background: 'var(--color-surface-card)', border: '2px solid rgba(139, 92, 246, 0.3)', boxShadow: '0 0 60px rgba(124, 58, 237, 0.15)' }}>
-              <span className="text-6xl sm:text-7xl md:text-8xl font-extrabold tracking-[0.3em] font-mono" style={{ color: 'var(--color-brand-300)', fontFamily: "'Outfit', monospace" }}>
-                {pin}
-              </span>
+          {/* PIN Display + QR Code */}
+          <div className="flex flex-col lg:flex-row items-center justify-center gap-8 mb-10">
+            {/* PIN */}
+            <div className="text-center">
+              <p className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>Room PIN</p>
+              <div className="inline-block px-10 py-5 rounded-2xl" style={{ background: 'var(--color-surface-card)', border: '2px solid rgba(139, 92, 246, 0.3)', boxShadow: '0 0 60px rgba(124, 58, 237, 0.15)' }}>
+                <span className="text-6xl sm:text-7xl md:text-8xl font-extrabold tracking-[0.3em] font-mono" style={{ color: 'var(--color-brand-300)', fontFamily: "'Outfit', monospace" }}>
+                  {pin}
+                </span>
+              </div>
+              <p className="mt-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                Share this PIN with your students to join the session
+              </p>
             </div>
-            <p className="mt-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-              Share this PIN with your students to join the session
-            </p>
+
+            {/* Divider */}
+            <div className="hidden lg:flex flex-col items-center gap-2">
+              <div className="w-px h-16 rounded-full" style={{ background: 'rgba(139, 92, 246, 0.25)' }} />
+              <span className="text-xs font-bold px-2" style={{ color: 'var(--color-text-muted)' }}>OR</span>
+              <div className="w-px h-16 rounded-full" style={{ background: 'rgba(139, 92, 246, 0.25)' }} />
+            </div>
+            <div className="flex lg:hidden items-center gap-3 w-full max-w-xs">
+              <div className="flex-1 h-px rounded-full" style={{ background: 'rgba(139, 92, 246, 0.25)' }} />
+              <span className="text-xs font-bold px-2" style={{ color: 'var(--color-text-muted)' }}>OR</span>
+              <div className="flex-1 h-px rounded-full" style={{ background: 'rgba(139, 92, 246, 0.25)' }} />
+            </div>
+
+            {/* QR Code */}
+            <div className="text-center">
+              <p className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>Scan to Join</p>
+              <div
+                id="qr-code-panel"
+                className="inline-flex flex-col items-center gap-3 p-5 rounded-2xl"
+                style={{
+                  background: 'var(--color-surface-card)',
+                  border: '2px solid rgba(139, 92, 246, 0.3)',
+                  boxShadow: '0 0 60px rgba(124, 58, 237, 0.15)',
+                }}
+              >
+                <div className="p-3 rounded-xl bg-white">
+                  <QRCodeSVG
+                    id="session-qr-code"
+                    value={`${window.location.origin}/session/${pin}`}
+                    size={160}
+                    bgColor="#ffffff"
+                    fgColor="#0f0a1e"
+                    level="M"
+                    marginSize={4}
+                  />
+                </div>
+                <p className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                  Scan to join instantly — no PIN needed
+                </p>
+                <button
+                  id="download-qr-btn"
+                  onClick={() => {
+                    const svg = document.getElementById('session-qr-code');
+                    if (!svg) return;
+                    const serializer = new XMLSerializer();
+                    const svgStr = serializer.serializeToString(svg);
+                    const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `quizcraft-pin-${pin}.svg`;
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 hover:translate-y-[-1px]"
+                  style={{
+                    background: 'rgba(139, 92, 246, 0.15)',
+                    color: 'var(--color-brand-300)',
+                    border: '1px solid rgba(139, 92, 246, 0.25)',
+                  }}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download QR
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Error */}
