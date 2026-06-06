@@ -259,7 +259,7 @@ const HostSession = () => {
                 <div className="p-3 rounded-xl bg-white">
                   <QRCodeSVG
                     id="session-qr-code"
-                    value={`${window.location.origin}/join?pin=${pin}`}
+                    value={`${window.location.origin}/session/${pin}`}
                     size={160}
                     bgColor="#ffffff"
                     fgColor="#0f0a1e"
@@ -268,7 +268,7 @@ const HostSession = () => {
                   />
                 </div>
                 <p className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                  Points camera here to join
+                  Scan to join instantly — no PIN needed
                 </p>
                 <button
                   id="download-qr-btn"
