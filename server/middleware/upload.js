@@ -11,7 +11,14 @@ const ALLOWED_MIMES = new Set([
 // ─── Upload limits ──────────────────────────────────────
 // Per-file size cap. Configurable via MAX_UPLOAD_MB so large lecture decks
 // (image-heavy PDFs can easily exceed 10 MB) can be accommodated per-deployment.
-export const MAX_FILE_SIZE_MB = Number(process.env.MAX_UPLOAD_MB) || 25;
+// Only a positive integer is honoured; anything else (negative, zero, float,
+// non-numeric, unset) falls back to the default to avoid an invalid fileSize.
+const DEFAULT_MAX_UPLOAD_MB = 25;
+const parsedMaxUploadMb = Number(process.env.MAX_UPLOAD_MB);
+export const MAX_FILE_SIZE_MB =
+  Number.isInteger(parsedMaxUploadMb) && parsedMaxUploadMb > 0
+    ? parsedMaxUploadMb
+    : DEFAULT_MAX_UPLOAD_MB;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 export const MAX_FILES = 5;
 
