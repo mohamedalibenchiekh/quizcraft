@@ -1,11 +1,11 @@
 import { Router } from "express";
-import upload from "../middleware/upload.js";
+import { uploadDocuments } from "../middleware/upload.js";
 import { extractTextFromFile } from "../utils/textExtractor.js";
 
 const router = Router();
 
 // ─── POST /api/upload — Multi-document upload + text extraction ──
-router.post("/", upload.array("documents", 5), async (req, res, next) => {
+router.post("/", uploadDocuments, async (req, res, next) => {
   try {
     // If Multer didn't find any files in the payload, reject early
     if (!req.files || req.files.length === 0) {
